@@ -26,14 +26,15 @@ export default function Home() {
     // For this example, we assume if a layout is set, the user is "logged in" and is redirected.
     // In a real app, you'd check for an auth token.
     if (storedLayout) {
-      router.push('/dashboard');
+      // We can remove this redirect to allow users to re-select layout if they wish
+      // router.push('/dashboard');
     }
   }, [router]);
 
   const handleContinue = () => {
     if (selectedLayout) {
       localStorage.setItem('keyboardLayout', selectedLayout);
-      router.push('/signup');
+      router.push('/test');
     }
   };
   
@@ -96,9 +97,12 @@ export default function Home() {
                 onClick={handleContinue}
                 disabled={!selectedLayout}
               >
-                এগিয়ে যান
+                অনুশীলন করুন
                 <CheckCircle className="ml-2 h-5 w-5" />
               </Button>
+              <p className="text-sm text-muted-foreground mt-4">
+                আপনার অগ্রগতি সংরক্ষণ করতে এবং সম্পূর্ণ অভিজ্ঞতা পেতে একটি <a href="/signup" className="underline text-primary">অ্যাকাউন্ট তৈরি করুন</a>।
+              </p>
             </CardContent>
           </Card>
         </div>
