@@ -37,7 +37,7 @@ const charToKeyMap: { [key: string]: string } = {
 };
 
 export function VirtualKeyboard({ nextChar }: { nextChar: string | null }) {
-  const activeKey = nextChar ? (charToKeyMap[nextChar] || nextChar) : null;
+  const activeKey = nextChar ? (charToKeyMap[nextChar.normalize("NFC")] || nextChar.normalize("NFC")) : null;
 
   return (
     <div className="p-4 bg-secondary/50 rounded-lg">
