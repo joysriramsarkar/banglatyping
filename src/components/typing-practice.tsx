@@ -33,6 +33,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
   const [accuracy, setAccuracy] = useState(100);
   const [isFinished, setIsFinished] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const totalTime = timeLimit ? timeLimit * 60 : 0;
   const { time, isActive, isPaused, start, pause, resume, reset } = useTimer();
@@ -64,6 +65,9 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     setTotalErrors(0);
     setTotalTypedChars(0);
     setIsFinished(false);
+    if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+    }
     if (isNewTest) {
         const randomParagraph = practiceParagraphs[Math.floor(Math.random() * practiceParagraphs.length)];
         setTextToType(randomParagraph);
@@ -72,6 +76,14 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     }
     inputRef.current?.focus();
   }, [reset, initialText]);
+  
+  const finishSession = useCallback(() => {
+    setIsFinished(true);
+    pause();
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+  }, [pause]);
 
   const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -79,17 +91,31 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     if (isFinished) return;
     if (!isActive && !isPaused) start();
 
+    if (isPaused && isActive) {
+        resume();
+    }
+    
+    if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+    }
+
+    inactivityTimerRef.current = setTimeout(() => {
+        if(isActive && !isPaused) {
+            pause();
+        }
+    }, 4000);
+
     setUserInput(value);
   };
   
   useEffect(() => {
     inputRef.current?.focus();
+    return () => {
+        if(inactivityTimerRef.current) {
+            clearTimeout(inactivityTimerRef.current)
+        }
+    }
   }, []);
-
-  const finishSession = () => {
-    setIsFinished(true);
-    pause();
-  };
 
   const nextParagraph = useCallback(() => {
       const currentErrors = userInput.split('').reduce((acc, char, i) => {
@@ -110,10 +136,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
       calculateAccuracy();
 
       if (userInput.normalize("NFC").length === textToType.normalize("NFC").length) {
-          if (timeLimit) {
-             // In timed mode, continue until time is up
-          } else {
-            // In practice mode, load next paragraph
+          if (!timeLimit) {
             nextParagraph();
           }
       }
@@ -122,14 +145,20 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
         finishSession();
       }
     }
-  }, [userInput, time, isActive, isPaused, textToType, timeLimit, calculateWpm, calculateAccuracy, pause, nextParagraph]);
+  }, [userInput, time, isActive, isPaused, textToType, timeLimit, calculateWpm, calculateAccuracy, finishSession, nextParagraph]);
+
+  useEffect(() => {
+      if(isPaused && inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+      }
+  }, [isPaused])
 
   const currentErrors = userInput.split('').reduce((acc, char, i) => {
       return acc + (char.normalize("NFC") !== textToType.normalize("NFC")[i] ? 1 : 0);
   }, 0);
 
   if(isFinished) {
-    return <TestResults stats={{ wpm, accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(true)} />;
+    return <TestResults stats={{ wpm, accuracy, errors: totalErrors + currentErrors, timeElapsed: time }} onRestart={() => resetTest(true)} />;
   }
 
   return (
@@ -138,7 +167,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
           <StatDisplay icon={Zap} value={wpm} label="WPM" />
           <StatDisplay icon={Target} value={`${accuracy}%`} label="Accuracy" />
-          <StatDisplay icon={Timer} value={timeLimit ? new Date(timeLeft * 1000).toISOString().substr(14, 5) : time} label={timeLimit ? "বাকি" : "সময়"} />
+          <StatDisplay icon={Timer} value={timeLimit ? new Date(timeLeft * 1000).toISOString().substr(14, 5) : new Date(time * 1000).toISOString().substr(14, 5)} label={timeLimit ? "বাকি" : "সময়"} />
           <StatDisplay icon={XCircle} value={totalErrors + currentErrors} label="ভুল" />
         </CardContent>
       </Card>
@@ -196,5 +225,3 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     </div>
   );
 }
-
-    
