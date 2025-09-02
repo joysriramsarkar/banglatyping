@@ -23,18 +23,15 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
     const storedLayout = localStorage.getItem('keyboardLayout');
-    // For this example, we assume if a layout is set, the user is "logged in" and is redirected.
-    // In a real app, you'd check for an auth token.
     if (storedLayout) {
-      // We can remove this redirect to allow users to re-select layout if they wish
-      // router.push('/dashboard');
+      setSelectedLayout(storedLayout);
     }
-  }, [router]);
+  }, []);
 
   const handleContinue = () => {
     if (selectedLayout) {
       localStorage.setItem('keyboardLayout', selectedLayout);
-      router.push('/test');
+      router.push('/dashboard/lessons');
     }
   };
   
