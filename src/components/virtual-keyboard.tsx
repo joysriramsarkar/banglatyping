@@ -28,6 +28,7 @@ const keyboardLayout = [
   ["ড", "ঢ", "ণ", "ত", "থ", "দ", "ধ", "ন", "প", "ফ", "ব"],
   ["ভ", "ম", "য", "র", "ল", "শ", "ষ", "স", "হ", "ড়", "ঢ়"],
   ["য়", " ", "ৎ", "ং", "ঃ", "ঁ"],
+  ["া", "ি", "ী", "ু", "ূ", "ৃ", "ে", "ৈ", "ো", "ৌ"]
 ];
 
 // This is a simplified representation. A real implementation would need complex mapping.

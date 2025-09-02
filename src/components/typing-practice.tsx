@@ -70,12 +70,17 @@ export default function TypingPractice({ textToType, timeLimit }: TypingPractice
     if (isFinished) return;
     if (!isActive && !isPaused) start();
 
-    const lastChar = value[value.length - 1];
-    const expectedChar = textToType[currentCharlIndex];
-
-    if (lastChar !== expectedChar) {
-      setErrors(errors + 1);
+    const normalizedTextToType = textToType.normalize("NFC");
+    const normalizedUserInput = value.normalize("NFC");
+    
+    let currentErrors = 0;
+    for (let i = 0; i < normalizedUserInput.length; i++) {
+        if (normalizedUserInput[i] !== normalizedTextToType[i]) {
+            currentErrors++;
+        }
     }
+    setErrors(currentErrors);
+
     setUserInput(value);
   };
   
@@ -88,13 +93,13 @@ export default function TypingPractice({ textToType, timeLimit }: TypingPractice
       calculateWpm();
       calculateAccuracy();
       
-      if (currentCharlIndex === textToType.length || (timeLimit && time >= timeLimit * 60)) {
+      if (userInput.normalize("NFC") === textToType.normalize("NFC") || (timeLimit && time >= timeLimit * 60)) {
         setIsFinished(true);
         pause();
       }
     }
-  }, [userInput, time, isActive, isPaused, textToType.length, timeLimit, calculateWpm, calculateAccuracy, pause]);
-
+  }, [userInput, time, isActive, isPaused, textToType, timeLimit, calculateWpm, calculateAccuracy, pause]);
+    
   if(isFinished) {
     return <TestResults stats={{ wpm, accuracy, errors, timeElapsed: time }} onRestart={resetTest} />;
   }
@@ -114,8 +119,8 @@ export default function TypingPractice({ textToType, timeLimit }: TypingPractice
         <Card className="p-6 text-2xl tracking-wider font-mono leading-relaxed relative">
           <div className="select-none">
             {textToType.split("").map((char, index) => {
-              const isTyped = index < currentCharlIndex;
-              const isCorrect = userInput[index] === char;
+              const isTyped = index < userInput.length;
+              const isCorrect = userInput.normalize("NFC")[index] === textToType.normalize("NFC")[index];
               return (
                 <span
                   key={index}
@@ -125,7 +130,7 @@ export default function TypingPractice({ textToType, timeLimit }: TypingPractice
                     "text-red-500 underline": isTyped && !isCorrect,
                   })}
                 >
-                  {index === currentCharlIndex && <span className="absolute animate-pulse bg-primary h-8 w-px -ml-px" />}
+                  {index === userInput.length && <span className="absolute animate-pulse bg-primary h-8 w-px -ml-px" />}
                   {char}
                 </span>
               );
@@ -152,7 +157,7 @@ export default function TypingPractice({ textToType, timeLimit }: TypingPractice
       </div>
       
       <div className="w-full mt-4">
-        <VirtualKeyboard nextChar={textToType[currentCharlIndex]} />
+        <VirtualKeyboard nextChar={textToType.normalize("NFC")[userInput.normalize("NFC").length]} />
       </div>
     </div>
   );
