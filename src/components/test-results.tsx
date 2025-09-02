@@ -7,8 +7,6 @@ import Certificate from "./certificate";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
 
@@ -25,7 +23,7 @@ const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label
 export default function TestResults({ stats, onRestart }: { stats: TypingStats, onRestart: () => void }) {
   const { wpm, accuracy, errors, timeElapsed } = stats;
   const canGetCertificate = wpm >= 40 && accuracy >= 95;
-  const [showCertificate, setShowCertificate] = useState(false);
+  const keystrokes = Math.round((wpm * 5 * timeElapsed) / 60);
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -39,16 +37,16 @@ export default function TestResults({ stats, onRestart }: { stats: TypingStats, 
           <div className="p-4 bg-secondary rounded-lg">
             <p className="text-sm text-muted-foreground">গতি (WPM)</p>
             <p className="text-4xl font-bold text-primary">{wpm}</p>
+            <p className="text-xs text-muted-foreground mt-1">কীস্ট্রোক: {keystrokes}</p>
           </div>
           <div className="p-4 bg-secondary rounded-lg">
             <p className="text-sm text-muted-foreground">নির্ভুলতা</p>
             <p className="text-4xl font-bold text-primary">{accuracy}%</p>
+            <p className="text-xs text-muted-foreground mt-1">ভুল: {errors}</p>
           </div>
         </div>
 
         <div className="space-y-2">
-          <StatItem icon={Zap} label="কীস্ট্রোক" value={`${Math.round((wpm * 5 * timeElapsed) / 60)}`} />
-          <StatItem icon={XCircle} label="ভুল" value={errors} />
           <StatItem icon={TimerIcon} label="সময়" value={`${timeElapsed} সেকেন্ড`} />
         </div>
         
