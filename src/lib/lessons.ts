@@ -3,13 +3,13 @@ import type { Lesson } from "./types";
 export const lessons: Lesson[] = [
   {
     id: "char-practice-1",
-    title: "অক্ষর অনুশীলন ১ (হোম রো)",
+    title: "অক্ষর অনুশীলন ১ (হোম রো - বাম)",
     level: "Beginner",
     text: "ক খ গ ঘ ঙ চ ছ জ ঝ ঞ ট ঠ",
   },
   {
     id: "char-practice-2",
-    title: "অক্ষর অনুশীলন ২ (টপ ও বটম রো)",
+    title: "অক্ষর অনুশীলন ২ (হোম রো - ডান)",
     level: "Beginner",
     text: "ড ঢ ণ ত থ দ ধ ন প ফ ব ভ ম",
   },
@@ -20,22 +20,46 @@ export const lessons: Lesson[] = [
     text: "য র ল শ ষ স হ ড় ঢ় য় ৎ ং ঃ ঁ",
   },
   {
+    id: "char-pair-practice-1",
+    title: "জোড়া অক্ষর অনুশীলন ১",
+    level: "Beginner",
+    text: "কক কখ খক খখ কগ গক gg গঘ ঘগ কঘ",
+  },
+  {
+    id: "char-pair-practice-2",
+    title: "জোড়া অক্ষর অনুশীলন ২",
+    level: "Beginner",
+    text: "তথ থত দথ ধদ নন পন ফপ বফ ভফ",
+  },
+  {
     id: "word-practice-1",
     title: "শব্দ অনুশীলন ১",
     level: "Intermediate",
-    text: "আমার সোনার বাংলা আমি তোমায় ভালোবাসি। চিরদিন তোমার আকাশ তোমার বাতাস আমার প্রাণে বাজায় বাঁশি।",
+    text: "আমার সোনার বাংলা আমি তোমায় ভালোবাসি।",
   },
   {
     id: "word-practice-2",
     title: "শব্দ অনুশীলন ২",
+    level: "Intermediate",
+    text: "চিরদিন তোমার আকাশ তোমার বাতাস আমার প্রাণে বাজায় বাঁশি।",
+  },
+    {
+    id: "word-practice-3",
+    title: "শব্দ অনুশীলন ৩",
     level: "Intermediate",
     text: "বাংলাদেশ ঢাকা সুন্দরবন নদী সমুদ্র মেঘ আকাশ বাতাস। স্বাধীনতা মুক্তি সংগ্রাম বিজয় একাত্তর।",
   },
   {
     id: "sentence-practice-1",
     title: "বাক্য অনুশীলন ১",
-    level: "Intermediate",
-    text: "সব দেশের চাইতে সেরা। কবি রবীন্দ্রনাথ ঠাকুর এই গানটি রচনা করেন। ও মা, ফাগুনে তোর আমের বনে ঘ্রাণে পাগল করে।",
+    level: "Advanced",
+    text: "সব দেশের চাইতে সেরা। কবি রবীন্দ্রনাথ ঠাকুর এই গানটি রচনা করেন।",
+  },
+    {
+    id: "sentence-practice-2",
+    title: "বাক্য অনুশীলন ২",
+    level: "Advanced",
+    text: "ও মা, ফাগুনে তোর আমের বনে ঘ্রাণে পাগল করে। হায়, কী শোভা, কী ছায়া গো, কী স্নেহ, কী মায়া গো!",
   },
   {
     id: "paragraph-practice-1",
