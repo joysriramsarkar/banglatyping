@@ -10,19 +10,25 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-const StatItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | number }) => (
+const toBengaliNumber = (num: number | string) => {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
+};
+
+const StatItem = ({ icon: Icon, label, value, unit }: { icon: React.ElementType, label: string, value: string | number, unit?: string }) => (
   <div className="flex items-center justify-between py-2 border-b">
     <div className="flex items-center gap-3">
       <Icon className="h-5 w-5 text-muted-foreground" />
       <span className="text-muted-foreground">{label}</span>
     </div>
-    <span className="font-semibold text-lg">{value}</span>
+    <span className="font-semibold text-lg">{toBengaliNumber(value)} {unit}</span>
   </div>
 );
 
 export default function TestResults({ stats, onRestart }: { stats: TypingStats, onRestart: () => void }) {
   const { wpm, accuracy, errors, timeElapsed } = stats;
   const canGetCertificate = wpm >= 40 && accuracy >= 95;
+  const grossWpm = Math.round(((wpm * 5 + errors * 5) * 60) / timeElapsed / 5);
   const keystrokes = Math.round((wpm * 5 * timeElapsed) / 60);
 
   return (
@@ -36,18 +42,19 @@ export default function TestResults({ stats, onRestart }: { stats: TypingStats, 
         <div className="grid grid-cols-2 gap-4 text-center">
           <div className="p-4 bg-secondary rounded-lg">
             <p className="text-sm text-muted-foreground">গতি (WPM)</p>
-            <p className="text-4xl font-bold text-primary">{wpm}</p>
-            <p className="text-xs text-muted-foreground mt-1">কীস্ট্রোক: {keystrokes}</p>
+            <p className="text-4xl font-bold text-primary">{toBengaliNumber(wpm)}</p>
           </div>
           <div className="p-4 bg-secondary rounded-lg">
             <p className="text-sm text-muted-foreground">নির্ভুলতা</p>
-            <p className="text-4xl font-bold text-primary">{accuracy}%</p>
-            <p className="text-xs text-muted-foreground mt-1">ভুল: {errors}</p>
+            <p className="text-4xl font-bold text-primary">{toBengaliNumber(accuracy)}%</p>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <StatItem icon={TimerIcon} label="সময়" value={`${timeElapsed} সেকেন্ড`} />
+        <div className="space-y-2 text-base">
+          <StatItem icon={Zap} label="কীস্ট্রোক" value={toBengaliNumber(keystrokes)} />
+          <StatItem icon={Target} label="সঠিক শব্দ" value={toBengaliNumber(Math.round(wpm * (timeElapsed/60)))} />
+          <StatItem icon={XCircle} label="ভুল শব্দ" value={toBengaliNumber(errors)} />
+          <StatItem icon={TimerIcon} label="সময়" value={toBengaliNumber(timeElapsed)} unit="সেকেন্ড" />
         </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
@@ -71,3 +78,5 @@ export default function TestResults({ stats, onRestart }: { stats: TypingStats, 
     </Card>
   );
 }
+
+    

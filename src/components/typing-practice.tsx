@@ -5,21 +5,27 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTimer } from "@/hooks/use-timer";
-import { Zap, Target, Timer, XCircle, RefreshCw, Pause, Play, BarChart } from "lucide-react";
+import { Zap, Target, Timer, XCircle, Pause, Play, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TestResults from "./test-results";
 import { practiceParagraphs } from "@/lib/lessons";
 import { Input } from "./ui/input";
+import { useRouter } from 'next/navigation';
 
 interface TypingPracticeProps {
   textToType: string;
   timeLimit?: number; // in minutes
 }
 
+const toBengaliNumber = (num: number | string) => {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
+};
+
 const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, value: string | number, label: string }) => (
   <div className="flex items-center gap-2 text-lg">
     <Icon className="h-5 w-5 text-primary" />
-    <span className="font-semibold">{value}</span>
+    <span className="font-semibold">{toBengaliNumber(value)}</span>
     <span className="text-sm text-muted-foreground">{label}</span>
   </div>
 );
@@ -38,6 +44,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
   const [isFinished, setIsFinished] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const router = useRouter();
 
   const totalTime = timeLimit ? timeLimit * 60 : 0;
   const { time, isActive, isPaused, start, pause, resume, reset } = useTimer();
@@ -55,7 +62,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
 
   const calculateWpm = useCallback(() => {
     if (time > 0) {
-      // WPM is calculated based on characters in correctly typed words.
       const correctChars = typedWords.reduce((acc, word, index) => {
         if(word.normalize('NFC') === words[index].normalize('NFC')) {
           return acc + word.length + 1; // +1 for space
@@ -101,7 +107,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
     }
-    if (isNewTest) {
+    if (isNewTest && timeLimit) {
         const randomParagraph = practiceParagraphs[Math.floor(Math.random() * practiceParagraphs.length)];
         setTextToType(randomParagraph.normalize('NFC'));
     } else {
@@ -110,7 +116,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     setCurrentWordIndex(0);
     setTypedWords([]);
     inputRef.current?.focus();
-  }, [reset, initialText]);
+  }, [reset, initialText, timeLimit]);
   
   const finishSession = useCallback(() => {
     setIsFinished(true);
@@ -179,25 +185,14 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
       calculateWpm();
       calculateAccuracy();
       
-      if (timeLimit && time >= timeLimit * 60) {
+      const isTestFinished = currentWordIndex === words.length && words.length > 0;
+      const isTimeUp = timeLimit && time >= timeLimit * 60;
+      
+      if (isTestFinished || isTimeUp) {
         finishSession();
       }
-
-      if (currentWordIndex === words.length && words.length > 0) {
-        // If it's a practice session (no time limit), load the next paragraph
-        if (!timeLimit) { 
-            const newParagraph = practiceParagraphs.filter(p => p !== textToType)[Math.floor(Math.random() * (practiceParagraphs.length - 1))];
-            if (newParagraph) {
-              setTextToType(newParagraph.normalize('NFC'));
-            } else {
-              finishSession();
-            }
-        } else { // If it is a timed test, finish the session
-            finishSession();
-        }
-      }
     }
-  }, [time, isActive, isPaused, timeLimit, calculateWpm, calculateAccuracy, finishSession, currentWordIndex, words, textToType]);
+  }, [time, isActive, isPaused, timeLimit, calculateWpm, calculateAccuracy, finishSession, currentWordIndex, words.length]);
 
 
   useEffect(() => {
@@ -212,7 +207,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     if (wordIdx < currentWordIndex) {
         return typedWords[wordIdx]?.normalize('NFC') === words[wordIdx]?.normalize('NFC') ? "text-green-500" : "text-red-500 line-through";
     }
-    return "text-primary underline underline-offset-4";
+    return "text-primary bg-yellow-100 dark:bg-yellow-800/50 rounded px-1";
   }
 
   const currentWord = words[currentWordIndex] || '';
@@ -264,9 +259,10 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
             onPaste={(e) => e.preventDefault()}
             lang="bn"
         />
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-card rounded-md shadow-lg">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-card rounded-md shadow-lg pointer-events-none">
+             <span className="invisible">{currentInput}</span>
              {currentInput.split('').map((char, index) => (
-                <span key={index} className={cn(char.normalize('NFC') === currentWord[index]?.normalize('NFC') ? 'text-green-500' : 'text-red-500')}>
+                <span key={index} className={cn('absolute left-2 top-2', char.normalize('NFC') === currentWord[index]?.normalize('NFC') ? 'text-green-500' : 'text-red-500')}>
                     {char}
                 </span>
              ))}
@@ -274,15 +270,11 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
       </div>
       
       <div className="flex items-center space-x-4">
-        <Button onClick={isPaused ? resume : pause} variant="outline" size="icon" disabled={!isActive}>
+        <Button onClick={() => router.push('/dashboard/lessons')} variant="outline" size="icon" title="পাঠক্রমে ফিরে যান">
+          <Home className="h-5 w-5" />
+        </Button>
+        <Button onClick={isPaused ? resume : pause} variant="outline" size="icon" disabled={!isActive} title={isPaused ? "চালিয়ে যান" : "থামুন"}>
           {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-        </Button>
-        <Button onClick={() => resetTest(!timeLimit)} variant="outline" size="icon">
-          <RefreshCw className="h-5 w-5" />
-        </Button>
-        <Button onClick={finishSession} disabled={!isActive}>
-            <BarChart className="mr-2 h-4 w-4" />
-            ফলাফল দেখুন
         </Button>
       </div>
     </div>

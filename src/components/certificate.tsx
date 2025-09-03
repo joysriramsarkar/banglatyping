@@ -10,16 +10,17 @@ interface CertificateProps {
   accuracy: number;
 }
 
+const toBengaliNumber = (num: number | string) => {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
+};
+
 export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
 
   const handlePrint = () => {
-    // Hide the button before printing
     const printButton = document.getElementById('print-button');
     if (printButton) printButton.style.display = 'none';
-
     window.print();
-
-    // Show the button again after printing
     if (printButton) printButton.style.display = 'flex';
   };
 
@@ -45,13 +46,13 @@ export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
             
             <div className="text-center text-lg">
                 <p>বাংলা টাইপিং এ অসাধারণ দক্ষতা প্রদর্শনের জন্য।</p>
-                <p className="mt-2">তিনি সফলভাবে <span className="font-bold">{wpm} শব্দ প্রতি মিনিট</span> গতি এবং <span className="font-bold">{accuracy}% নির্ভুলতা</span> অর্জন করেছেন।</p>
+                <p className="mt-2">তিনি সফলভাবে <span className="font-bold">{toBengaliNumber(wpm)} শব্দ প্রতি মিনিট</span> গতি এবং <span className="font-bold">{toBengaliNumber(accuracy)}% নির্ভুলতা</span> অর্জন করেছেন।</p>
             </div>
 
             <div className="flex justify-between items-end pt-8">
                 <div className="text-center">
                     <p className="border-t-2 border-gray-400 pt-2 font-semibold">তারিখ</p>
-                    <p>{new Date().toLocaleDateString('bn-BD')}</p>
+                    <p>{new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 </div>
                 <div className="text-center">
                    <Award className="h-16 w-16 text-yellow-500 mx-auto" />
@@ -69,3 +70,5 @@ export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
     </div>
   );
 }
+
+    
