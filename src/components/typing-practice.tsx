@@ -259,10 +259,10 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
             onPaste={(e) => e.preventDefault()}
             lang="bn"
         />
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-card rounded-md shadow-lg pointer-events-none">
-             <span className="invisible">{currentInput}</span>
-             {currentInput.split('').map((char, index) => (
-                <span key={index} className={cn('absolute left-2 top-2', char.normalize('NFC') === currentWord[index]?.normalize('NFC') ? 'text-green-500' : 'text-red-500')}>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center text-2xl font-mono">
+            <span className="invisible whitespace-pre">{currentInput}</span>
+            {currentInput.split('').map((char, index) => (
+                <span key={index} className={cn('absolute', char.normalize('NFC') === currentWord[index]?.normalize('NFC') ? 'text-green-500' : 'text-red-500')}>
                     {char}
                 </span>
              ))}
