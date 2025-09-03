@@ -73,8 +73,9 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     if (typedCharsCount > 0) {
         const errorsInTypedWords = typedWords.reduce((errorCount, typedWord, index) => {
              const targetWord = words[index];
+             if (!targetWord) return errorCount;
              for(let i=0; i< typedWord.length; i++) {
-                 if (typedWord[i].normalize('NFC') !== targetWord[i].normalize('NFC')) {
+                 if (!targetWord[i] || typedWord[i].normalize('NFC') !== targetWord[i].normalize('NFC')) {
                      errorCount++;
                  }
              }
@@ -186,7 +187,11 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
         // If it's a practice session (no time limit), load the next paragraph
         if (!timeLimit) { 
             const newParagraph = practiceParagraphs.filter(p => p !== textToType)[Math.floor(Math.random() * (practiceParagraphs.length - 1))];
-            setTextToType(newParagraph.normalize('NFC'));
+            if (newParagraph) {
+              setTextToType(newParagraph.normalize('NFC'));
+            } else {
+              finishSession();
+            }
         } else { // If it is a timed test, finish the session
             finishSession();
         }
@@ -205,18 +210,18 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
   const getWordClass = (wordIdx: number) => {
     if (wordIdx > currentWordIndex) return "text-muted-foreground";
     if (wordIdx < currentWordIndex) {
-        return typedWords[wordIdx].normalize('NFC') === words[wordIdx].normalize('NFC') ? "text-green-500" : "text-red-500 line-through";
+        return typedWords[wordIdx]?.normalize('NFC') === words[wordIdx]?.normalize('NFC') ? "text-green-500" : "text-red-500 line-through";
     }
     return "text-primary underline underline-offset-4";
   }
 
   const currentWord = words[currentWordIndex] || '';
-  const isError = currentInput.length > 0 && !currentWord.startsWith(currentInput);
+  const isError = currentInput.length > 0 && !currentWord.startsWith(currentInput.normalize('NFC'));
 
 
   if(isFinished) {
     const finalErrors = typedWords.reduce((errorCount, typedWord, index) => {
-        if(typedWord.normalize('NFC') !== words[index].normalize('NFC')) return errorCount + 1;
+        if(typedWord.normalize('NFC') !== words[index]?.normalize('NFC')) return errorCount + 1;
         return errorCount;
     }, 0);
 
@@ -252,7 +257,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
             onChange={handleUserInputChange}
             className={cn("w-full text-center text-2xl font-mono p-6", {
                 'border-red-500 focus-visible:ring-red-500': isError,
-                'border-green-500 focus-visible:ring-green-500': !isError && currentInput.length > 0 && currentWord.startsWith(currentInput),
+                'border-green-500 focus-visible:ring-green-500': !isError && currentInput.length > 0 && currentWord.startsWith(currentInput.normalize('NFC')),
             })}
             placeholder="টাইপ করুন..."
             disabled={isFinished}
