@@ -181,16 +181,19 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
   }, []);
 
   useEffect(() => {
+    const isTestFinished = currentWordIndex === words.length && words.length > 0;
     if (isActive && !isPaused) {
       calculateWpm();
       calculateAccuracy();
       
-      const isTestFinished = currentWordIndex === words.length && words.length > 0;
       const isTimeUp = timeLimit && time >= timeLimit * 60;
       
       if (isTestFinished || isTimeUp) {
         finishSession();
       }
+    }
+     if (isTestFinished) {
+      finishSession();
     }
   }, [time, isActive, isPaused, timeLimit, calculateWpm, calculateAccuracy, finishSession, currentWordIndex, words.length]);
 
@@ -244,31 +247,29 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
           </p>
       </Card>
 
-      <div className="w-full relative">
-        <Input
-            ref={inputRef}
-            type="text"
-            value={currentInput}
-            onChange={handleUserInputChange}
-            className={cn("w-full text-center text-2xl font-mono p-6 text-transparent bg-transparent", {
-                'border-red-500 focus-visible:ring-red-500': isError,
-                'border-green-500 focus-visible:ring-green-500': !isError && currentInput.length > 0 && currentWord.startsWith(currentInput.normalize('NFC')),
-            })}
-            placeholder="টাইপ করুন..."
-            disabled={isFinished}
-            onPaste={(e) => e.preventDefault()}
-            lang="bn"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-        />
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-2xl font-mono">
-            {currentInput.split('').map((char, index) => (
-                <span key={index} className={cn(char.normalize('NFC') === currentWord[index]?.normalize('NFC') ? 'text-green-500' : 'text-red-500')}>
-                    {char}
-                </span>
-             ))}
+       <div className="w-full h-16 flex flex-col items-center justify-center">
+        <div className={cn(
+          "text-2xl font-mono",
+          isError ? "text-red-500" : "text-green-500"
+        )}>
+          {currentInput || <span className="text-muted-foreground">টাইপ করুন...</span>}
         </div>
+        <Input
+          ref={inputRef}
+          type="text"
+          value={currentInput}
+          onChange={handleUserInputChange}
+          className={cn(
+            "w-full text-center text-2xl font-mono p-6 border-t-0 rounded-t-none",
+             isError ? "border-red-500 focus-visible:ring-red-500" : "border-green-500 focus-visible:ring-green-500"
+          )}
+          disabled={isFinished}
+          onPaste={(e) => e.preventDefault()}
+          lang="bn"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+        />
       </div>
       
       <div className="flex items-center space-x-4">
