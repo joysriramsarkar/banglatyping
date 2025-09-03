@@ -25,7 +25,7 @@ const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, va
 );
 
 export default function TypingPractice({ textToType: initialText, timeLimit }: TypingPracticeProps) {
-  const [textToType, setTextToType] = useState(initialText);
+  const [textToType, setTextToType] = useState(initialText.normalize('NFC'));
   const [words, setWords] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentInput, setCurrentInput] = useState("");
@@ -45,7 +45,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
   const timeLeft = totalTime > 0 ? totalTime - time : time;
 
   useEffect(() => {
-    const newWords = textToType.split(' ').filter(w => w);
+    const newWords = textToType.normalize('NFC').split(' ').filter(w => w);
     setWords(newWords);
     setCurrentWordIndex(0);
     setTypedWords([]);
@@ -57,7 +57,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     if (time > 0) {
       // WPM is calculated based on characters in correctly typed words.
       const correctChars = typedWords.reduce((acc, word, index) => {
-        if(word === words[index]) {
+        if(word.normalize('NFC') === words[index].normalize('NFC')) {
           return acc + word.length + 1; // +1 for space
         }
         return acc;
@@ -74,7 +74,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
         const errorsInTypedWords = typedWords.reduce((errorCount, typedWord, index) => {
              const targetWord = words[index];
              for(let i=0; i< typedWord.length; i++) {
-                 if (typedWord[i] !== targetWord[i]) {
+                 if (typedWord[i].normalize('NFC') !== targetWord[i].normalize('NFC')) {
                      errorCount++;
                  }
              }
@@ -102,9 +102,9 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     }
     if (isNewTest) {
         const randomParagraph = practiceParagraphs[Math.floor(Math.random() * practiceParagraphs.length)];
-        setTextToType(randomParagraph);
+        setTextToType(randomParagraph.normalize('NFC'));
     } else {
-        setTextToType(initialText);
+        setTextToType(initialText.normalize('NFC'));
     }
     setCurrentWordIndex(0);
     setTypedWords([]);
@@ -122,7 +122,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
   }, [pause, calculateWpm, calculateAccuracy]);
 
   const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const value = e.target.value.normalize('NFC');
 
     if (isFinished) return;
     if (!isActive && !isPaused) start();
@@ -155,7 +155,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
 
         const targetWord = words[currentWordIndex];
         const typedWord = currentInput.trim();
-        if(targetWord !== typedWord) {
+        if(targetWord.normalize('NFC') !== typedWord.normalize('NFC')) {
             setTotalErrors(prev => prev + 1);
         }
 
@@ -182,14 +182,17 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
         finishSession();
       }
 
-      if (!timeLimit && currentWordIndex === words.length && words.length > 0) {
-        if (!timeLimit) { // If not a timed test, move to next paragraph
-            const randomParagraph = practiceParagraphs.filter(p => p !== textToType)[Math.floor(Math.random() * (practiceParagraphs.length - 1))];
-            setTextToType(randomParagraph);
+      if (currentWordIndex === words.length && words.length > 0) {
+        // If it's a practice session (no time limit), load the next paragraph
+        if (!timeLimit) { 
+            const newParagraph = practiceParagraphs.filter(p => p !== textToType)[Math.floor(Math.random() * (practiceParagraphs.length - 1))];
+            setTextToType(newParagraph.normalize('NFC'));
+        } else { // If it is a timed test, finish the session
+            finishSession();
         }
       }
     }
-  }, [time, isActive, isPaused, timeLimit, calculateWpm, calculateAccuracy, finishSession, currentWordIndex, words.length, textToType]);
+  }, [time, isActive, isPaused, timeLimit, calculateWpm, calculateAccuracy, finishSession, currentWordIndex, words, textToType]);
 
 
   useEffect(() => {
@@ -202,7 +205,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
   const getWordClass = (wordIdx: number) => {
     if (wordIdx > currentWordIndex) return "text-muted-foreground";
     if (wordIdx < currentWordIndex) {
-        return typedWords[wordIdx] === words[wordIdx] ? "text-green-500" : "text-red-500 line-through";
+        return typedWords[wordIdx].normalize('NFC') === words[wordIdx].normalize('NFC') ? "text-green-500" : "text-red-500 line-through";
     }
     return "text-primary underline underline-offset-4";
   }
@@ -213,11 +216,11 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
 
   if(isFinished) {
     const finalErrors = typedWords.reduce((errorCount, typedWord, index) => {
-        if(typedWord !== words[index]) return errorCount + 1;
+        if(typedWord.normalize('NFC') !== words[index].normalize('NFC')) return errorCount + 1;
         return errorCount;
     }, 0);
 
-    return <TestResults stats={{ wpm, accuracy, errors: finalErrors, timeElapsed: time }} onRestart={() => resetTest(true)} />;
+    return <TestResults stats={{ wpm, accuracy, errors: finalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} />;
   }
 
   return (
@@ -226,7 +229,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
           <StatDisplay icon={Zap} value={wpm} label="WPM" />
           <StatDisplay icon={Target} value={`${accuracy}%`} label="Accuracy" />
-          <StatDisplay icon={Timer} value={timeLimit ? new Date(timeLeft * 1000).toISOString().substr(14, 5) : new Date(time * 1000).toISOString().substr(14, 5)} label={timeLimit ? "বাকি" : "সময়"} />
+          <StatDisplay icon={Timer} value={timeLimit ? new Date((totalTime - time) * 1000).toISOString().substr(14, 5) : new Date(time * 1000).toISOString().substr(14, 5)} label={timeLimit ? "বাকি" : "সময়"} />
           <StatDisplay icon={XCircle} value={totalErrors} label="ভুল শব্দ" />
         </CardContent>
       </Card>
@@ -249,21 +252,19 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
             onChange={handleUserInputChange}
             className={cn("w-full text-center text-2xl font-mono p-6", {
                 'border-red-500 focus-visible:ring-red-500': isError,
+                'border-green-500 focus-visible:ring-green-500': !isError && currentInput.length > 0 && currentWord.startsWith(currentInput),
             })}
             placeholder="টাইপ করুন..."
             disabled={isFinished}
             onPaste={(e) => e.preventDefault()}
             lang="bn"
         />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[calc(50%+2.5rem)] text-2xl font-mono text-muted-foreground pointer-events-none">
-            {currentInput.split('').map((char, index) => {
-                const isCharCorrect = char === currentWord[index];
-                return (
-                    <span key={index} className={cn({ "text-green-500": isCharCorrect, "text-red-500": !isCharCorrect })}>
-                        {currentWord[index]}
-                    </span>
-                )
-            })}
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-card rounded-md shadow-lg">
+             {currentInput.split('').map((char, index) => (
+                <span key={index} className={cn(char.normalize('NFC') === currentWord[index]?.normalize('NFC') ? 'text-green-500' : 'text-red-500')}>
+                    {char}
+                </span>
+             ))}
         </div>
       </div>
       
@@ -271,7 +272,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
         <Button onClick={isPaused ? resume : pause} variant="outline" size="icon" disabled={!isActive}>
           {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
         </Button>
-        <Button onClick={() => resetTest(true)} variant="outline" size="icon">
+        <Button onClick={() => resetTest(!timeLimit)} variant="outline" size="icon">
           <RefreshCw className="h-5 w-5" />
         </Button>
         <Button onClick={finishSession} disabled={!isActive}>
@@ -282,3 +283,5 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     </div>
   );
 }
+
+    
