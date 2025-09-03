@@ -216,7 +216,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
 
   if(isFinished) {
     const finalErrors = typedWords.reduce((errorCount, typedWord, index) => {
-        if(typedWord.normalize('NFC') !== words[index]?.normalize('NFC')) return errorCount + 1;
+        if(words[index] && typedWord.normalize('NFC') !== words[index].normalize('NFC')) return errorCount + 1;
         return errorCount;
     }, 0);
 
@@ -250,7 +250,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
             type="text"
             value={currentInput}
             onChange={handleUserInputChange}
-            className={cn("w-full text-center text-2xl font-mono p-6", {
+            className={cn("w-full text-center text-2xl font-mono p-6 text-transparent bg-transparent", {
                 'border-red-500 focus-visible:ring-red-500': isError,
                 'border-green-500 focus-visible:ring-green-500': !isError && currentInput.length > 0 && currentWord.startsWith(currentInput.normalize('NFC')),
             })}
@@ -258,11 +258,13 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
             disabled={isFinished}
             onPaste={(e) => e.preventDefault()}
             lang="bn"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
         />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center text-2xl font-mono">
-            <span className="invisible whitespace-pre">{currentInput}</span>
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-2xl font-mono">
             {currentInput.split('').map((char, index) => (
-                <span key={index} className={cn('absolute', char.normalize('NFC') === currentWord[index]?.normalize('NFC') ? 'text-green-500' : 'text-red-500')}>
+                <span key={index} className={cn(char.normalize('NFC') === currentWord[index]?.normalize('NFC') ? 'text-green-500' : 'text-red-500')}>
                     {char}
                 </span>
              ))}
@@ -280,5 +282,3 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
     </div>
   );
 }
-
-    
