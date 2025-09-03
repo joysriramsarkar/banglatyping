@@ -33,7 +33,7 @@ export default function PracticePage() {
                 <h1 className="text-3xl font-bold font-headline">{lesson.title}</h1>
                 <p className="text-muted-foreground">{lesson.level} স্তরের পাঠ</p>
             </div>
-            <TypingPractice textToType={lesson.text} />
+            <TypingPractice textToType={lesson.text} lessonId={lesson.id} />
         </div>
     );
 }

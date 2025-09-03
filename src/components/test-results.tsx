@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Award, RefreshCw, Zap, Target, XCircle, Timer as TimerIcon } from "lucide-react";
-import { TypingStats } from "@/lib/types";
+import { Award, RefreshCw, Zap, Target, XCircle, Timer as TimerIcon, Home, ArrowRight } from "lucide-react";
+import { TypingStats, Lesson } from "@/lib/types";
 import { useState } from "react";
 import Certificate from "./certificate";
 import {
@@ -9,6 +9,9 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { lessons } from "@/lib/lessons";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const toBengaliNumber = (num: number | string) => {
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -25,11 +28,19 @@ const StatItem = ({ icon: Icon, label, value, unit }: { icon: React.ElementType,
   </div>
 );
 
-export default function TestResults({ stats, onRestart }: { stats: TypingStats, onRestart: () => void }) {
+export default function TestResults({ stats, onRestart, lessonId }: { stats: TypingStats, onRestart: () => void, lessonId?: string }) {
   const { wpm, accuracy, errors, timeElapsed } = stats;
+  const router = useRouter();
+
   const canGetCertificate = wpm >= 40 && accuracy >= 95;
-  const grossWpm = Math.round(((wpm * 5 + errors * 5) * 60) / timeElapsed / 5);
-  const keystrokes = Math.round((wpm * 5 * timeElapsed) / 60);
+  
+  let nextLesson: Lesson | null = null;
+  if(lessonId) {
+    const currentLessonIndex = lessons.findIndex(l => l.id === lessonId);
+    if(currentLessonIndex !== -1 && currentLessonIndex < lessons.length - 1) {
+        nextLesson = lessons[currentLessonIndex + 1];
+    }
+  }
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -51,7 +62,6 @@ export default function TestResults({ stats, onRestart }: { stats: TypingStats, 
         </div>
 
         <div className="space-y-2 text-base">
-          <StatItem icon={Zap} label="কীস্ট্রোক" value={toBengaliNumber(keystrokes)} />
           <StatItem icon={Target} label="সঠিক শব্দ" value={toBengaliNumber(Math.round(wpm * (timeElapsed/60)))} />
           <StatItem icon={XCircle} label="ভুল শব্দ" value={toBengaliNumber(errors)} />
           <StatItem icon={TimerIcon} label="সময়" value={toBengaliNumber(timeElapsed)} unit="সেকেন্ড" />
@@ -73,10 +83,21 @@ export default function TestResults({ stats, onRestart }: { stats: TypingStats, 
               পুনরায় চেষ্টা করুন
             </Button>
         </div>
+        
+        <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+            <Button onClick={() => router.push('/dashboard/lessons')} variant="secondary" className="w-full">
+              <Home className="mr-2 h-4 w-4" />
+              পাঠক্রমে ফিরে যান
+            </Button>
+            {nextLesson && (
+                 <Button onClick={() => router.push(`/practice/${nextLesson?.id}`)} className="w-full">
+                    পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+            )}
+        </div>
+
 
       </CardContent>
     </Card>
   );
 }
-
-    

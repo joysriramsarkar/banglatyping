@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 interface TypingPracticeProps {
   textToType: string;
   timeLimit?: number; // in minutes
+  lessonId?: string;
 }
 
 const toBengaliNumber = (num: number | string) => {
@@ -30,7 +31,7 @@ const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, va
   </div>
 );
 
-export default function TypingPractice({ textToType: initialText, timeLimit }: TypingPracticeProps) {
+export default function TypingPractice({ textToType: initialText, timeLimit, lessonId }: TypingPracticeProps) {
   const [textToType, setTextToType] = useState(initialText.normalize('NFC'));
   const [words, setWords] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -54,9 +55,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
   useEffect(() => {
     const newWords = textToType.normalize('NFC').split(' ').filter(w => w);
     setWords(newWords);
-    setCurrentWordIndex(0);
-    setTypedWords([]);
-    setCurrentInput("");
   }, [textToType]);
 
 
@@ -223,7 +221,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
         return errorCount;
     }, 0);
 
-    return <TestResults stats={{ wpm, accuracy, errors: finalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} />;
+    return <TestResults stats={{ wpm, accuracy, errors: finalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
   }
 
   return (
@@ -249,10 +247,16 @@ export default function TypingPractice({ textToType: initialText, timeLimit }: T
 
        <div className="w-full h-16 flex flex-col items-center justify-center">
         <div className={cn(
-          "text-2xl font-mono",
+          "text-2xl font-mono p-2",
           isError ? "text-red-500" : "text-green-500"
         )}>
-          {currentInput || <span className="text-muted-foreground">টাইপ করুন...</span>}
+           {currentWord.split('').map((char, index) => {
+              let charClass = "opacity-50";
+              if(index < currentInput.length) {
+                charClass = currentInput[index] === char ? "opacity-100" : "opacity-100 text-red-500";
+              }
+              return <span key={index} className={charClass}>{char}</span>
+           })}
         </div>
         <Input
           ref={inputRef}
