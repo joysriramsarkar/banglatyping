@@ -9,8 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Timer } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const timeOptions = [1, 2, 5, 10];
+const timeOptions = [
+    { value: 1, label: '১' },
+    { value: 2, label: '২' },
+    { value: 5, label: '৫' },
+    { value: 10, label: '১০' }
+];
 
 const toBengaliNumber = (num: number | string) => {
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -52,20 +58,24 @@ export default function TestPage() {
           <div>
             <Label className="text-base font-medium mb-4 block text-center">সময়কাল নির্বাচন করুন (মিনিট)</Label>
             <RadioGroup
-              defaultValue="1"
+              value={String(selectedTime)}
               onValueChange={(value) => setSelectedTime(parseInt(value))}
               className="grid grid-cols-2 sm:grid-cols-4 gap-4"
             >
               {timeOptions.map(time => (
-                <Label
-                  key={time}
-                  htmlFor={`time-${time}`}
-                  className="flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer transition-colors hover:bg-accent has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary"
-                >
-                  <RadioGroupItem value={String(time)} id={`time-${time}`} className="sr-only" />
-                  <span className="text-2xl font-bold">{toBengaliNumber(time)}</span>
-                  <span className="text-muted-foreground">মিনিট</span>
-                </Label>
+                <div key={time.value}>
+                  <RadioGroupItem value={String(time.value)} id={`time-${time.value}`} className="sr-only" />
+                  <Label
+                    htmlFor={`time-${time.value}`}
+                    className={cn(
+                        "flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer transition-colors hover:bg-accent",
+                        selectedTime === time.value ? "border-primary ring-2 ring-primary" : ""
+                    )}
+                  >
+                    <span className="text-2xl font-bold">{time.label}</span>
+                    <span className="text-muted-foreground">মিনিট</span>
+                  </Label>
+                </div>
               ))}
             </RadioGroup>
           </div>

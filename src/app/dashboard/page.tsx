@@ -1,3 +1,6 @@
+
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Zap, Target, BookCheck, Award, ArrowRight } from "lucide-react";
@@ -8,6 +11,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useAuth } from "@/hooks/use-auth";
 
 const toBengaliNumber = (num: number | string) => {
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
@@ -34,10 +38,13 @@ const lessonsByLevel = [
 ];
 
 export default function DashboardPage() {
+  const { userData } = useAuth();
+  const welcomeMessage = userData?.displayName ? `স্বাগতম, ${userData.displayName}!` : 'স্বাগতম!';
+  
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold font-headline">স্বাগতম, ব্যবহারকারী!</h1>
+        <h1 className="text-3xl font-bold font-headline">{welcomeMessage}</h1>
         <p className="text-muted-foreground">আপনার টাইপিং যাত্রা চালিয়ে যান।</p>
       </div>
 

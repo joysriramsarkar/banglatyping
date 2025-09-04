@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -27,11 +28,25 @@ import { usePathname, useRouter } from "next/navigation"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
 import { AuthProvider, useAuth } from "@/hooks/use-auth"
+import AuthGuard from "@/components/auth-guard"
+import { Skeleton } from "@/components/ui/skeleton"
 
 function SidebarFooterContent() {
   const router = useRouter();
-  const { user, userData, signOut } = useAuth();
+  const { user, userData, signOut, loading } = useAuth();
   
+  if (loading) {
+    return (
+        <div className="flex items-center gap-2 p-2">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="flex-1 space-y-1 group-data-[collapsible=icon]:hidden">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+            </div>
+        </div>
+    )
+  }
+
   if (!user) {
     return (
       <div className="p-2 group-data-[collapsible=expanded]:space-y-2">
@@ -51,7 +66,7 @@ function SidebarFooterContent() {
           <AvatarFallback>{userData?.displayName?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
         </Avatar>
         <div className="flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
-          <p className="font-semibold text-sm truncate">{userData?.displayName}</p>
+          <p className="font-semibold text-sm truncate">{userData?.displayName || user.email}</p>
           <p className="text-xs text-sidebar-foreground/70 truncate">{user.email}</p>
         </div>
         <Button variant="ghost" size="icon" className="group-data-[collapsible=icon]:hidden" onClick={signOut}>
@@ -61,12 +76,9 @@ function SidebarFooterContent() {
   )
 }
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const isProfilePage = pathname === '/dashboard/profile';
 
   const navItems = [
     { href: "/dashboard", icon: Home, label: "ড্যাশবোর্ড" },
@@ -77,7 +89,6 @@ export default function DashboardLayout({
   ]
 
   return (
-    <AuthProvider>
       <div className="flex min-h-screen w-full flex-col bg-muted/40">
         <SidebarProvider>
           <Sidebar>
@@ -114,11 +125,22 @@ export default function DashboardLayout({
                 </div>
             </header>
             <main className="p-4 sm:px-6 sm:py-0">
-               {children}
+               {isProfilePage ? <AuthGuard>{children}</AuthGuard> : children}
             </main>
           </SidebarInset>
         </SidebarProvider>
       </div>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <AuthProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
     </AuthProvider>
   )
 }
