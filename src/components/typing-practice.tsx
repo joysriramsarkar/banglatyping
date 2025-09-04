@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -271,7 +270,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const [totalErrors, setTotalErrors] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
-  const [isFinished, setIsFinished] useState(false);
+  const [isFinished, setIsFinished] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
@@ -296,7 +295,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     }
     
     const correctWords = typedWords.filter((word, index) => word === words[index]);
-    const newAccuracy = words.length > 0 ? (correctWords.length / typedWords.length) * 100 : 100;
+    const newAccuracy = typedWords.length > 0 ? (correctWords.length / typedWords.length) * 100 : 100;
     setAccuracy(Math.round(newAccuracy > 0 ? newAccuracy : 0));
 
   }, [time, typedWords, words]);
@@ -419,7 +418,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
 
   if(isFinished) {
-    return <TestResults stats={{ wpm, accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
+    return <TestResults stats={{ wpm: toBengaliNumber(wpm), accuracy: toBengaliNumber(accuracy), errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
   }
 
   return (
@@ -488,3 +487,5 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   );
 }
 export { VisualTypingDrill };
+
+    
