@@ -2,15 +2,18 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTimer } from "@/hooks/use-timer";
-import { Zap, Target, Timer, XCircle, Pause, Play, Home } from "lucide-react";
+import { Zap, Target, Timer, XCircle, Pause, Play, Home, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TestResults from "./test-results";
 import { practiceParagraphs } from "@/lib/lessons";
 import { Input } from "./ui/input";
 import { useRouter } from 'next/navigation';
+import type { Drill } from "@/lib/types";
+import { Progress } from "@/components/ui/progress";
+import Image from "next/image";
 
 interface TypingPracticeProps {
   textToType: string;
@@ -30,6 +33,197 @@ const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, va
     <span className="text-sm text-muted-foreground">{label}</span>
   </div>
 );
+
+const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
+    const [currentDrillIndex, setCurrentDrillIndex] = useState(0);
+    const [status, setStatus] = useState<'pending' | 'correct' | 'incorrect'>('pending');
+    const totalDrills = drills.length;
+    const progress = (currentDrillIndex / totalDrills) * 100;
+
+    const handleKeyPress = useCallback((event: KeyboardEvent) => {
+        event.preventDefault();
+        if (status !== 'pending' || currentDrillIndex >= totalDrills) return;
+
+        const currentDrill = drills[currentDrillIndex];
+        const expectedKey = currentDrill.key === ' ' ? 'Space' : currentDrill.key;
+        
+        if (event.key.toLowerCase() === expectedKey.toLowerCase()) {
+            setStatus('correct');
+            setTimeout(() => {
+                setStatus('pending');
+                setCurrentDrillIndex(prev => prev + 1);
+            }, 300);
+        } else {
+            setStatus('incorrect');
+            setTimeout(() => {
+                setStatus('pending');
+            }, 500);
+        }
+    }, [currentDrillIndex, drills, status, totalDrills]);
+
+
+    useEffect(() => {
+        window.addEventListener('keydown', handleKeyPress);
+        return () => {
+            window.removeEventListener('keydown', handleKeyPress);
+        };
+    }, [handleKeyPress]);
+
+    if (currentDrillIndex >= totalDrills) {
+        return (
+            <Card className="text-center p-8">
+                <CardHeader>
+                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <CardTitle className="text-2xl">অনুশীলন সম্পন্ন!</CardTitle>
+                    <CardDescription>খুব ভালো করেছেন!</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={() => setCurrentDrillIndex(0)}>আবার চেষ্টা করুন</Button>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    const currentDrill = drills[currentDrillIndex];
+
+    return (
+        <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-5xl mx-auto">
+            <div className="flex flex-col md:flex-row gap-8">
+                <div className="w-full md:w-2/3 space-y-8">
+                    {/* Prompt Display */}
+                    <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px]">
+                        {drills.slice(currentDrillIndex, Math.min(currentDrillIndex + 8, totalDrills)).map((drill, index) => {
+                            const isCurrent = index === 0;
+                            let boxClass = "bg-secondary";
+                            if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
+                            if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
+                            
+                            return (
+                                <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-2xl font-bold", boxClass, isCurrent && "ring-2 ring-primary")}>
+                                   {drill.prompt === ' ' ? 'Space' : drill.prompt}
+                                </div>
+                            )
+                        })}
+                    </div>
+                    
+                    {/* Virtual Keyboard */}
+                    <VirtualKeyboard highlightKey={currentDrill.key} />
+                    
+                    {/* Hand Guide */}
+                    <HandGuide highlightKey={currentDrill.key} />
+
+                </div>
+                <div className="w-full md:w-1/3 space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>অগ্রগতি</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="flex items-center gap-4">
+                                <div className="text-3xl font-bold text-primary">{toBengaliNumber(Math.round(progress))}%</div>
+                                <Progress value={progress} className="w-full" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                     <div className="flex justify-end gap-2 mt-4">
+                        <Button variant="outline">বাতিল</Button>
+                        <Button>পরবর্তী</Button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+const keyboardLayout = {
+    top: ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+    home: ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+    bottom: ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
+    space: [' '],
+};
+
+const keyToFingerMap: Record<string, { hand: 'left' | 'right', finger: 'pinky' | 'ring' | 'middle' | 'index' | 'thumb' }> = {
+    'q': { hand: 'left', finger: 'pinky' }, 'a': { hand: 'left', finger: 'pinky' }, 'z': { hand: 'left', finger: 'pinky' },
+    'w': { hand: 'left', finger: 'ring' }, 's': { hand: 'left', finger: 'ring' }, 'x': { hand: 'left', finger: 'ring' },
+    'e': { hand: 'left', finger: 'middle' }, 'd': { hand: 'left', finger: 'middle' }, 'c': { hand: 'left', finger: 'middle' },
+    'r': { hand: 'left', finger: 'index' }, 'f': { hand: 'left', finger: 'index' }, 'v': { hand: 'left', finger: 'index' },
+    't': { hand: 'left', finger: 'index' }, 'g': { hand: 'left', finger: 'index' }, 'b': { hand: 'left', finger: 'index' },
+    'y': { hand: 'right', finger: 'index' }, 'h': { hand: 'right', finger: 'index' }, 'n': { hand: 'right', finger: 'index' },
+    'u': { hand: 'right', finger: 'index' }, 'j': { hand: 'right', finger: 'index' }, 'm': { hand: 'right', finger: 'index' },
+    'i': { hand: 'right', finger: 'middle' }, 'k': { hand: 'right', finger: 'middle' },
+    'o': { hand: 'right', finger: 'ring' }, 'l': { hand: 'right', finger: 'ring' },
+    'p': { hand: 'right', finger: 'pinky' },
+    ' ': { hand: 'left', finger: 'thumb' }, // or right thumb
+};
+
+
+const VirtualKeyboard = ({ highlightKey }: { highlightKey: string }) => (
+    <div className="p-4 bg-background rounded-lg shadow-inner space-y-2">
+        {Object.values(keyboardLayout).map((row, rowIndex) => (
+            <div key={rowIndex} className="flex justify-center gap-1.5">
+                {row.map(key => (
+                    <div
+                        key={key}
+                        className={cn(
+                            "flex items-center justify-center h-12 rounded-md bg-secondary border border-b-4",
+                            key === ' ' ? 'w-64' : 'w-12',
+                            highlightKey.toLowerCase() === key.toLowerCase() && 'bg-primary/20 border-primary text-primary'
+                        )}
+                    >
+                        {key === ' ' ? 'Space' : key.toUpperCase()}
+                    </div>
+                ))}
+            </div>
+        ))}
+    </div>
+);
+
+const HandGuide = ({ highlightKey }: { highlightKey: string }) => {
+    const fingerInfo = keyToFingerMap[highlightKey.toLowerCase()];
+
+    const getFingerHighlightStyle = (hand: 'left' | 'right', finger: 'pinky' | 'ring' | 'middle' | 'index' | 'thumb'): React.CSSProperties => {
+        if (fingerInfo && fingerInfo.hand === hand && fingerInfo.finger === finger) {
+            return { filter: 'drop-shadow(0 0 12px hsl(var(--primary)))', transform: 'scale(1.1)' };
+        }
+        return {};
+    };
+
+    return (
+        <div className="flex justify-center items-end gap-8 h-48">
+             <div className="relative">
+                <Image src="https://picsum.photos/200/150" width={200} height={150} alt="Left Hand" data-ai-hint="left hand" className="transform -scale-x-100" />
+                <div className="absolute top-0 left-0 w-full h-full">
+                    {/* Pinky */}
+                    <div style={getFingerHighlightStyle('left', 'pinky')} className="absolute top-[35px] left-[25px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    {/* Ring */}
+                    <div style={getFingerHighlightStyle('left', 'ring')} className="absolute top-[15px] left-[55px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    {/* Middle */}
+                    <div style={getFingerHighlightStyle('left', 'middle')} className="absolute top-[5px] left-[85px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    {/* Index */}
+                    <div style={getFingerHighlightStyle('left', 'index')} className="absolute top-[15px] left-[115px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    {/* Thumb */}
+                    <div style={getFingerHighlightStyle('left', 'thumb')} className="absolute top-[80px] left-[140px] w-6 h-6 bg-primary/50 rounded-full transition-all"></div>
+                </div>
+            </div>
+            <div className="relative">
+                <Image src="https://picsum.photos/200/150" width={200} height={150} alt="Right Hand" data-ai-hint="right hand" />
+                 <div className="absolute top-0 left-0 w-full h-full">
+                    {/* Index */}
+                    <div style={getFingerHighlightStyle('right', 'index')} className="absolute top-[15px] left-[30px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    {/* Middle */}
+                    <div style={getFingerHighlightStyle('right', 'middle')} className="absolute top-[5px] left-[60px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    {/* Ring */}
+                    <div style={getFingerHighlightStyle('right', 'ring')} className="absolute top-[15px] left-[90px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    {/* Pinky */}
+                    <div style={getFingerHighlightStyle('right', 'pinky')} className="absolute top-[35px] left-[118px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                     {/* Thumb */}
+                    <div style={getFingerHighlightStyle('right', 'thumb')} className="absolute top-[80px] left-[5px] w-6 h-6 bg-primary/50 rounded-full transition-all"></div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 export default function TypingPractice({ textToType: initialText, timeLimit, lessonId }: TypingPracticeProps) {
   const [textToType, setTextToType] = useState(initialText.normalize('NFC'));
@@ -217,7 +411,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
   if(isFinished) {
     const finalErrors = typedWords.reduce((errorCount, typedWord, index) => {
-        if(words[index] && typedWord.normalize('NFC') !== words[index].normalize('NFC')) return errorCount + 1;
+        const targetWord = words[index];
+        if (targetWord && typedWord.normalize('NFC') !== targetWord.normalize('NFC')) return errorCount + 1;
         return errorCount;
     }, 0);
 
@@ -247,9 +442,10 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
        <div className="w-full h-16 flex flex-col items-center justify-center">
         <div className={cn(
-          "text-2xl font-mono p-2",
+          "text-2xl font-mono p-2 flex items-center justify-center min-h-[3rem]",
           isError ? "text-red-500" : "text-green-500"
         )}>
+          <span>
            {currentWord.split('').map((char, index) => {
               let charClass = "opacity-50";
               if(index < currentInput.length) {
@@ -257,6 +453,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
               }
               return <span key={index} className={charClass}>{char}</span>
            })}
+           </span>
         </div>
         <Input
           ref={inputRef}
@@ -287,3 +484,4 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     </div>
   );
 }
+export { VisualTypingDrill };

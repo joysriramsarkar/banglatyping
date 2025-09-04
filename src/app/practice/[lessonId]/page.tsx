@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from 'next/navigation';
-import TypingPractice from '@/components/typing-practice';
+import TypingPractice, { VisualTypingDrill } from '@/components/typing-practice';
 import { lessons } from '@/lib/lessons';
 import { useEffect, useState } from 'react';
 import type { Lesson } from '@/lib/types';
@@ -33,7 +33,8 @@ export default function PracticePage() {
                 <h1 className="text-3xl font-bold font-headline">{lesson.title}</h1>
                 <p className="text-muted-foreground">{lesson.level} স্তরের পাঠ</p>
             </div>
-            <TypingPractice textToType={lesson.text} lessonId={lesson.id} />
+            {lesson.text && <TypingPractice textToType={lesson.text} lessonId={lesson.id} />}
+            {lesson.drills && <VisualTypingDrill drills={lesson.drills} />}
         </div>
     );
 }

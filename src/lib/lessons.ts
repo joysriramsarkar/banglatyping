@@ -2,43 +2,43 @@ import type { Lesson } from "./types";
 
 export const lessons: Lesson[] = [
   {
+    id: "home-row-1",
+    title: "হোম রো অনুশীলন ১",
+    level: "Beginner",
+    drills: [
+        { prompt: "া", key: "f" }, { prompt: "স", key: "j" }, { prompt: " ", key: " " },
+        { prompt: "া", key: "f" }, { prompt: "স", key: "j" }, { prompt: " ", key: " " },
+        { prompt: "া", key: "f" }, { prompt: "স", key: "j" },
+    ]
+  },
+  {
+    id: "home-row-2",
+    title: "হোম রো অনুশীলন ২",
+    level: "Beginner",
+    drills: [
+        { prompt: "দ", key: "d" }, { prompt: "ক", key: "k" }, { prompt: " ", key: " " },
+        { prompt: "দ", key: "d" }, { prompt: "ক", key: "k" }, { prompt: " ", key: " " },
+        { prompt: "দ", key: "d" }, { prompt: "ক", key: "k" },
+    ]
+  },
+  {
+    id: "home-row-3",
+    title: "হোম রো অনুশীলন ৩",
+    level: "Beginner",
+    drills: [
+        { prompt: "ত", key: "s" }, { prompt: "ল", key: "l" }, { prompt: " ", key: " " },
+        { prompt: "ত", key: "s" }, { prompt: "ল", key: "l" }, { prompt: " ", key: " " },
+        { prompt: "ত", key: "s" }, { prompt: "ল", key: "l" },
+    ]
+  },
+   {
     id: "char-practice-1",
     title: "অক্ষর অনুশীলন ১ (ক-বর্গ)",
     level: "Beginner",
-    text: "ক কক খ খখ গ গগ ঘ ঘঘ ঙ",
+    text: "ক খ গ ঘ ঙ চ ছ জ ঝ ঞ ট ঠ ড ঢ ণ ত থ দ ধ ন প ফ ব ভ ম য র ল শ ষ স হ ড় ঢ় য়",
   },
   {
     id: "char-practice-2",
-    title: "অক্ষর অনুশীলন ২ (চ-বর্গ)",
-    level: "Beginner",
-    text: "চ চচ ছ ছছ জ জজ ঝ ঝঝ ঞ",
-  },
-   {
-    id: "char-practice-3",
-    title: "অক্ষর অনুশীলন ৩ (ট-বর্গ)",
-    level: "Beginner",
-    text: "ট টট ঠ ঠঠ ড ডড ঢ ঢঢ ণ",
-  },
-   {
-    id: "char-practice-4",
-    title: "অক্ষর অনুশীলন ৪ (ত-বর্গ)",
-    level: "Beginner",
-    text: "ত ত্ত থ থথ দ দ্দ ধ ধধ ন",
-  },
-   {
-    id: "char-practice-5",
-    title: "অক্ষর অনুশীলন ৫ (প-বর্গ)",
-    level: "Beginner",
-    text: "প পপ ফ ফফ ব বব ভ ভভ ম",
-  },
-   {
-    id: "char-practice-6",
-    title: "অক্ষর অনুশীলন ৬ (অন্যান্য)",
-    level: "Beginner",
-    text: "য র ল শ ষ স হ ড় ঢ় য়",
-  },
-  {
-    id: "char-practice-7",
     title: "কার-চিহ্ন অনুশীলন",
     level: "Beginner",
     text: "কা কি কী কু কূ কৃ কে কৈ কো কৌ কং কঃ কঁ",
