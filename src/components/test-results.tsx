@@ -7,6 +7,8 @@ import Certificate from "./certificate";
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { lessons } from "@/lib/lessons";
@@ -62,8 +64,8 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
         </div>
 
         <div className="space-y-2 text-base">
-          <StatItem icon={Target} label="সঠিক শব্দ" value={toBengaliNumber(Math.round(wpm * (timeElapsed/60)))} />
-          <StatItem icon={XCircle} label="ভুল শব্দ" value={toBengaliNumber(errors)} />
+          <StatItem icon={Target} label="সঠিক শব্দ" value={toBengaliNumber(Math.round(wpm * (timeElapsed/60) * (accuracy/100) ) )} />
+          <StatItem icon={XCircle} label="ভুল" value={toBengaliNumber(errors)} />
           <StatItem icon={TimerIcon} label="সময়" value={toBengaliNumber(timeElapsed)} unit="সেকেন্ড" />
         </div>
         
@@ -74,6 +76,9 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
                         <Button className="w-full">সার্টিফিকেট দেখুন</Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl p-0">
+                        <DialogHeader className="sr-only">
+                           <DialogTitle>সাফল্যের সনদপত্র</DialogTitle>
+                        </DialogHeader>
                         <Certificate name="ব্যবহারকারী" wpm={wpm} accuracy={accuracy} />
                     </DialogContent>
                  </Dialog>
