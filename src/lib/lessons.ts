@@ -6,29 +6,30 @@ export const lessons: Lesson[] = [
     title: "হোম রো অনুশীলন ১",
     level: "Beginner",
     drills: [
-        { prompt: "া", key: "f" }, { prompt: "স", key: "j" }, { prompt: " ", key: " " },
-        { prompt: "া", key: "f" }, { prompt: "স", key: "j" }, { prompt: " ", key: " " },
-        { prompt: "া", key: "f" }, { prompt: "স", key: "j" },
+        { prompt: "স", key: "s" }, { prompt: "ক", key: "k" }, { prompt: " ", key: " " },
+        { prompt: "দ", key: "d" }, { prompt: "ল", key: "l" }, { prompt: " ", key: " " },
+        { prompt: "া", key: "f" }, { prompt: "গ", key: "g" }, { prompt: "হ", key: "h" }, { prompt: "জ", key: "j" },
     ]
   },
   {
-    id: "home-row-2",
-    title: "হোম রো অনুশীলন ২",
+    id: "home-row-shift-1",
+    title: "হোম রো শিফট অনুশীলন",
     level: "Beginner",
     drills: [
-        { prompt: "দ", key: "d" }, { prompt: "ক", key: "k" }, { prompt: " ", key: " " },
-        { prompt: "দ", key: "d" }, { prompt: "ক", key: "k" }, { prompt: " ", key: " " },
-        { prompt: "দ", key: "d" }, { prompt: "ক", key: "k" },
+        { prompt: "আ", key: "a", shift: true }, { prompt: "শ", key: "s", shift: true }, { prompt: " ", key: " " },
+        { prompt: "ধ", key: "d", shift: true }, { prompt: "খ", key: "k", shift: true }, { prompt: " ", key: " " },
+        { prompt: "ঘ", key: "g", shift: true }, { prompt: "ঝ", key: "h", shift: true }, { prompt: "ষ", key: "l", shift: true },
     ]
   },
   {
-    id: "home-row-3",
-    title: "হোম রো অনুশীলন ৩",
+    id: "top-row-1",
+    title: "টপ রো অনুশীলন",
     level: "Beginner",
     drills: [
-        { prompt: "ত", key: "s" }, { prompt: "ল", key: "l" }, { prompt: " ", key: " " },
-        { prompt: "ত", key: "s" }, { prompt: "ল", key: "l" }, { prompt: " ", key: " " },
-        { prompt: "ত", key: "s" }, { prompt: "ল", key: "l" },
+        { prompt: "ড", key: "w" }, { prompt: "চ", key: "e" }, { prompt: "র", key: "r" },
+        { prompt: "ত", key: "t" }, { prompt: "য়", key: "y" }, { prompt: " ", key: " " },
+        { prompt: "প", key: "p" }, { prompt: "ও", key: "o" }, { prompt: "ই", key: "i" },
+        { prompt: "উ", key: "u" },
     ]
   },
    {

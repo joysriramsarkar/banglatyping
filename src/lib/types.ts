@@ -18,4 +18,5 @@ export interface TypingStats {
 export interface Drill {
   prompt: string; // The character(s) the user needs to type
   key: string; // The key on the keyboard to press
+  shift?: boolean;
 }

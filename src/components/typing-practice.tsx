@@ -49,11 +49,12 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         const expectedKey = currentDrill.key;
         
         let keyPressedCorrectly = false;
-        if (expectedKey === ' ') {
-            if (event.code === 'Space') {
-                keyPressedCorrectly = true;
-            }
-        } else if (event.key.toLowerCase() === expectedKey.toLowerCase()) {
+        
+        const isShiftMatch = event.shiftKey === !!currentDrill.shift;
+
+        if (event.key.toLowerCase() === expectedKey.toLowerCase() && isShiftMatch) {
+            keyPressedCorrectly = true;
+        } else if (expectedKey === ' ' && event.code === 'Space') {
             keyPressedCorrectly = true;
         }
         
@@ -111,14 +112,14 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                             
                             return (
                                 <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-2xl font-bold", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drill.prompt === ' ' ? 'Space' : drill.prompt}
+                                   {drill.prompt === ' ' ? '-' : drill.prompt}
                                 </div>
                             )
                         })}
                     </div>
                     
                     {/* Virtual Keyboard */}
-                    <VirtualKeyboard highlightKey={currentDrill.key} />
+                    <VirtualKeyboard highlightKey={currentDrill.key} needsShift={!!currentDrill.shift} />
                     
                     {/* Hand Guide */}
                     <HandGuide highlightKey={currentDrill.key} />
@@ -146,20 +147,20 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     )
 }
 
-const keyboardLayout: Record<string, {key: string, bn: string}[]> = {
+const keyboardLayout: Record<string, {key: string, bn: string, bnShift: string}[]> = {
     top: [
-        {key: 'q', bn: 'ঙ'}, {key: 'w', bn: 'ড'}, {key: 'e', bn: 'ড'}, {key: 'r', bn: 'র'}, {key: 't', bn: 'ত'}, 
-        {key: 'y', bn: 'য়'}, {key: 'u', bn: 'উ'}, {key: 'i', bn: 'ই'}, {key: 'o', bn: 'ও'}, {key: 'p', bn: 'প'}
+        {key: 'q', bn: 'ঙ', bnShift: 'ং'}, {key: 'w', bn: 'ড', bnShift: 'ঢ'}, {key: 'e', bn: 'চ', bnShift: 'ছ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ত', bnShift: 'থ'}, 
+        {key: 'y', bn: 'য়', bnShift: 'য'}, {key: 'u', bn: 'উ', bnShift: 'ঊ'}, {key: 'i', bn: 'ই', bnShift: 'ঈ'}, {key: 'o', bn: 'ও', bnShift: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ফ'}
     ],
     home: [
-        {key: 'a', bn: 'অ'}, {key: 's', bn: 'ত'}, {key: 'd', bn: 'দ'}, {key: 'f', bn: 'া'}, {key: 'g', bn: 'গ'},
-        {key: 'h', bn: 'হ'}, {key: 'j', bn: 'স'}, {key: 'k', bn: 'ক'}, {key: 'l', bn: 'ল'}
+        {key: 'a', bn: 'অ', bnShift: 'আ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'দ', bnShift: 'ধ'}, {key: 'f', bn: 'া', bnShift: 'অ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
+        {key: 'h', bn: 'হ', bnShift: 'ঝ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'}
     ],
     bottom: [
-        {key: 'z', bn: 'য'}, {key: 'x', bn: 'শ'}, {key: 'c', bn: 'চ'}, {key: 'v', bn: 'ভ'}, {key: 'b', bn: 'ব'},
-        {key: 'n', bn: 'ন'}, {key: 'm', bn: 'ম'}
+        {key: 'z', bn: 'য', bnShift: 'য়'}, {key: 'x', bn: 'শ', bnShift: 'ষ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'ভ', bnShift: 'ভ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম', bnShift: 'শ'}
     ],
-    space: [{key: ' ', bn: 'Space'}],
+    space: [{key: ' ', bn: '-', bnShift: ''}],
 };
 
 const keyToFingerMap: Record<string, { hand: 'left' | 'right', finger: 'pinky' | 'ring' | 'middle' | 'index' | 'thumb' }> = {
@@ -177,23 +178,36 @@ const keyToFingerMap: Record<string, { hand: 'left' | 'right', finger: 'pinky' |
 };
 
 
-const VirtualKeyboard = ({ highlightKey }: { highlightKey: string }) => (
+const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string, needsShift: boolean }) => (
     <div className="p-4 bg-background rounded-lg shadow-inner space-y-2">
         {Object.values(keyboardLayout).map((row, rowIndex) => (
             <div key={rowIndex} className="flex justify-center gap-1.5">
-                {row.map(keyData => (
-                    <div
-                        key={keyData.key}
-                        className={cn(
-                            "flex items-center justify-center h-12 rounded-md bg-secondary border border-b-4",
-                            keyData.key === ' ' ? 'w-64' : 'w-12',
-                            "text-xl font-bold",
-                            highlightKey.toLowerCase() === keyData.key.toLowerCase() && 'bg-primary/20 border-primary text-primary'
-                        )}
-                    >
-                        {keyData.bn}
-                    </div>
-                ))}
+                {row.map(keyData => {
+                    const isHighlighted = highlightKey.toLowerCase() === keyData.key.toLowerCase();
+                    return (
+                        <div
+                            key={keyData.key}
+                            className={cn(
+                                "flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4",
+                                keyData.key === ' ' ? 'w-64' : 'w-16',
+                                isHighlighted && 'bg-primary/20 border-primary text-primary'
+                            )}
+                        >
+                            <span className={cn(
+                                "text-sm",
+                                (isHighlighted && needsShift) && "font-bold text-lg text-primary"
+                            )}>
+                                {keyData.bnShift}
+                            </span>
+                            <span className={cn(
+                                "text-lg font-bold",
+                                (isHighlighted && !needsShift) && "text-primary text-2xl"
+                            )}>
+                                {keyData.bn}
+                            </span>
+                        </div>
+                    );
+                })}
             </div>
         ))}
     </div>
@@ -257,7 +271,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const [totalErrors, setTotalErrors] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
-  const [isFinished, setIsFinished] = useState(false);
+  const [isFinished, setIsFinished] useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
@@ -332,6 +346,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   }, [reset, initialText, timeLimit]);
   
   const finishSession = useCallback(() => {
+    if(isFinished) return;
     setIsFinished(true);
     pause();
     calculateWpm();
@@ -339,7 +354,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-  }, [pause, calculateWpm, calculateAccuracy]);
+  }, [isFinished, pause, calculateWpm, calculateAccuracy]);
 
   const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.normalize('NFC');
@@ -430,6 +445,12 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const isError = currentInput.length > 0 && !currentWord.startsWith(currentInput.normalize('NFC'));
 
 
+  useEffect(() => {
+    if (currentWordIndex === words.length && words.length > 0) {
+      finishSession();
+    }
+  }, [currentWordIndex, words.length, finishSession]);
+
   if(isFinished) {
     const finalErrors = typedWords.reduce((errorCount, typedWord, index) => {
         const targetWord = words[index];
@@ -461,20 +482,20 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
           </p>
       </Card>
 
-       <div className="w-full h-16 flex flex-col items-center justify-center">
+       <div className="w-full h-24 flex flex-col items-center justify-center">
         <div className={cn(
-          "text-2xl font-mono p-2 flex items-center justify-center min-h-[3rem]",
+          "text-2xl font-mono p-2 flex items-center justify-center min-h-[3rem] w-full",
           isError ? "text-red-500" : "text-green-500"
         )}>
-          <span>
-           {currentWord.split('').map((char, index) => {
+          <div className="flex">
+            {currentWord.split('').map((char, index) => {
               let charClass = "opacity-50";
               if(index < currentInput.length) {
                 charClass = currentInput[index] === char ? "opacity-100" : "opacity-100 text-red-500";
               }
               return <span key={index} className={charClass}>{char}</span>
            })}
-           </span>
+          </div>
         </div>
         <Input
           ref={inputRef}
