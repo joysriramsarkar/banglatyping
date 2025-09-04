@@ -49,25 +49,17 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
             return;
         }
         event.preventDefault();
-    
+
         const currentDrill = drills[currentDrillIndex];
+
+        // Match the physical key code (e.g., 'KeyA', 'KeyK', 'Space')
+        // This is more reliable than event.key for layout-independent checks.
+        const codeIsCorrect = `Key${currentDrill.key.toUpperCase()}` === event.code || (currentDrill.key === ' ' && event.code === 'Space') || (currentDrill.key === '\\' && event.code === 'Backslash');
         
-        let keyIsCorrect = false;
-        if (currentDrill.shift) {
-            // For shift keys, we can check the event.key directly as it gives the produced character
-            keyIsCorrect = event.key === currentDrill.prompt;
-        } else {
-            // For non-shift keys, event.key gives the character, e.g., 'k'
-            // We compare it with the drill's base key
-            keyIsCorrect = event.key.toLowerCase() === currentDrill.key.toLowerCase() && !event.shiftKey;
-        }
-        
-        // Special case for space
-        if (currentDrill.key === ' ' && event.code === 'Space') {
-            keyIsCorrect = true;
-        }
-    
-        if (keyIsCorrect) {
+        // Check if the shift key state matches the drill requirement
+        const shiftIsCorrect = !!currentDrill.shift === event.shiftKey;
+
+        if (codeIsCorrect && shiftIsCorrect) {
             setStatus('correct');
             setTimeout(() => {
                 setStatus('pending');
@@ -443,12 +435,11 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         
         correctPart = currentWord.substring(0, i);
         if (i < normalizedInput.length) { // There is a mistake
-            incorrectPart = normalizedInput.substring(i);
-            remainingPart = currentWord.substring(i);
+            incorrectPart = currentWord.substring(i, normalizedInput.length);
+            remainingPart = currentWord.substring(normalizedInput.length);
         } else { // No mistake yet
             remainingPart = currentWord.substring(i);
         }
-
 
         return (
             <>
@@ -529,6 +520,7 @@ export { VisualTypingDrill };
     
 
     
+
 
 
 
