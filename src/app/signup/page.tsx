@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
@@ -21,7 +24,7 @@ export default function SignupPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -30,34 +33,89 @@ export default function SignupPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    // Mock signup logic with a delay
-    setTimeout(() => {
-      try {
-        if (!name || !email || !password) {
-            throw new Error("অনুগ্রহ করে সমস্ত তথ্য পূরণ করুন।");
-        }
-        // In a real app, you would make an API call here.
-        // For this demo, we'll use localStorage.
-        localStorage.setItem("user", JSON.stringify({ name, email, isLoggedIn: true }));
-        
-        toast({
-          title: "সাফল্য!",
-          description: "আপনার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে।",
-        });
-        
-        router.push("/dashboard");
-
-      } catch (error: any) {
+    if (!name || !email || !password) {
         toast({
           variant: "destructive",
           title: "ত্রুটি",
-          description: error.message || "অ্যাকাউন্ট তৈরিতে একটি সমস্যা হয়েছে।",
+          description: "অনুগ্রহ করে সমস্ত তথ্য পূরণ করুন।",
         });
-      } finally {
         setIsLoading(false);
+        return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Update user profile
+      await updateProfile(user, { displayName: name });
+
+      // Create user document in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        displayName: name,
+        email: user.email,
+        photoURL: user.photoURL,
+        createdAt: new Date(),
+      });
+
+      toast({
+        title: "সাফল্য!",
+        description: "আপনার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে।",
+      });
+      
+      router.push("/dashboard");
+
+    } catch (error: any) {
+      const errorCode = error.code;
+      let errorMessage = "অ্যাকাউন্ট তৈরিতে একটি সমস্যা হয়েছে।";
+      if (errorCode === 'auth/email-already-in-use') {
+          errorMessage = "এই ইমেল ঠিকানাটি 이미 ব্যবহৃত হচ্ছে।";
+      } else if (errorCode === 'auth/weak-password') {
+          errorMessage = "পাসওয়ার্ডটি খুব দুর্বল। অনুগ্রহ করে আরও শক্তিশালী পাসওয়ার্ড দিন।";
       }
-    }, 1000);
+      toast({
+        variant: "destructive",
+        title: "ত্রুটি",
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
+    const handleGoogleSignup = async () => {
+    setIsLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Create user document in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        displayName: user.displayName,
+        email: user.email,
+        photoURL: user.photoURL,
+        createdAt: new Date(),
+      }, { merge: true }); // Use merge to avoid overwriting existing data if user signs up differently
+
+      toast({
+        title: "সাফল্য!",
+        description: `স্বাগতম, ${user.displayName}!`,
+      });
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "ত্রুটি",
+        description: "Google দিয়ে সাইন আপ করার সময় একটি সমস্যা হয়েছে।",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
@@ -84,9 +142,9 @@ export default function SignupPage() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "লোড হচ্ছে..." : "অ্যাকাউন্ট তৈরি করুন"}
             </Button>
-            <Button variant="outline" className="w-full" disabled={isLoading}>
+            <Button variant="outline" type="button" className="w-full" onClick={handleGoogleSignup} disabled={isLoading}>
               <GoogleIcon />
-              গুগল দিয়ে সাইন আপ করুন
+              {isLoading ? "লোড হচ্ছে..." : "গুগল দিয়ে সাইন আপ করুন"}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">

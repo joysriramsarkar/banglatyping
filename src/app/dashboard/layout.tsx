@@ -1,4 +1,3 @@
-
 "use client"
 
 import {
@@ -20,27 +19,20 @@ import {
   Timer,
   Gamepad2,
   User,
+  LogOut,
   LogIn,
   Settings,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
+import { AuthProvider, useAuth } from "@/hooks/use-auth"
+import AuthGuard from "@/components/auth-guard"
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter();
-
-  // This is a mock user. In a real app, you'd get this from an auth context.
-  const user = {
-    name: "ব্যবহারকারী",
-    email: "user@example.com",
-    isLoggedIn: false, // Set to true to see the logged-in state
-  }
+  const { user, userData, signOut } = useAuth();
 
   const navItems = [
     { href: "/dashboard", icon: Home, label: "ড্যাশবোর্ড" },
@@ -76,18 +68,18 @@ export default function DashboardLayout({
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-            {user.isLoggedIn ? (
+            {user ? (
               <div className="flex items-center gap-2 p-2 rounded-md transition-colors hover:bg-sidebar-accent">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src="https://picsum.photos/100" alt={user.name} data-ai-hint="user avatar" />
-                  <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={user.photoURL || "https://picsum.photos/100"} alt={userData?.displayName || 'User'} data-ai-hint="user avatar" />
+                  <AvatarFallback>{userData?.displayName?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
-                  <p className="font-semibold text-sm truncate">{user.name}</p>
+                  <p className="font-semibold text-sm truncate">{userData?.displayName}</p>
                   <p className="text-xs text-sidebar-foreground/70 truncate">{user.email}</p>
                 </div>
-                <Button variant="ghost" size="icon" className="group-data-[collapsible=icon]:hidden">
-                  <LogIn className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="group-data-[collapsible=icon]:hidden" onClick={signOut}>
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
@@ -108,9 +100,26 @@ export default function DashboardLayout({
                   {/* Potentially add breadcrumbs or page title here */}
               </div>
           </header>
-          <main className="p-4 sm:px-6 sm:py-0">{children}</main>
+          <main className="p-4 sm:px-6 sm:py-0">
+             <AuthGuard>
+                {children}
+            </AuthGuard>
+          </main>
         </SidebarInset>
       </SidebarProvider>
     </div>
+  )
+}
+
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <AuthProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </AuthProvider>
   )
 }
