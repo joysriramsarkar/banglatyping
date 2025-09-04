@@ -41,33 +41,37 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     const totalDrills = drills.length;
     const progress = (currentDrillIndex / totalDrills) * 100;
     const router = useRouter();
+    const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
         if (modifierKeys.includes(event.key) || currentDrillIndex >= totalDrills) {
-            if (event.key !== 'Shift') event.preventDefault();
+            event.preventDefault();
             return;
         }
         event.preventDefault();
+        
+        if (statusTimeoutRef.current) {
+          clearTimeout(statusTimeoutRef.current);
+        }
 
         const currentDrill = drills[currentDrillIndex];
 
-        // Match the physical key code (e.g., 'KeyA', 'KeyK', 'Space')
-        // This is more reliable than event.key for layout-independent checks.
-        const codeIsCorrect = `Key${currentDrill.key.toUpperCase()}` === event.code || (currentDrill.key === ' ' && event.code === 'Space') || (currentDrill.key === '\\' && event.code === 'Backslash');
+        const codeIsCorrect = `Key${currentDrill.key.toUpperCase()}` === event.code || 
+                              (currentDrill.key === ' ' && event.code === 'Space') || 
+                              (currentDrill.key === '\\' && event.code === 'Backslash');
         
-        // Check if the shift key state matches the drill requirement
         const shiftIsCorrect = !!currentDrill.shift === event.shiftKey;
 
         if (codeIsCorrect && shiftIsCorrect) {
             setStatus('correct');
-            setTimeout(() => {
+            setCurrentDrillIndex(prev => prev + 1);
+            statusTimeoutRef.current = setTimeout(() => {
                 setStatus('pending');
-                setCurrentDrillIndex(prev => prev + 1);
             }, 300);
         } else {
             setStatus('incorrect');
-            setTimeout(() => {
+            statusTimeoutRef.current = setTimeout(() => {
                 setStatus('pending');
             }, 500);
         }
@@ -78,6 +82,9 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         window.addEventListener('keydown', handleKeyPress);
         return () => {
             window.removeEventListener('keydown', handleKeyPress);
+            if (statusTimeoutRef.current) {
+              clearTimeout(statusTimeoutRef.current);
+            }
         };
     }, [handleKeyPress]);
 
@@ -434,18 +441,20 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         }
         
         correctPart = currentWord.substring(0, i);
-
-        const mistakeIndex = i;
         
-        incorrectPart = normalizedInput.substring(mistakeIndex);
-        remainingPart = currentWord.substring(normalizedInput.length);
+        if (i < normalizedInput.length) { // Mistake found
+          incorrectPart = normalizedInput.substring(i);
+          remainingPart = currentWord.substring(i);
+        } else {
+          remainingPart = currentWord.substring(i);
+        }
 
 
         return (
             <>
             <span className="text-green-500">{correctPart}</span>
             <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
-            <span className="text-muted-foreground opacity-50">{remainingPart}</span>
+            <span className="text-muted-foreground opacity-50">{remainingPart.substring(incorrectPart.length)}</span>
             </>
         );
     };
@@ -520,6 +529,7 @@ export { VisualTypingDrill };
     
 
     
+
 
 
 
