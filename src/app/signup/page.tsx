@@ -96,8 +96,17 @@ export default function SignupPage() {
     }
   };
   
-  const handleOAuthSignup = async (provider: GoogleAuthProvider | FacebookAuthProvider | OAuthProvider) => {
+  const handleOAuthSignup = async (providerName: 'google' | 'facebook' | 'microsoft') => {
     setIsLoading(true);
+    let provider;
+    if (providerName === 'google') {
+        provider = new GoogleAuthProvider();
+    } else if (providerName === 'facebook') {
+        provider = new FacebookAuthProvider();
+    } else {
+        provider = new OAuthProvider('microsoft.com');
+    }
+
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
@@ -119,7 +128,7 @@ export default function SignupPage() {
       toast({
         variant: "destructive",
         title: "ত্রুটি",
-        description: "সাইন আপ করার সময় একটি সমস্যা হয়েছে।",
+        description: "সাইন আপ করার সময় একটি সমস্যা হয়েছে।",
       });
     } finally {
       setIsLoading(false);
@@ -160,15 +169,15 @@ export default function SignupPage() {
                     <span className="bg-background px-2 text-muted-foreground">অথবা</span>
                 </div>
             </div>
-            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup(new GoogleAuthProvider())} disabled={isLoading}>
+            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup('google')} disabled={isLoading}>
               <GoogleIcon />
               {isLoading ? "লোড হচ্ছে..." : "গুগল দিয়ে সাইন আপ করুন"}
             </Button>
-            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup(new FacebookAuthProvider())} disabled={isLoading}>
+            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup('facebook')} disabled={isLoading}>
               <FacebookIcon />
               {isLoading ? "লোড হচ্ছে..." : "ফেসবুক দিয়ে সাইন আপ করুন"}
             </Button>
-            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup(new OAuthProvider('microsoft.com'))} disabled={isLoading}>
+            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup('microsoft')} disabled={isLoading}>
               <MicrosoftIcon />
               {isLoading ? "লোড হচ্ছে..." : "মাইক্রোসফ্ট দিয়ে সাইন আপ করুন"}
             </Button>
@@ -184,5 +193,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    
