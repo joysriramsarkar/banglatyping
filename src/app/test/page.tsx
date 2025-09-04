@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -10,6 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Timer } from "lucide-react";
 
 const timeOptions = [1, 2, 5, 10];
+
+const toBengaliNumber = (num: number | string) => {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
+};
 
 export default function TestPage() {
   const [selectedTime, setSelectedTime] = useState(1);
@@ -27,7 +33,7 @@ export default function TestPage() {
       <div>
         <div className="text-center mb-8">
             <h1 className="text-3xl font-bold font-headline">টাইপিং টেস্ট</h1>
-            <p className="text-muted-foreground">{selectedTime} মিনিটের পরীক্ষা</p>
+            <p className="text-muted-foreground">{toBengaliNumber(selectedTime)} মিনিটের পরীক্ষা</p>
         </div>
         <TypingPractice textToType={paragraph} timeLimit={selectedTime} />
       </div>
@@ -54,10 +60,10 @@ export default function TestPage() {
                 <Label
                   key={time}
                   htmlFor={`time-${time}`}
-                  className="flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer hover:bg-accent has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary"
+                  className="flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer transition-colors hover:bg-accent has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary"
                 >
                   <RadioGroupItem value={String(time)} id={`time-${time}`} className="sr-only" />
-                  <span className="text-2xl font-bold">{time}</span>
+                  <span className="text-2xl font-bold">{toBengaliNumber(time)}</span>
                   <span className="text-muted-foreground">মিনিট</span>
                 </Label>
               ))}
