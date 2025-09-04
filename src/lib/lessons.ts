@@ -1,33 +1,109 @@
 import type { Lesson } from "./types";
 
+const generateDrills = (chars: string[], count: number): {prompt: string, key: string, shift?: boolean}[] => {
+    const drills: {prompt: string, key: string, shift?: boolean}[] = [];
+    const keyMap = homaRowKeyMap.flatMap(r => r.keys);
+
+    for (let i = 0; i < count; i++) {
+        const char = chars[Math.floor(Math.random() * chars.length)];
+        const mapping = keyMap.find(k => k.bn === char || k.bnShift === char);
+        if(mapping) {
+            drills.push({
+                prompt: char,
+                key: mapping.key,
+                shift: mapping.bnShift === char
+            })
+        }
+    }
+    return drills;
+};
+
+
+const homaRowKeyMap = [
+    {
+        row: 'home',
+        keys: [
+            {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
+            {key: 'h', bn: '্', bnShift: 'হ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ষ', bnShift: 'ল'}, // Note: l is swapped in image vs normal avro
+        ]
+    },
+     {
+        row: 'top',
+        keys: [
+            {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
+            {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'}
+        ]
+    },
+    {
+       row: 'bottom',
+       keys: [
+            {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
+            {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'},
+       ]
+    }
+];
+
+
 export const lessons: Lesson[] = [
+  // Home Row Lessons - Stage 1
   {
-    id: "home-row-1",
-    title: "হোম রো অনুশীলন ১",
+    id: "home-row-1-1-left-hand-chars",
+    title: "হোম রো ১.১: বাম হাত (অক্ষর)",
     level: "Beginner",
-    drills: [
-        { prompt: "া", key: "a" }, { prompt: "স", key: "s" }, { prompt: "ড", key: "d" }, { prompt: "ফ", key: "f" }, { prompt: "গ", key: "g" }, { prompt: " ", key: " " },
-        { prompt: "্", key: "h" }, { prompt: "জ", key: "j" }, { prompt: "ক", key: "k" }, { prompt: "ল", key: "l" },
-    ]
+    drills: generateDrills(['া', 'স', 'ড', 'ফ', 'গ'], 20)
   },
   {
-    id: "home-row-shift-1",
-    title: "হোম রো শিফট অনুশীলন",
+    id: "home-row-1-2-left-hand-words",
+    title: "হোম রো ১.২: বাম হাত (শব্দ)",
     level: "Beginner",
-    drills: [
-        { prompt: "অ", key: "a", shift: true }, { prompt: "শ", key: "s", shift: true }, { prompt: "ঢ", key: "d", shift: true },
-        { prompt: "ৎ", key: "f", shift: true }, { prompt: "ঘ", key: "g", shift: true }, { prompt: " ", key: " " },
-        { prompt: "হ", key: "h", shift: true }, { prompt: "ঝ", key: "j", shift: true }, { prompt: "খ", key: "k", shift: true }, { prompt: "ষ", key: "l", shift: true },
-    ]
+    text: "সাদ ডগা ফাগা গাসা কsaga ফাদ ডাস গড"
   },
+  {
+    id: "home-row-1-3-right-hand-chars",
+    title: "হোম রো ১.৩: ডান হাত (অক্ষর)",
+    level: "Beginner",
+    drills: generateDrills(['্', 'জ', 'ক', 'ল', 'ষ'], 20)
+  },
+   {
+    id: "home-row-1-4-right-hand-words",
+    title: "হোম রো ১.৪: ডান হাত (শব্দ)",
+    level: "Beginner",
+    text: "কাজ কলম লজ জষ কাজল কল"
+  },
+  {
+    id: "home-row-1-5-shift-chars",
+    title: "হোম রো ১.৫: শিফট কী (অক্ষর)",
+    level: "Beginner",
+    drills: generateDrills(['অ', 'শ', 'ঢ', 'ৎ', 'ঘ', 'হ', 'ঝ', 'খ', 'ল'], 20)
+  },
+   {
+    id: "home-row-1-6-shift-words",
+    title: "হোম রো ১.৬: শিফট কী (শব্দ)",
+    level: "Beginner",
+    text: "অশোক ঢাক ঘষাৎ হঠাৎ আশঙ্কা ঘোষণা"
+  },
+  {
+    id: "home-row-1-7-paragraph-1",
+    title: "হোম রো ১.৭: অনুচ্ছেদ অনুশীলন ১",
+    level: "Beginner",
+    text: "সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ।"
+  },
+  {
+    id: "home-row-1-8-paragraph-2",
+    title: "হোম রো ১.৮: অনুচ্ছেদ অনুশীলন ২",
+    level: "Beginner",
+    text: "অঘোষ সকাশ। শশাrakash। ঘষাঘষি। শশাঙ্ক। আকাশ। সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। আকাশ সকল শশাঙ্ক। শশাঙ্ক আকাশ সকল। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক।"
+  },
+  // Other Beginner Lessons
   {
     id: "top-row-1",
     title: "টপ রো অনুশীলন",
     level: "Beginner",
     drills: [
-        { prompt: "ক্ষ", key: "q" }, { prompt: "ঙ", key: "w" }, { prompt: "ে", key: "e" }, { prompt: "র", key: "r" },
-        { prompt: "ট", key: "t" }, { prompt: " ", key: " " },
-        { prompt: "য", key: "y" }, { prompt: "ু", key: "u" }, { prompt: "ি", key: "i" }, { prompt: "ো", key: "o" }, { prompt: "প", key: "p" },
+        { prompt: 'ক্ষ', key: 'q' }, { prompt: 'ঙ', key: 'w' }, { prompt: 'ে', key: 'e' }, { prompt: 'র', key: 'r' }, { prompt: 'ট', key: 't' },
+        { prompt: 'য', key: 'y' }, { prompt: 'ু', key: 'u' }, { prompt: 'ি', key: 'i' }, { prompt: 'ো', key: 'o' }, { prompt: 'প', key: 'p' },
+        { prompt: 'ঁ', key: 'q', shift: true }, { prompt: 'ঃ', key: 'w', shift: true }, { prompt: 'ৈ', key: 'e', shift: true }, { prompt: 'ড়', key: 'r', shift: true }, { prompt: 'ঠ', key: 't', shift: true },
+        { prompt: 'য়', key: 'y', shift: true }, { prompt: 'ূ', key: 'u', shift: true }, { prompt: 'ী', key: 'i', shift: true }, { prompt: 'ৌ', key: 'o', shift: true }, { prompt: 'ঢ়', key: 'p', shift: true }
     ]
   },
   {
@@ -35,14 +111,15 @@ export const lessons: Lesson[] = [
     title: "বটম রো অনুশীলন",
     level: "Beginner",
     drills: [
-        { prompt: "্য", key: "z" }, { prompt: "ত", key: "x" }, { prompt: "চ", key: "c" }, { prompt: "দ", key: "v" },
-        { prompt: "ব", key: "b" }, { prompt: " ", key: " " },
-        { prompt: "ন", key: "n" }, { prompt: "ম", key: "m" }, { prompt: "ৃ", key: "\\" },
+        { prompt: '্য', key: 'z' }, { prompt: 'ত', key: 'x' }, { prompt: 'চ', key: 'c' }, { prompt: 'দ', key: 'v' }, { prompt: 'ব', key: 'b' },
+        { prompt: 'ন', key: 'n' }, { prompt: 'ম', key: 'm' }, { prompt: 'ৃ', key: '\\' },
+        { prompt: 'ং', key: 'z', shift: true }, { prompt: 'থ', key: 'x', shift: true }, { prompt: 'ছ', key: 'c', shift: true }, { prompt: 'ধ', key: 'v', shift: true }, { prompt: 'ভ', key: 'b', shift: true },
+        { prompt: 'ণ', key: 'n', shift: true }, { prompt: 'ঞ', key: '\\', shift: true }
     ]
   },
-   {
+  {
     id: "char-practice-1",
-    title: "অক্ষর অনুশীলন ১ (ক-বর্গ)",
+    title: "বর্ণমালা অনুশীলন",
     level: "Beginner",
     text: "ক খ গ ঘ ঙ চ ছ জ ঝ ঞ ট ঠ ড ঢ ণ ত থ দ ধ ন প ফ ব ভ ম য র ল শ ষ স হ ড় ঢ় য়",
   },
@@ -52,6 +129,7 @@ export const lessons: Lesson[] = [
     level: "Beginner",
     text: "কা কি কী কু কূ কৃ কে কৈ কো কৌ কং কঃ কঁ",
   },
+  // Intermediate Lessons
   {
     id: "word-practice-1",
     title: "ছোট শব্দ অনুশীলন",
@@ -70,6 +148,7 @@ export const lessons: Lesson[] = [
     level: "Intermediate",
     text: "কাজ ঘর বাজার বাবা মা ভাই বোন বন্ধু। প্রতিদিন সকাল দুপুর রাত খাওয়া ঘুম।",
   },
+  // Advanced Lessons
   {
     id: "sentence-practice-1",
     title: "ছোট বাক্য অনুশীলন",
@@ -84,7 +163,7 @@ export const lessons: Lesson[] = [
   },
   {
     id: "paragraph-practice-1",
-    title: "অনুচ্ছেদ অনুশীলন",
+    title: "অনুচ্ছেদ অনুশীলন - সাধারণ",
     level: "Advanced",
     text: "দ্রুত বাদামী শেয়ালটি অলস কুকুরটিকে লাফিয়ে পার হয়ে গেল। এই বাক্যটি ইংরেজি বর্ণমালার সমস্ত অক্ষর ব্যবহার করে লেখা যায়, তেমনই বাংলাতেও এমন বাক্য তৈরি করা সম্ভব যা প্রায় সমস্ত বর্ণ ব্যবহার করে। টাইপিং অনুশীলন ধৈর্য ও অধ্যবসায়ের বিষয়।",
   },
