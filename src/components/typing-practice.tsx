@@ -50,9 +50,6 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         
         let keyPressedCorrectly = false;
         
-        // This is the correct logic for shift key matching.
-        // It checks if the event's shiftKey state is the same as what the drill requires.
-        // `!!` converts undefined/false to false, and true to true.
         const isShiftMatch = event.shiftKey === !!currentDrill.shift;
 
         if (event.key.toLowerCase() === expectedKey.toLowerCase() && isShiftMatch) {
@@ -297,7 +294,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
       setWpm(Math.round(grossWpm > 0 ? grossWpm : 0));
     }
     
-    const correctWords = typedWords.filter((word, index) => word === words[index]);
+    const correctWords = typedWords.filter((word, index) => word.normalize('NFC') === words[index]?.normalize('NFC'));
     const newAccuracy = typedWords.length > 0 ? (correctWords.length / typedWords.length) * 100 : 100;
     setAccuracy(Math.round(newAccuracy > 0 ? newAccuracy : 0));
 
@@ -491,5 +488,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   );
 }
 export { VisualTypingDrill };
+
+    
 
     
