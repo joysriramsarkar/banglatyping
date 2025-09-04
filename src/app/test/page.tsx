@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Timer } from "lucide-react";
+import { Timer, FileText, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const timeOptions = [
     { value: 1, label: '১' },
@@ -24,39 +25,59 @@ const toBengaliNumber = (num: number | string) => {
 };
 
 export default function TestPage() {
-  const [selectedTime, setSelectedTime] = useState(1);
+  const [selectedTime, setSelectedTime] = useState<number | null>(null);
+  const [selectedParagraph, setSelectedParagraph] = useState<string | null>(null);
   const [testStarted, setTestStarted] = useState(false);
-  const [paragraph, setParagraph] = useState("");
 
   const startTest = () => {
-    const randomParagraph = practiceParagraphs[Math.floor(Math.random() * practiceParagraphs.length)];
-    setParagraph(randomParagraph);
-    setTestStarted(true);
+    if (selectedParagraph && selectedTime) {
+      setTestStarted(true);
+    }
   };
 
-  if (testStarted) {
+  if (testStarted && selectedParagraph && selectedTime) {
     return (
       <div>
         <div className="text-center mb-8">
             <h1 className="text-3xl font-bold font-headline">টাইপিং টেস্ট</h1>
             <p className="text-muted-foreground">{toBengaliNumber(selectedTime)} মিনিটের পরীক্ষা</p>
         </div>
-        <TypingPractice textToType={paragraph} timeLimit={selectedTime} />
+        <TypingPractice textToType={selectedParagraph} timeLimit={selectedTime} />
       </div>
     );
   }
 
   return (
     <div className="flex items-center justify-center py-12">
-      <Card className="w-full max-w-lg">
+      <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
           <Timer className="mx-auto h-12 w-12 text-primary" />
           <CardTitle className="text-3xl font-headline">টাইপিং টেস্ট</CardTitle>
-          <CardDescription>আপনার গতি এবং নির্ভুলতা পরীক্ষা করুন। একটি সময় নির্বাচন করে শুরু করুন।</CardDescription>
+          <CardDescription>আপনার গতি এবং নির্ভুলতা পরীক্ষা করুন। একটি অনুচ্ছেদ ও সময় নির্বাচন করে শুরু করুন।</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-8">
+          
           <div>
-            <Label className="text-base font-medium mb-4 block text-center">সময়কাল নির্বাচন করুন (মিনিট)</Label>
+            <Label className="text-base font-medium mb-4 block text-center">১. একটি অনুচ্ছেদ নির্বাচন করুন</Label>
+            <ScrollArea className="h-48 w-full rounded-md border p-4">
+                 <div className="space-y-4">
+                    {practiceParagraphs.map((p, index) => (
+                        <div key={index}
+                             onClick={() => setSelectedParagraph(p)}
+                             className={cn("p-3 border rounded-lg cursor-pointer transition-all",
+                                selectedParagraph === p ? "border-primary ring-2 ring-primary" : "hover:bg-accent"
+                             )}
+                        >
+                           <p className="text-sm text-muted-foreground truncate">{p}</p>
+                           {selectedParagraph === p && <CheckCircle className="h-5 w-5 text-primary absolute top-2 right-2"/>}
+                        </div>
+                    ))}
+                 </div>
+            </ScrollArea>
+          </div>
+          
+          <div>
+            <Label className="text-base font-medium mb-4 block text-center">২. সময়কাল নির্বাচন করুন (মিনিট)</Label>
             <RadioGroup
               value={String(selectedTime)}
               onValueChange={(value) => setSelectedTime(parseInt(value))}
@@ -79,7 +100,7 @@ export default function TestPage() {
               ))}
             </RadioGroup>
           </div>
-          <Button onClick={startTest} size="lg" className="w-full">
+          <Button onClick={startTest} size="lg" className="w-full" disabled={!selectedParagraph || !selectedTime}>
             টেস্ট শুরু করুন
           </Button>
         </CardContent>
@@ -87,3 +108,4 @@ export default function TestPage() {
     </div>
   );
 }
+

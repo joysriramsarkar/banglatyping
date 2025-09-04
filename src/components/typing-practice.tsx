@@ -1,6 +1,5 @@
 
 
-
 "use client";
 
 import * as React from "react";
@@ -445,7 +444,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
               <span
                 key={index}
                 className={cn(
-                  'transition-colors px-1',
+                  'transition-colors',
                   getWordClass(index),
                   index === currentWordIndex && 'bg-yellow-100 dark:bg-yellow-800/50 rounded'
                 )}
@@ -498,6 +497,7 @@ export { VisualTypingDrill };
     
 
     
+
 
 
 
