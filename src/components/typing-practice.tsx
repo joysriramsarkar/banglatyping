@@ -51,9 +51,23 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         event.preventDefault();
     
         const currentDrill = drills[currentDrillIndex];
-        const keyToPress = currentDrill.key.toLowerCase();
+        
+        let keyIsCorrect = false;
+        if (currentDrill.shift) {
+            // For shift keys, we can check the event.key directly as it gives the produced character
+            keyIsCorrect = event.key === currentDrill.prompt;
+        } else {
+            // For non-shift keys, event.key gives the character, e.g., 'k'
+            // We compare it with the drill's base key
+            keyIsCorrect = event.key.toLowerCase() === currentDrill.key.toLowerCase() && !event.shiftKey;
+        }
+        
+        // Special case for space
+        if (currentDrill.key === ' ' && event.code === 'Space') {
+            keyIsCorrect = true;
+        }
     
-        if (event.key.toLowerCase() === keyToPress && !!currentDrill.shift === event.shiftKey) {
+        if (keyIsCorrect) {
             setStatus('correct');
             setTimeout(() => {
                 setStatus('pending');
@@ -411,35 +425,39 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const currentWord = words[currentWordIndex]?.normalize('NFC') || '';
   const normalizedInput = currentInput.normalize('NFC');
   
-  const getPreviewContent = () => {
-      if (!currentWord && !normalizedInput) return null;
+    const getPreviewContent = () => {
+        if (!currentWord && !normalizedInput) return null;
 
-      let correctPart = '';
-      let incorrectPart = '';
-      let remainingPart = currentWord;
-      
-      let i = 0;
-      while (i < normalizedInput.length && i < currentWord.length) {
-          if (normalizedInput[i] === currentWord[i]) {
-              i++;
-          } else {
-              break;
-          }
-      }
-      
-      correctPart = currentWord.substring(0, i);
-      const typedIncorrectPart = normalizedInput.substring(i);
-      incorrectPart = typedIncorrectPart; // Show what the user typed incorrectly
-      remainingPart = currentWord.substring(i);
+        let correctPart = '';
+        let incorrectPart = '';
+        let remainingPart = currentWord;
+        
+        let i = 0;
+        while (i < normalizedInput.length && i < currentWord.length) {
+            if (normalizedInput[i] === currentWord[i]) {
+                i++;
+            } else {
+                break;
+            }
+        }
+        
+        correctPart = currentWord.substring(0, i);
+        if (i < normalizedInput.length) { // There is a mistake
+            incorrectPart = normalizedInput.substring(i);
+            remainingPart = currentWord.substring(i);
+        } else { // No mistake yet
+            remainingPart = currentWord.substring(i);
+        }
 
-      return (
-        <>
-          <span className="text-green-500">{correctPart}</span>
-          <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
-          <span className="text-muted-foreground opacity-50">{remainingPart.substring(incorrectPart.length)}</span>
-        </>
-      );
-  };
+
+        return (
+            <>
+            <span className="text-green-500">{correctPart}</span>
+            <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
+            <span className="text-muted-foreground opacity-50">{remainingPart}</span>
+            </>
+        );
+    };
 
 
   const isError = normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
@@ -511,6 +529,7 @@ export { VisualTypingDrill };
     
 
     
+
 
 
 
