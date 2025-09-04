@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Type } from 'lucide-react';
 import { Logo } from '@/components/logo';
 
 export default function Home() {
@@ -27,7 +26,7 @@ export default function Home() {
       <main className="flex-grow container mx-auto flex flex-col items-center justify-center p-4 text-center">
         <div className="w-full max-w-4xl space-y-8">
           <section>
-             <Type className="h-24 w-24 mx-auto text-primary mb-4" />
+             <div className="h-24 w-24 mx-auto text-primary mb-4 bg-primary/10 rounded-full flex items-center justify-center text-5xl font-bold font-headline">টি</div>
             <h1 className="text-4xl md:text-6xl font-bold mb-4 font-headline text-primary">বাংলা টাইপিং মাস্টার</h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               ইন্টারেক্টিভ পাঠ, গেম এবং পরীক্ষার মাধ্যমে আপনার বাংলা টাইপিং দক্ষতা বাড়ান।
@@ -51,7 +50,7 @@ export default function Home() {
       </main>
       
       <footer className="p-4 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Bangla Typing Master. All rights reserved.
+        © {new Date().getFullYear()} বাংলা টাইপিং মাস্টার. All rights reserved.
       </footer>
     </div>
   );

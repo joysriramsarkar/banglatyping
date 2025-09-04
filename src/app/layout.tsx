@@ -15,7 +15,7 @@ const noto_sans_bengali = Noto_Sans_Bengali({
 });
 
 export const metadata: Metadata = {
-  title: 'Bangla Typing Master',
+  title: 'বাংলা টাইপিং মাস্টার',
   description: 'Master Bangla typing with interactive lessons and games.',
 };
 
