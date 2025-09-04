@@ -42,24 +42,18 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     const progress = (currentDrillIndex / totalDrills) * 100;
     const router = useRouter();
 
-     const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    const handleKeyPress = useCallback((event: KeyboardEvent) => {
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
         if (modifierKeys.includes(event.key) || status !== 'pending' || currentDrillIndex >= totalDrills) {
-            event.preventDefault();
+            if (event.key !== 'Shift') event.preventDefault();
             return;
         }
         event.preventDefault();
-
+    
         const currentDrill = drills[currentDrillIndex];
-        
-        let keyPressedCorrectly = false;
-        const keyToPress = currentDrill.key === ' ' ? 'Space' : `Key${currentDrill.key.toUpperCase()}`;
-
-        if (event.code === keyToPress && !!currentDrill.shift === event.shiftKey) {
-            keyPressedCorrectly = true;
-        }
-        
-        if (keyPressedCorrectly) {
+        const keyToPress = currentDrill.key.toLowerCase();
+    
+        if (event.key.toLowerCase() === keyToPress && !!currentDrill.shift === event.shiftKey) {
             setStatus('correct');
             setTimeout(() => {
                 setStatus('pending');
@@ -150,16 +144,16 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
 
 const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
     top: [
-        {key: 'q', bn: 'ঙ', bnShift: 'ক্ষ'}, {key: 'w', bn: 'ড', bnShift: 'ড়'}, {key: 'e', bn: 'চ', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ট'}, {key: 't', bn: 'ত', bnShift: 'ঠ'}, 
-        {key: 'y', bn: 'এ', bnShift: 'য়'}, {key: 'u', bn: 'উ', bnShift: 'ঊ'}, {key: 'i', bn: 'ই', bnShift: 'ঈ'}, {key: 'o', bn: 'ও', bnShift: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ফ'}
+        {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'}, 
+        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'}
     ],
     home: [
-        {key: 'a', bn: 'অ', bnShift: 'আ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'}, {key: 'f', bn: 'ফ', bnShift: 'গ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
-        {key: 'h', bn: 'হ', bnShift: 'ঝ'}, {key: 'j', bn: 'জ', bnShift: 'খ'}, {key: 'k', bn: 'ক', bnShift: 'ষ'}, {key: 'l', bn: 'ল'}
+        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
+        {key: 'h', bn: '্', bnShift: 'হ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'}
     ],
     bottom: [
-        {key: 'z', bn: 'য', bnShift: 'থ'}, {key: 'x', bn: 'ত', bnShift: 'ছ'}, {key: 'c', bn: 'চ', bnShift: 'ধ'}, {key: 'v', bn: 'দ', bnShift: 'ভ'}, {key: 'b', bn: 'ব', bnShift: 'ণ'},
-        {key: 'n', bn: 'ন'}, {key: 'm', bn: 'ম'}
+        {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'},
     ],
     space: [{key: ' ', bn: '-'}],
 };
@@ -174,7 +168,7 @@ const keyToFingerMap: Record<string, { hand: 'left' | 'right', finger: 'pinky' |
     'u': { hand: 'right', finger: 'index' }, 'j': { hand: 'right', finger: 'index' }, 'm': { hand: 'right', finger: 'index' },
     'i': { hand: 'right', finger: 'middle' }, 'k': { hand: 'right', finger: 'middle' },
     'o': { hand: 'right', finger: 'ring' }, 'l': { hand: 'right', finger: 'ring' },
-    'p': { hand: 'right', finger: 'pinky' },
+    'p': { hand: 'right', finger: 'pinky' }, '\\': { hand: 'right', finger: 'pinky' },
     ' ': { hand: 'left', finger: 'thumb' }, // or right thumb
 };
 
@@ -435,15 +429,14 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
       
       correctPart = currentWord.substring(0, i);
       const typedIncorrectPart = normalizedInput.substring(i);
-      const actualIncorrectPart = currentWord.substring(i, i + typedIncorrectPart.length);
       incorrectPart = typedIncorrectPart; // Show what the user typed incorrectly
-      remainingPart = currentWord.substring(i + typedIncorrectPart.length);
+      remainingPart = currentWord.substring(i);
 
       return (
         <>
           <span className="text-green-500">{correctPart}</span>
           <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
-          <span className="text-muted-foreground opacity-50">{remainingPart}</span>
+          <span className="text-muted-foreground opacity-50">{remainingPart.substring(incorrectPart.length)}</span>
         </>
       );
   };
@@ -518,5 +511,6 @@ export { VisualTypingDrill };
     
 
     
+
 
 

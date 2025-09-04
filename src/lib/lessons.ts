@@ -6,8 +6,8 @@ export const lessons: Lesson[] = [
     title: "হোম রো অনুশীলন ১",
     level: "Beginner",
     drills: [
-        { prompt: "অ", key: "a" }, { prompt: "স", key: "s" }, { prompt: "ড", key: "d" }, { prompt: "ফ", key: "f" }, { prompt: "গ", key: "g" }, { prompt: " ", key: " " },
-        { prompt: "হ", key: "h" }, { prompt: "জ", key: "j" }, { prompt: "ক", key: "k" }, { prompt: "ল", key: "l" },
+        { prompt: "া", key: "a" }, { prompt: "স", key: "s" }, { prompt: "ড", key: "d" }, { prompt: "ফ", key: "f" }, { prompt: "গ", key: "g" }, { prompt: " ", key: " " },
+        { prompt: "্", key: "h" }, { prompt: "জ", key: "j" }, { prompt: "ক", key: "k" }, { prompt: "ল", key: "l" },
     ]
   },
   {
@@ -15,29 +15,29 @@ export const lessons: Lesson[] = [
     title: "হোম রো শিফট অনুশীলন",
     level: "Beginner",
     drills: [
-        { prompt: "আ", key: "a", shift: true }, { prompt: "শ", key: "s", shift: true }, { prompt: "ঢ", key: "d", shift: true },
-        { prompt: "গ", key: "f", shift: true }, { prompt: "ঘ", key: "g", shift: true }, { prompt: " ", key: " " },
-        { prompt: "ঝ", key: "h", shift: true }, { prompt: "খ", key: "j", shift: true }, { prompt: "ষ", key: "k", shift: true },
+        { prompt: "অ", key: "a", shift: true }, { prompt: "শ", key: "s", shift: true }, { prompt: "ঢ", key: "d", shift: true },
+        { prompt: "ৎ", key: "f", shift: true }, { prompt: "ঘ", key: "g", shift: true }, { prompt: " ", key: " " },
+        { prompt: "হ", key: "h", shift: true }, { prompt: "ঝ", key: "j", shift: true }, { prompt: "খ", key: "k", shift: true }, { prompt: "ষ", key: "l", shift: true },
     ]
   },
   {
     id: "top-row-1",
     title: "টপ রো অনুশীলন",
-    level: "Beginger",
+    level: "Beginner",
     drills: [
-        { prompt: "ঙ", key: "q" }, { prompt: "ড", key: "w" }, { prompt: "চ", key: "e" }, { prompt: "র", key: "r" },
-        { prompt: "ত", key: "t" }, { prompt: " ", key: " " },
-        { prompt: "এ", key: "y" }, { prompt: "উ", key: "u" }, { prompt: "ই", key: "i" }, { prompt: "ও", key: "o" }, { prompt: "প", key: "p" },
+        { prompt: "ক্ষ", key: "q" }, { prompt: "ঙ", key: "w" }, { prompt: "ে", key: "e" }, { prompt: "র", key: "r" },
+        { prompt: "ট", key: "t" }, { prompt: " ", key: " " },
+        { prompt: "য", key: "y" }, { prompt: "ু", key: "u" }, { prompt: "ি", key: "i" }, { prompt: "ো", key: "o" }, { prompt: "প", key: "p" },
     ]
   },
   {
     id: "bottom-row-1",
     title: "বটম রো অনুশীলন",
-    level: "Beginger",
+    level: "Beginner",
     drills: [
-        { prompt: "য", key: "z" }, { prompt: "ত", key: "x" }, { prompt: "চ", key: "c" }, { prompt: "দ", key: "v" },
+        { prompt: "্য", key: "z" }, { prompt: "ত", key: "x" }, { prompt: "চ", key: "c" }, { prompt: "দ", key: "v" },
         { prompt: "ব", key: "b" }, { prompt: " ", key: " " },
-        { prompt: "ন", key: "n" }, { prompt: "ম", key: "m" },
+        { prompt: "ন", key: "n" }, { prompt: "ম", key: "m" }, { prompt: "ৃ", key: "\\" },
     ]
   },
    {
