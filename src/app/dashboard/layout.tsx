@@ -101,9 +101,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               </div>
           </header>
           <main className="p-4 sm:px-6 sm:py-0">
-             <AuthGuard>
-                {children}
-            </AuthGuard>
+             {children}
           </main>
         </SidebarInset>
       </SidebarProvider>

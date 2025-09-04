@@ -12,7 +12,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { signInWithEmailAndPassword, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
@@ -68,19 +68,33 @@ export default function LoginPage() {
     }
   };
 
-  const handleOAuthLogin = async (provider: GoogleAuthProvider | FacebookAuthProvider | OAuthProvider) => {
+  const handleOAuthLogin = async (providerName: 'google' | 'facebook' | 'microsoft') => {
     setIsLoading(true);
+    let provider;
+    if (providerName === 'google') {
+        provider = new GoogleAuthProvider();
+    } else if (providerName === 'facebook') {
+        provider = new FacebookAuthProvider();
+    } else {
+        provider = new OAuthProvider('microsoft.com');
+    }
+
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        displayName: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-        createdAt: new Date(),
-      }, { merge: true });
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+         await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL,
+            createdAt: new Date(),
+          }, { merge: true });
+      }
 
       toast({ title: "সাফল্য!", description: `স্বাগতম, ${user.displayName}!` });
       router.push("/dashboard");
@@ -124,15 +138,15 @@ export default function LoginPage() {
                     <span className="bg-background px-2 text-muted-foreground">অথবা</span>
                 </div>
             </div>
-            <Button variant="outline" type="button" onClick={() => handleOAuthLogin(new GoogleAuthProvider())} className="w-full" disabled={isLoading}>
+            <Button variant="outline" type="button" onClick={() => handleOAuthLogin('google')} className="w-full" disabled={isLoading}>
               <GoogleIcon />
               {isLoading ? "লোড হচ্ছে..." : "গুগল দিয়ে লগইন করুন"}
             </Button>
-             <Button variant="outline" type="button" onClick={() => handleOAuthLogin(new FacebookAuthProvider())} className="w-full" disabled={isLoading}>
+             <Button variant="outline" type="button" onClick={() => handleOAuthLogin('facebook')} className="w-full" disabled={isLoading}>
                 <FacebookIcon />
                 {isLoading ? "লোড হচ্ছে..." : "ফেসবুক দিয়ে লগইন করুন"}
             </Button>
-             <Button variant="outline" type="button" onClick={() => handleOAuthLogin(new OAuthProvider('microsoft.com'))} className="w-full" disabled={isLoading}>
+             <Button variant="outline" type="button" onClick={() => handleOAuthLogin('microsoft')} className="w-full" disabled={isLoading}>
                 <MicrosoftIcon />
                 {isLoading ? "লোড হচ্ছে..." : "মাইক্রোসফ্ট দিয়ে লগইন করুন"}
             </Button>

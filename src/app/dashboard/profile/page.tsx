@@ -12,8 +12,9 @@ import { updateProfile } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import AuthGuard from "@/components/auth-guard";
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, userData, loading } = useAuth();
   const { toast } = useToast();
   const [name, setName] = useState('');
@@ -123,4 +124,13 @@ export default function ProfilePage() {
       </Card>
     </div>
   );
+}
+
+
+export default function ProfilePage() {
+    return (
+        <AuthGuard>
+            <ProfilePageContent />
+        </AuthGuard>
+    )
 }
