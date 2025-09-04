@@ -2,6 +2,7 @@
 
 "use client";
 
+import * as React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,13 +67,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
 
         if (codeIsCorrect && shiftIsCorrect) {
             setStatus('correct');
-            setCurrentDrillIndex(prev => {
-                if (prev + 1 >= totalDrills) {
-                    return prev + 1;
-                }
-                return prev + 1;
-            });
-            
+            setCurrentDrillIndex(prev => prev + 1);
         } else {
             setStatus('incorrect');
             statusTimeoutRef.current = setTimeout(() => {
@@ -340,7 +335,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   }, []);
 
   useEffect(() => {
-    const isTestFinished = currentWordIndex === words.length && words.length > 0;
+    const isTestFinished = currentWordIndex === words.length && words.length > 0 && !timeLimit;
     if (isActive && !isPaused) {
       calculateStats();
       
@@ -352,7 +347,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     } else if (isTestFinished) {
         finishSession();
     }
-  }, [time, isActive, isPaused, timeLimit, calculateStats, finishSession, currentWordIndex, words.length]);
+  }, [time, isActive, isPaused, timeLimit, calculateStats, finishSession, currentWordIndex, words]);
 
 
   useEffect(() => {
@@ -431,9 +426,9 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
             {words.map((word, index) => (
                 <React.Fragment key={index}>
                     <span className={cn(
-                        "transition-colors", 
+                        "transition-colors rounded px-1", 
                         getWordClass(index),
-                        index === currentWordIndex && "bg-yellow-100 dark:bg-yellow-800/50 rounded px-1"
+                        index === currentWordIndex && "bg-yellow-100 dark:bg-yellow-800/50"
                     )}>
                         {word.normalize('NFC')}
                     </span>
@@ -485,6 +480,7 @@ export { VisualTypingDrill };
     
 
     
+
 
 
 
