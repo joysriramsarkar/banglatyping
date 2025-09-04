@@ -42,19 +42,26 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     const router = useRouter();
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
+        const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta'];
+        if (modifierKeys.includes(event.key) || status !== 'pending' || currentDrillIndex >= totalDrills) {
+            event.preventDefault();
+            return;
+        }
         event.preventDefault();
-        if (status !== 'pending' || currentDrillIndex >= totalDrills) return;
 
         const currentDrill = drills[currentDrillIndex];
-        const expectedKey = currentDrill.key;
+        const expectedKey = `Key${currentDrill.key.toUpperCase()}`;
+        const expectedSpace = currentDrill.key === ' ';
         
         let keyPressedCorrectly = false;
-        
-        const isShiftMatch = event.shiftKey === !!currentDrill.shift;
 
-        if (event.key.toLowerCase() === expectedKey.toLowerCase() && isShiftMatch) {
-            keyPressedCorrectly = true;
-        } else if (expectedKey === ' ' && event.code === 'Space') {
+        const isShiftMatch = event.shiftKey === !!currentDrill.shift;
+        
+        if (expectedSpace) {
+            if (event.code === 'Space') {
+                 keyPressedCorrectly = true;
+            }
+        } else if (event.code === expectedKey && isShiftMatch) {
             keyPressedCorrectly = true;
         }
         
@@ -149,16 +156,16 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
 
 const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
     top: [
-        {key: 'q', bn: 'ঙ', bnShift: 'ং'}, {key: 'w', bn: 'ড', bnShift: 'ঢ'}, {key: 'e', bn: 'চ', bnShift: 'ছ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ত', bnShift: 'থ'}, 
-        {key: 'y', bn: 'য়', bnShift: 'য'}, {key: 'u', bn: 'উ', bnShift: 'ঊ'}, {key: 'i', bn: 'ই', bnShift: 'ঈ'}, {key: 'o', bn: 'ও', bnShift: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ফ'}
+        {key: 'q', bn: 'ঙ', bnShift: 'ং'}, {key: 'w', bn: 'ড', bnShift: 'ঢ'}, {key: 'e', bn: 'চ', bnShift: 'ছ'}, {key: 'r', bn: 'ত', bnShift: 'থ'}, {key: 't', bn: 'ট', bnShift: 'ঠ'}, 
+        {key: 'y', bn: 'এ', bnShift: 'ঐ'}, {key: 'u', bn: 'উ', bnShift: 'ঊ'}, {key: 'i', bn: 'ই', bnShift: 'ঈ'}, {key: 'o', bn: 'ও', bnShift: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ফ'}
     ],
     home: [
         {key: 'a', bn: 'অ', bnShift: 'আ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'দ', bnShift: 'ধ'}, {key: 'f', bn: 'া', bnShift: 'অ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
-        {key: 'h', bn: 'হ', bnShift: 'ঝ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'}
+        {key: 'h', bn: 'হ', bnShift: 'ঃ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'}
     ],
     bottom: [
-        {key: 'z', bn: 'য', bnShift: 'য়'}, {key: 'x', bn: 'শ', bnShift: 'ষ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'ভ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম', bnShift: 'শ'}
+        {key: 'z', bn: 'য', bnShift: 'য়'}, {key: 'x', bn: 'ম', bnShift: 'শ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'র', bnShift: 'ড়'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}
     ],
     space: [{key: ' ', bn: '-'}],
 };
@@ -248,7 +255,7 @@ const HandGuide = ({ highlightKey }: { highlightKey: string }) => {
                     {/* Middle */}
                     <div style={getFingerHighlightStyle('right', 'middle')} className="absolute top-[5px] left-[60px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
                     {/* Ring */}
-                    <div style={getFingerHighlightStyle('right', 'ring')} className="absolute top-[15px] left-[90px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    <div style-getFingerHighlightStyle={'right', 'ring'} className="absolute top-[15px] left-[90px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
                     {/* Pinky */}
                     <div style={getFingerHighlightStyle('right', 'pinky')} className="absolute top-[35px] left-[118px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
                      {/* Thumb */}
@@ -416,7 +423,51 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const currentWord = words[currentWordIndex]?.normalize('NFC') || '';
   const normalizedInput = currentInput.normalize('NFC');
   const isError = normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
+  
+  const getPreviewContent = () => {
+    if (!currentWord) return null;
 
+    let correctPart = '';
+    let incorrectPart = '';
+    let remainingPart = currentWord;
+
+    for (let i = 0; i < currentWord.length; i++) {
+      if (i < normalizedInput.length) {
+        if (normalizedInput[i] === currentWord[i]) {
+          correctPart += currentWord[i];
+        } else {
+          incorrectPart = normalizedInput.substring(i);
+          remainingPart = currentWord.substring(i);
+          break;
+        }
+      } else {
+        remainingPart = currentWord.substring(i);
+        break;
+      }
+    }
+    
+    if (correctPart.length === currentWord.length && normalizedInput.length > currentWord.length) {
+       incorrectPart = normalizedInput.substring(currentWord.length)
+    } else if (correctPart.length < currentWord.length && normalizedInput.length > correctPart.length) {
+       remainingPart = currentWord.substring(correctPart.length);
+       const firstIncorrectIndex = correctPart.length;
+       for(let i=firstIncorrectIndex; i<normalizedInput.length; i++){
+          if(normalizedInput[i] !== remainingPart[i-firstIncorrectIndex]){
+            incorrectPart = normalizedInput.substring(i);
+            remainingPart = remainingPart.substring(i-firstIncorrectIndex);
+            break;
+          }
+       }
+    }
+
+    return (
+      <>
+        <span className="opacity-100 text-green-500">{correctPart}</span>
+        <span className="opacity-100 text-red-500 underline">{incorrectPart}</span>
+        <span className="opacity-50">{remainingPart}</span>
+      </>
+    );
+  };
 
   if(isFinished) {
     return <TestResults stats={{ wpm: wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
@@ -446,17 +497,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
        <div className="w-full h-24 flex flex-col items-center justify-center">
         <div className={cn(
           "text-2xl font-mono p-2 flex items-center justify-center min-h-[3rem] w-full",
-          isError ? "text-red-500" : "text-green-500"
         )}>
-          <div className="flex">
-            {currentWord.split('').map((char, index) => {
-              let charClass = "opacity-50";
-              if(index < normalizedInput.length) {
-                charClass = normalizedInput[index] === char ? "opacity-100" : "opacity-100 text-red-500";
-              }
-              return <span key={index} className={charClass}>{char}</span>
-           })}
-          </div>
+          {getPreviewContent()}
         </div>
         <Input
           ref={inputRef}
@@ -488,6 +530,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   );
 }
 export { VisualTypingDrill };
+
+    
 
     
 
