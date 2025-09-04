@@ -9,6 +9,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+const toBengaliNumber = (num: number | string) => {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
+};
+
 const StatCard = ({ icon: Icon, title, value, unit }: { icon: React.ElementType, title: string, value: string, unit: string }) => (
   <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -16,7 +21,7 @@ const StatCard = ({ icon: Icon, title, value, unit }: { icon: React.ElementType,
       <Icon className="h-4 w-4 text-muted-foreground" />
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-2xl font-bold">{toBengaliNumber(value)}</div>
       <p className="text-xs text-muted-foreground">{unit}</p>
     </CardContent>
   </Card>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -147,7 +148,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     )
 }
 
-const keyboardLayout: Record<string, {key: string, bn: string, bnShift: string}[]> = {
+const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
     top: [
         {key: 'q', bn: 'ঙ', bnShift: 'ং'}, {key: 'w', bn: 'ড', bnShift: 'ঢ'}, {key: 'e', bn: 'চ', bnShift: 'ছ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ত', bnShift: 'থ'}, 
         {key: 'y', bn: 'য়', bnShift: 'য'}, {key: 'u', bn: 'উ', bnShift: 'ঊ'}, {key: 'i', bn: 'ই', bnShift: 'ঈ'}, {key: 'o', bn: 'ও', bnShift: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ফ'}
@@ -157,10 +158,10 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift: string}[
         {key: 'h', bn: 'হ', bnShift: 'ঝ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'}
     ],
     bottom: [
-        {key: 'z', bn: 'য', bnShift: 'য়'}, {key: 'x', bn: 'শ', bnShift: 'ষ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'ভ', bnShift: 'ভ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
+        {key: 'z', bn: 'য', bnShift: 'য়'}, {key: 'x', bn: 'শ', bnShift: 'ষ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'ভ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
         {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম', bnShift: 'শ'}
     ],
-    space: [{key: ' ', bn: '-', bnShift: ''}],
+    space: [{key: ' ', bn: '-'}],
 };
 
 const keyToFingerMap: Record<string, { hand: 'left' | 'right', finger: 'pinky' | 'ring' | 'middle' | 'index' | 'thumb' }> = {
@@ -261,13 +262,12 @@ const HandGuide = ({ highlightKey }: { highlightKey: string }) => {
 
 
 export default function TypingPractice({ textToType: initialText, timeLimit, lessonId }: TypingPracticeProps) {
-  const [textToType, setTextToType] = useState(initialText.normalize('NFC'));
+  const [textToType, setTextToType] = useState(initialText?.normalize('NFC') || '');
   const [words, setWords] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentInput, setCurrentInput] = useState("");
   const [typedWords, setTypedWords] = useState<string[]>([]);
   
-  const [totalTypedChars, setTotalTypedChars] = useState(0);
   const [totalErrors, setTotalErrors] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
@@ -282,46 +282,25 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const timeLeft = totalTime > 0 ? totalTime - time : time;
 
   useEffect(() => {
-    const newWords = textToType.normalize('NFC').split(' ').filter(w => w);
+    const newWords = textToType.split(' ').filter(w => w);
     setWords(newWords);
   }, [textToType]);
 
 
-  const calculateWpm = useCallback(() => {
+  const calculateStats = useCallback(() => {
     if (time > 0) {
-      const correctChars = typedWords.reduce((acc, word, index) => {
-        if(word.normalize('NFC') === words[index].normalize('NFC')) {
-          return acc + word.length + 1; // +1 for space
-        }
-        return acc;
-      }, 0);
-
-      const grossWpm = (correctChars / 5) / (time / 60);
+      const typedCharsCount = typedWords.join(' ').length;
+      // Using the standard WPM calculation (5 chars = 1 word)
+      const grossWpm = (typedCharsCount / 5) / (time / 60);
       setWpm(Math.round(grossWpm > 0 ? grossWpm : 0));
     }
+    
+    const correctWords = typedWords.filter((word, index) => word === words[index]);
+    const newAccuracy = words.length > 0 ? (correctWords.length / typedWords.length) * 100 : 100;
+    setAccuracy(Math.round(newAccuracy > 0 ? newAccuracy : 0));
+
   }, [time, typedWords, words]);
   
-  const calculateAccuracy = useCallback(() => {
-    const typedCharsCount = typedWords.reduce((acc, word) => acc + word.length, 0) + typedWords.length;
-    if (typedCharsCount > 0) {
-        const errorsInTypedWords = typedWords.reduce((errorCount, typedWord, index) => {
-             const targetWord = words[index];
-             if (!targetWord) return errorCount;
-             for(let i=0; i< typedWord.length; i++) {
-                 if (!targetWord[i] || typedWord[i].normalize('NFC') !== targetWord[i].normalize('NFC')) {
-                     errorCount++;
-                 }
-             }
-             return errorCount + Math.abs(targetWord.length - typedWord.length);
-        },0);
-
-        const newAccuracy = ((typedCharsCount - errorsInTypedWords) / typedCharsCount) * 100;
-        setAccuracy(Math.round(newAccuracy > 0 ? newAccuracy : 0));
-    } else {
-        setAccuracy(100);
-    }
-  }, [typedWords, words]);
-
 
   const resetTest = useCallback((isNewTest = true) => {
     reset();
@@ -329,7 +308,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     setWpm(0);
     setAccuracy(100);
     setTotalErrors(0);
-    setTotalTypedChars(0);
     setIsFinished(false);
     if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
@@ -349,12 +327,11 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     if(isFinished) return;
     setIsFinished(true);
     pause();
-    calculateWpm();
-    calculateAccuracy();
+    calculateStats();
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-  }, [isFinished, pause, calculateWpm, calculateAccuracy]);
+  }, [isFinished, pause, calculateStats]);
 
   const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.normalize('NFC');
@@ -382,18 +359,16 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
             return;
         };
 
-        const newTypedWords = [...typedWords, currentInput.trim()];
-        setTypedWords(newTypedWords);
-        setCurrentWordIndex(prev => prev + 1);
-        setCurrentInput("");
-        setTotalTypedChars(p => p + currentInput.trim().length + 1);
-
-        const targetWord = words[currentWordIndex];
         const typedWord = currentInput.trim();
-        if(targetWord.normalize('NFC') !== typedWord.normalize('NFC')) {
+        const newTypedWords = [...typedWords, typedWord];
+        setTypedWords(newTypedWords);
+
+        if(typedWord.normalize('NFC') !== words[currentWordIndex].normalize('NFC')) {
             setTotalErrors(prev => prev + 1);
         }
 
+        setCurrentWordIndex(prev => prev + 1);
+        setCurrentInput("");
     } else {
         setCurrentInput(value);
     }
@@ -411,19 +386,17 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   useEffect(() => {
     const isTestFinished = currentWordIndex === words.length && words.length > 0;
     if (isActive && !isPaused) {
-      calculateWpm();
-      calculateAccuracy();
+      calculateStats();
       
       const isTimeUp = timeLimit && time >= timeLimit * 60;
       
       if (isTestFinished || isTimeUp) {
         finishSession();
       }
+    } else if (isTestFinished) {
+        finishSession();
     }
-     if (isTestFinished) {
-      finishSession();
-    }
-  }, [time, isActive, isPaused, timeLimit, calculateWpm, calculateAccuracy, finishSession, currentWordIndex, words.length]);
+  }, [time, isActive, isPaused, timeLimit, calculateStats, finishSession, currentWordIndex, words.length]);
 
 
   useEffect(() => {
@@ -442,23 +415,11 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   }
 
   const currentWord = words[currentWordIndex] || '';
-  const isError = currentInput.length > 0 && !currentWord.startsWith(currentInput.normalize('NFC'));
+  const isError = currentInput.length > 0 && !currentWord.normalize('NFC').startsWith(currentInput.normalize('NFC'));
 
-
-  useEffect(() => {
-    if (currentWordIndex === words.length && words.length > 0) {
-      finishSession();
-    }
-  }, [currentWordIndex, words.length, finishSession]);
 
   if(isFinished) {
-    const finalErrors = typedWords.reduce((errorCount, typedWord, index) => {
-        const targetWord = words[index];
-        if (targetWord && typedWord.normalize('NFC') !== targetWord.normalize('NFC')) return errorCount + 1;
-        return errorCount;
-    }, 0);
-
-    return <TestResults stats={{ wpm, accuracy, errors: finalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
+    return <TestResults stats={{ wpm, accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
   }
 
   return (
@@ -491,7 +452,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
             {currentWord.split('').map((char, index) => {
               let charClass = "opacity-50";
               if(index < currentInput.length) {
-                charClass = currentInput[index] === char ? "opacity-100" : "opacity-100 text-red-500";
+                charClass = currentInput[index].normalize('NFC') === char.normalize('NFC') ? "opacity-100" : "opacity-100 text-red-500";
               }
               return <span key={index} className={charClass}>{char}</span>
            })}

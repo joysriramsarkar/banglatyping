@@ -10,24 +10,7 @@ import { RefreshCw } from 'lucide-react';
 const words = ["বাংলা", "ভাষা", "நாடு", "পতাকা", "নদী", "ফুল", "ফল", "মাছ", "গান", "কবিতা", "স্বাধীনতা"];
 
 const Word = ({ word, onComplete }: { word: string, onComplete: (w: string) => void }) => {
-  const [y, setY] = useState(-50);
-  const duration = Math.random() * 5 + 5;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setY(prev => {
-        const newY = prev + 1;
-        if (newY > window.innerHeight - 100) {
-          onComplete(word); // Word reached bottom
-          clearInterval(interval);
-          return window.innerHeight;
-        }
-        return newY;
-      });
-    }, (duration * 1000) / window.innerHeight);
-    return () => clearInterval(interval);
-  }, [word, onComplete, duration]);
-
+  const duration = Math.random() * 8 + 8; // Increased duration for slower fall
 
   return (
     <motion.div
@@ -67,10 +50,10 @@ export default function FallingWordsGame() {
                 }
                 return prev;
             });
-        }, 2000);
+        }, 2500); // Increased interval for new words
     }, []);
 
-    const handleWordCompletion = useCallback((word: string) => {
+    const handleWordMiss = useCallback((word: string) => {
         setActiveWords(prev => prev.filter(w => w !== word));
         if(!gameOver) {
             setLives(prev => {
@@ -125,7 +108,7 @@ export default function FallingWordsGame() {
         <div className="relative w-full h-[80vh] bg-secondary/30 rounded-lg overflow-hidden border">
             <AnimatePresence>
                 {activeWords.map((word) => (
-                    <Word key={word} word={word.replace(/[0-9.]/g, '')} onComplete={handleWordCompletion} />
+                    <Word key={word} word={word.replace(/[0-9.]/g, '')} onComplete={handleWordMiss} />
                 ))}
             </AnimatePresence>
 
