@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Timer, FileText, CheckCircle } from "lucide-react";
+import { Timer, FileText, CheckCircle, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRouter } from "next/navigation";
+
 
 const timeOptions = [
     { value: 1, label: '১' },
@@ -28,6 +30,7 @@ export default function TestPage() {
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
   const [selectedParagraph, setSelectedParagraph] = useState<string | null>(null);
   const [testStarted, setTestStarted] = useState(false);
+  const router = useRouter();
 
   const startTest = () => {
     if (selectedParagraph && selectedTime) {
@@ -59,12 +62,12 @@ export default function TestPage() {
           
           <div>
             <Label className="text-base font-medium mb-4 block text-center">১. একটি অনুচ্ছেদ নির্বাচন করুন</Label>
-            <ScrollArea className="h-48 w-full rounded-md border p-4">
-                 <div className="space-y-4">
+            <ScrollArea className="h-48 w-full rounded-md border">
+                 <div className="space-y-2 p-4">
                     {practiceParagraphs.map((p, index) => (
                         <div key={index}
                              onClick={() => setSelectedParagraph(p)}
-                             className={cn("p-3 border rounded-lg cursor-pointer transition-all",
+                             className={cn("p-3 border rounded-lg cursor-pointer transition-all relative",
                                 selectedParagraph === p ? "border-primary ring-2 ring-primary" : "hover:bg-accent"
                              )}
                         >
@@ -90,7 +93,7 @@ export default function TestPage() {
                     htmlFor={`time-${time.value}`}
                     className={cn(
                         "flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer transition-colors hover:bg-accent",
-                        selectedTime === time.value ? "border-primary ring-2 ring-primary" : ""
+                        "data-[state=checked]:border-primary data-[state=checked]:ring-2 data-[state=checked]:ring-primary"
                     )}
                   >
                     <span className="text-2xl font-bold">{time.label}</span>
@@ -100,12 +103,17 @@ export default function TestPage() {
               ))}
             </RadioGroup>
           </div>
-          <Button onClick={startTest} size="lg" className="w-full" disabled={!selectedParagraph || !selectedTime}>
-            টেস্ট শুরু করুন
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button onClick={startTest} size="lg" className="w-full" disabled={!selectedParagraph || !selectedTime}>
+              টেস্ট শুরু করুন
+            </Button>
+             <Button onClick={() => router.push('/dashboard')} variant="outline" className="w-full">
+              <Home className="mr-2 h-4 w-4" />
+              হোমে ফিরে যান
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-
