@@ -42,7 +42,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     const progress = (currentDrillIndex / totalDrills) * 100;
     const router = useRouter();
 
-    const handleKeyPress = useCallback((event: KeyboardEvent) => {
+     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
         if (modifierKeys.includes(event.key) || status !== 'pending' || currentDrillIndex >= totalDrills) {
             event.preventDefault();
@@ -53,14 +53,10 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         const currentDrill = drills[currentDrillIndex];
         
         let keyPressedCorrectly = false;
-        // Using event.code is more reliable for physical key presses regardless of layout
         const keyToPress = currentDrill.key === ' ' ? 'Space' : `Key${currentDrill.key.toUpperCase()}`;
 
-        if (event.code === keyToPress) {
-            // Check if shift key is required and if it was pressed
-            if (!!currentDrill.shift === event.shiftKey) {
-                keyPressedCorrectly = true;
-            }
+        if (event.code === keyToPress && !!currentDrill.shift === event.shiftKey) {
+            keyPressedCorrectly = true;
         }
         
         if (keyPressedCorrectly) {
@@ -154,16 +150,16 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
 
 const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
     top: [
-        {key: 'q', bn: 'ঙ', bnShift: 'ং'}, {key: 'w', bn: 'ড', bnShift: 'ঢ'}, {key: 'e', bn: 'চ', bnShift: 'ছ'}, {key: 'r', bn: 'ত', bnShift: 'থ'}, {key: 't', bn: 'ট', bnShift: 'ঠ'}, 
-        {key: 'y', bn: 'এ', bnShift: 'ঐ'}, {key: 'u', bn: 'উ', bnShift: 'ঊ'}, {key: 'i', bn: 'ই', bnShift: 'ঈ'}, {key: 'o', bn: 'ও', bnShift: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ফ'}
+        {key: 'q', bn: 'ঙ', bnShift: 'ক্ষ'}, {key: 'w', bn: 'ড', bnShift: 'ড়'}, {key: 'e', bn: 'চ', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ট'}, {key: 't', bn: 'ত', bnShift: 'ঠ'}, 
+        {key: 'y', bn: 'এ', bnShift: 'য়'}, {key: 'u', bn: 'উ', bnShift: 'ঊ'}, {key: 'i', bn: 'ই', bnShift: 'ঈ'}, {key: 'o', bn: 'ও', bnShift: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ফ'}
     ],
     home: [
-        {key: 'a', bn: 'অ', bnShift: 'আ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'দ', bnShift: 'ধ'}, {key: 'f', bn: 'া', bnShift: 'অ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
-        {key: 'h', bn: 'হ', bnShift: 'ঃ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'}
+        {key: 'a', bn: 'অ', bnShift: 'আ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'}, {key: 'f', bn: 'ফ', bnShift: 'গ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
+        {key: 'h', bn: 'হ', bnShift: 'ঝ'}, {key: 'j', bn: 'জ', bnShift: 'খ'}, {key: 'k', bn: 'ক', bnShift: 'ষ'}, {key: 'l', bn: 'ল'}
     ],
     bottom: [
-        {key: 'z', bn: 'য', bnShift: 'য়'}, {key: 'x', bn: 'ম', bnShift: 'শ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'র', bnShift: 'ড়'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}
+        {key: 'z', bn: 'য', bnShift: 'থ'}, {key: 'x', bn: 'ত', bnShift: 'ছ'}, {key: 'c', bn: 'চ', bnShift: 'ধ'}, {key: 'v', bn: 'দ', bnShift: 'ভ'}, {key: 'b', bn: 'ব', bnShift: 'ণ'},
+        {key: 'n', bn: 'ন'}, {key: 'm', bn: 'ম'}
     ],
     space: [{key: ' ', bn: '-'}],
 };
@@ -422,37 +418,36 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const normalizedInput = currentInput.normalize('NFC');
   
   const getPreviewContent = () => {
-    if (!currentWord) return null;
+      if (!currentWord && !normalizedInput) return null;
 
-    let correctPart = '';
-    let incorrectPart = '';
-    let remainingPart = currentWord;
-    
-    let i = 0;
-    for (i = 0; i < normalizedInput.length && i < currentWord.length; i++) {
-        if (normalizedInput[i] === currentWord[i]) {
-            correctPart += currentWord[i];
-        } else {
-            break;
-        }
-    }
-    
-    // The rest of the original word that hasn't been typed yet
-    remainingPart = currentWord.substring(i);
+      let correctPart = '';
+      let incorrectPart = '';
+      let remainingPart = currentWord;
+      
+      let i = 0;
+      while (i < normalizedInput.length && i < currentWord.length) {
+          if (normalizedInput[i] === currentWord[i]) {
+              i++;
+          } else {
+              break;
+          }
+      }
+      
+      correctPart = currentWord.substring(0, i);
+      const typedIncorrectPart = normalizedInput.substring(i);
+      const actualIncorrectPart = currentWord.substring(i, i + typedIncorrectPart.length);
+      incorrectPart = typedIncorrectPart; // Show what the user typed incorrectly
+      remainingPart = currentWord.substring(i + typedIncorrectPart.length);
 
-    // The part of the input that is incorrect
-    if (normalizedInput.length > i) {
-        incorrectPart = normalizedInput.substring(i);
-    }
-
-    return (
-      <>
-        <span className="text-green-500">{correctPart}</span>
-        <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
-        <span className="text-muted-foreground opacity-50">{remainingPart.substring(incorrectPart.length)}</span>
-      </>
-    );
+      return (
+        <>
+          <span className="text-green-500">{correctPart}</span>
+          <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
+          <span className="text-muted-foreground opacity-50">{remainingPart}</span>
+        </>
+      );
   };
+
 
   const isError = normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
 
@@ -523,4 +518,5 @@ export { VisualTypingDrill };
     
 
     
+
 
