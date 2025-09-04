@@ -39,15 +39,25 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     const [status, setStatus] = useState<'pending' | 'correct' | 'incorrect'>('pending');
     const totalDrills = drills.length;
     const progress = (currentDrillIndex / totalDrills) * 100;
+    const router = useRouter();
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         event.preventDefault();
         if (status !== 'pending' || currentDrillIndex >= totalDrills) return;
 
         const currentDrill = drills[currentDrillIndex];
-        const expectedKey = currentDrill.key === ' ' ? 'Space' : currentDrill.key;
+        const expectedKey = currentDrill.key;
         
-        if (event.key.toLowerCase() === expectedKey.toLowerCase()) {
+        let keyPressedCorrectly = false;
+        if (expectedKey === ' ') {
+            if (event.code === 'Space') {
+                keyPressedCorrectly = true;
+            }
+        } else if (event.key.toLowerCase() === expectedKey.toLowerCase()) {
+            keyPressedCorrectly = true;
+        }
+        
+        if (keyPressedCorrectly) {
             setStatus('correct');
             setTimeout(() => {
                 setStatus('pending');
@@ -77,8 +87,9 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                     <CardTitle className="text-2xl">অনুশীলন সম্পন্ন!</CardTitle>
                     <CardDescription>খুব ভালো করেছেন!</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex flex-col gap-2">
                     <Button onClick={() => setCurrentDrillIndex(0)}>আবার চেষ্টা করুন</Button>
+                    <Button onClick={() => router.push('/dashboard/lessons')} variant="outline">পাঠক্রমে ফিরে যান</Button>
                 </CardContent>
             </Card>
         )
@@ -126,8 +137,8 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                         </CardContent>
                     </Card>
                      <div className="flex justify-end gap-2 mt-4">
-                        <Button variant="outline">বাতিল</Button>
-                        <Button>পরবর্তী</Button>
+                        <Button variant="outline" onClick={() => router.push('/dashboard/lessons')}>বাতিল</Button>
+                        <Button onClick={() => setCurrentDrillIndex(p => Math.min(p + 1, totalDrills))}>পরবর্তী</Button>
                     </div>
                 </div>
             </div>
@@ -485,3 +496,4 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   );
 }
 export { VisualTypingDrill };
+
