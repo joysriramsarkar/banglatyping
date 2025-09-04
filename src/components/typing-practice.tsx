@@ -146,11 +146,20 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     )
 }
 
-const keyboardLayout = {
-    top: ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-    home: ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
-    bottom: ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
-    space: [' '],
+const keyboardLayout: Record<string, {key: string, bn: string}[]> = {
+    top: [
+        {key: 'q', bn: 'ঙ'}, {key: 'w', bn: 'ড'}, {key: 'e', bn: 'ড'}, {key: 'r', bn: 'র'}, {key: 't', bn: 'ত'}, 
+        {key: 'y', bn: 'য়'}, {key: 'u', bn: 'উ'}, {key: 'i', bn: 'ই'}, {key: 'o', bn: 'ও'}, {key: 'p', bn: 'প'}
+    ],
+    home: [
+        {key: 'a', bn: 'অ'}, {key: 's', bn: 'ত'}, {key: 'd', bn: 'দ'}, {key: 'f', bn: 'া'}, {key: 'g', bn: 'গ'},
+        {key: 'h', bn: 'হ'}, {key: 'j', bn: 'স'}, {key: 'k', bn: 'ক'}, {key: 'l', bn: 'ল'}
+    ],
+    bottom: [
+        {key: 'z', bn: 'য'}, {key: 'x', bn: 'শ'}, {key: 'c', bn: 'চ'}, {key: 'v', bn: 'ভ'}, {key: 'b', bn: 'ব'},
+        {key: 'n', bn: 'ন'}, {key: 'm', bn: 'ম'}
+    ],
+    space: [{key: ' ', bn: 'Space'}],
 };
 
 const keyToFingerMap: Record<string, { hand: 'left' | 'right', finger: 'pinky' | 'ring' | 'middle' | 'index' | 'thumb' }> = {
@@ -172,16 +181,17 @@ const VirtualKeyboard = ({ highlightKey }: { highlightKey: string }) => (
     <div className="p-4 bg-background rounded-lg shadow-inner space-y-2">
         {Object.values(keyboardLayout).map((row, rowIndex) => (
             <div key={rowIndex} className="flex justify-center gap-1.5">
-                {row.map(key => (
+                {row.map(keyData => (
                     <div
-                        key={key}
+                        key={keyData.key}
                         className={cn(
                             "flex items-center justify-center h-12 rounded-md bg-secondary border border-b-4",
-                            key === ' ' ? 'w-64' : 'w-12',
-                            highlightKey.toLowerCase() === key.toLowerCase() && 'bg-primary/20 border-primary text-primary'
+                            keyData.key === ' ' ? 'w-64' : 'w-12',
+                            "text-xl font-bold",
+                            highlightKey.toLowerCase() === keyData.key.toLowerCase() && 'bg-primary/20 border-primary text-primary'
                         )}
                     >
-                        {key === ' ' ? 'Space' : key.toUpperCase()}
+                        {keyData.bn}
                     </div>
                 ))}
             </div>
@@ -496,4 +506,3 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   );
 }
 export { VisualTypingDrill };
-
