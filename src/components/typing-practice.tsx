@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -42,7 +43,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     const router = useRouter();
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta'];
+        const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter'];
         if (modifierKeys.includes(event.key) || status !== 'pending' || currentDrillIndex >= totalDrills) {
             event.preventDefault();
             return;
@@ -50,19 +51,18 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         event.preventDefault();
 
         const currentDrill = drills[currentDrillIndex];
-        const expectedKey = `Key${currentDrill.key.toUpperCase()}`;
-        const expectedSpace = currentDrill.key === ' ';
         
         let keyPressedCorrectly = false;
+        const keyToPress = `Key${currentDrill.key.toUpperCase()}`;
 
-        const isShiftMatch = event.shiftKey === !!currentDrill.shift;
-        
-        if (expectedSpace) {
+        if (currentDrill.key === ' ') {
             if (event.code === 'Space') {
-                 keyPressedCorrectly = true;
+                keyPressedCorrectly = true;
             }
-        } else if (event.code === expectedKey && isShiftMatch) {
-            keyPressedCorrectly = true;
+        } else if (event.code === keyToPress) {
+            if (!!currentDrill.shift === event.shiftKey) {
+                keyPressedCorrectly = true;
+            }
         }
         
         if (keyPressedCorrectly) {
@@ -255,7 +255,7 @@ const HandGuide = ({ highlightKey }: { highlightKey: string }) => {
                     {/* Middle */}
                     <div style={getFingerHighlightStyle('right', 'middle')} className="absolute top-[5px] left-[60px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
                     {/* Ring */}
-                    <div style-getFingerHighlightStyle={'right', 'ring'} className="absolute top-[15px] left-[90px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
+                    <div style={getFingerHighlightStyle('right', 'ring')} className="absolute top-[15px] left-[90px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
                     {/* Pinky */}
                     <div style={getFingerHighlightStyle('right', 'pinky')} className="absolute top-[35px] left-[118px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
                      {/* Thumb */}
@@ -340,7 +340,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   }, [isFinished, pause, calculateStats]);
 
   const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const value = e.target.value.normalize('NFC');
 
     if (isFinished) return;
     if (!isActive && !isPaused) start();
@@ -422,7 +422,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
   const currentWord = words[currentWordIndex]?.normalize('NFC') || '';
   const normalizedInput = currentInput.normalize('NFC');
-  const isError = normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
   
   const getPreviewContent = () => {
     if (!currentWord) return null;
@@ -430,44 +429,29 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     let correctPart = '';
     let incorrectPart = '';
     let remainingPart = currentWord;
-
-    for (let i = 0; i < currentWord.length; i++) {
-      if (i < normalizedInput.length) {
-        if (normalizedInput[i] === currentWord[i]) {
-          correctPart += currentWord[i];
-        } else {
-          incorrectPart = normalizedInput.substring(i);
-          remainingPart = currentWord.substring(i);
-          break;
-        }
-      } else {
-        remainingPart = currentWord.substring(i);
-        break;
-      }
-    }
     
-    if (correctPart.length === currentWord.length && normalizedInput.length > currentWord.length) {
-       incorrectPart = normalizedInput.substring(currentWord.length)
-    } else if (correctPart.length < currentWord.length && normalizedInput.length > correctPart.length) {
-       remainingPart = currentWord.substring(correctPart.length);
-       const firstIncorrectIndex = correctPart.length;
-       for(let i=firstIncorrectIndex; i<normalizedInput.length; i++){
-          if(normalizedInput[i] !== remainingPart[i-firstIncorrectIndex]){
-            incorrectPart = normalizedInput.substring(i);
-            remainingPart = remainingPart.substring(i-firstIncorrectIndex);
+    let i = 0;
+    for (i = 0; i < normalizedInput.length && i < currentWord.length; i++) {
+        if (normalizedInput[i] === currentWord[i]) {
+            correctPart += currentWord[i];
+        } else {
             break;
-          }
-       }
+        }
     }
+
+    remainingPart = currentWord.substring(i);
+    incorrectPart = normalizedInput.substring(i);
 
     return (
       <>
-        <span className="opacity-100 text-green-500">{correctPart}</span>
-        <span className="opacity-100 text-red-500 underline">{incorrectPart}</span>
-        <span className="opacity-50">{remainingPart}</span>
+        <span className="text-green-500">{correctPart}</span>
+        <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
+        <span className="text-muted-foreground opacity-50">{remainingPart}</span>
       </>
     );
   };
+
+  const isError = normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
 
   if(isFinished) {
     return <TestResults stats={{ wpm: wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
