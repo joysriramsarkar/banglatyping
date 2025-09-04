@@ -50,6 +50,9 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         
         let keyPressedCorrectly = false;
         
+        // This is the correct logic for shift key matching.
+        // It checks if the event's shiftKey state is the same as what the drill requires.
+        // `!!` converts undefined/false to false, and true to true.
         const isShiftMatch = event.shiftKey === !!currentDrill.shift;
 
         if (event.key.toLowerCase() === expectedKey.toLowerCase() && isShiftMatch) {
@@ -333,7 +336,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   }, [isFinished, pause, calculateStats]);
 
   const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.normalize('NFC');
+    const value = e.target.value;
 
     if (isFinished) return;
     if (!isActive && !isPaused) start();
@@ -358,11 +361,11 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
             return;
         };
 
-        const typedWord = currentInput.trim();
+        const typedWord = currentInput.trim().normalize('NFC');
         const newTypedWords = [...typedWords, typedWord];
         setTypedWords(newTypedWords);
 
-        if(typedWord.normalize('NFC') !== words[currentWordIndex].normalize('NFC')) {
+        if(typedWord !== words[currentWordIndex].normalize('NFC')) {
             setTotalErrors(prev => prev + 1);
         }
 
@@ -413,12 +416,13 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     return "text-primary bg-yellow-100 dark:bg-yellow-800/50 rounded px-1";
   }
 
-  const currentWord = words[currentWordIndex] || '';
-  const isError = currentInput.length > 0 && !currentWord.normalize('NFC').startsWith(currentInput.normalize('NFC'));
+  const currentWord = words[currentWordIndex]?.normalize('NFC') || '';
+  const normalizedInput = currentInput.normalize('NFC');
+  const isError = normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
 
 
   if(isFinished) {
-    return <TestResults stats={{ wpm: toBengaliNumber(wpm), accuracy: toBengaliNumber(accuracy), errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
+    return <TestResults stats={{ wpm: wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
   }
 
   return (
@@ -436,7 +440,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
           <p>
             {words.map((word, index) => (
                 <span key={index} className={cn("transition-colors", getWordClass(index))}>
-                    {word}{' '}
+                    {word.normalize('NFC')}{' '}
                 </span>
             ))}
           </p>
@@ -450,8 +454,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
           <div className="flex">
             {currentWord.split('').map((char, index) => {
               let charClass = "opacity-50";
-              if(index < currentInput.length) {
-                charClass = currentInput[index].normalize('NFC') === char.normalize('NFC') ? "opacity-100" : "opacity-100 text-red-500";
+              if(index < normalizedInput.length) {
+                charClass = normalizedInput[index] === char ? "opacity-100" : "opacity-100 text-red-500";
               }
               return <span key={index} className={charClass}>{char}</span>
            })}
