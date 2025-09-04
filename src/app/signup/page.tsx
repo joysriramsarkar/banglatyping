@@ -15,19 +15,19 @@ import { auth, db } from "@/lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 
 const GoogleIcon = () => (
-    <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+    <svg className="h-5 w-5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
         <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-67.7 67.7C314.6 114.5 283.5 104 248 104c-73.8 0-134.3 60.3-134.3 134.3s60.5 134.3 134.3 134.3c81.5 0 115.7-60.2 120.3-91.2H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path>
     </svg>
 );
 
 const FacebookIcon = () => (
-    <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="facebook" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <svg className="h-5 w-5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="facebook" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
         <path fill="currentColor" d="M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z"></path>
     </svg>
 );
 
 const MicrosoftIcon = () => (
-    <svg className="mr-2 h-4 w-4" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <svg className="h-5 w-5" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <title>Microsoft</title>
       <path fill="currentColor" d="M11.4 22.2h-10v-10h10v10zm0-11.6h-10v-10h10v10zm11.2 11.6h-10v-10h10v10zm0-11.6h-10v-10h10v10z"/>
     </svg>
@@ -169,18 +169,17 @@ export default function SignupPage() {
                     <span className="bg-background px-2 text-muted-foreground">অথবা</span>
                 </div>
             </div>
-            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup('google')} disabled={isLoading}>
-              <GoogleIcon />
-              {isLoading ? "লোড হচ্ছে..." : "গুগল দিয়ে সাইন আপ করুন"}
-            </Button>
-            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup('facebook')} disabled={isLoading}>
-              <FacebookIcon />
-              {isLoading ? "লোড হচ্ছে..." : "ফেসবুক দিয়ে সাইন আপ করুন"}
-            </Button>
-            <Button variant="outline" type="button" className="w-full" onClick={() => handleOAuthSignup('microsoft')} disabled={isLoading}>
-              <MicrosoftIcon />
-              {isLoading ? "লোড হচ্ছে..." : "মাইক্রোসফ্ট দিয়ে সাইন আপ করুন"}
-            </Button>
+            <div className="flex justify-center gap-4">
+               <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthSignup('google')} disabled={isLoading} aria-label="Google দিয়ে সাইন আপ করুন">
+                  <GoogleIcon />
+               </Button>
+               <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthSignup('facebook')} disabled={isLoading} aria-label="Facebook দিয়ে সাইন আপ করুন">
+                  <FacebookIcon />
+               </Button>
+               <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthSignup('microsoft')} disabled={isLoading} aria-label="Microsoft দিয়ে সাইন আপ করুন">
+                  <MicrosoftIcon />
+               </Button>
+            </div>
           </form>
           <div className="mt-4 text-center text-sm">
             ইতিমধ্যে একটি অ্যাকাউন্ট আছে?{" "}
