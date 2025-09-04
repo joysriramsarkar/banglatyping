@@ -34,7 +34,7 @@ export default function PracticePage() {
                 <p className="text-muted-foreground">{lesson.level} স্তরের পাঠ</p>
             </div>
             {lesson.text && <TypingPractice textToType={lesson.text} lessonId={lesson.id} />}
-            {lesson.drills && <VisualTypingDrill drills={lesson.drills} />}
+            {lesson.drills && <VisualTypingDrill drills={lesson.drills} lessonId={lesson.id} />}
         </div>
     );
 }

@@ -1,8 +1,19 @@
 import type { Lesson } from "./types";
 
+const keyMap = [
+    // Top Row
+    {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ', row: 'top', hand: 'left'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ', row: 'top', hand: 'left'}, {key: 'e', bn: 'ে', bnShift: 'ৈ', row: 'top', hand: 'left'}, {key: 'r', bn: 'র', bnShift: 'ড়', row: 'top', hand: 'left'}, {key: 't', bn: 'ট', bnShift: 'ঠ', row: 'top', hand: 'left'}, 
+    {key: 'y', bn: 'য', bnShift: 'য়', row: 'top', hand: 'right'}, {key: 'u', bn: 'ু', bnShift: 'ূ', row: 'top', hand: 'right'}, {key: 'i', bn: 'ি', bnShift: 'ী', row: 'top', hand: 'right'}, {key: 'o', bn: 'ো', bnShift: 'ৌ', row: 'top', hand: 'right'}, {key: 'p', bn: 'প', bnShift: 'ঢ়', row: 'top', hand: 'right'},
+    // Home Row
+    {key: 'a', bn: 'া', bnShift: 'অ', row: 'home', hand: 'left'}, {key: 's', bn: 'স', bnShift: 'শ', row: 'home', hand: 'left'}, {key: 'd', bn: 'ড', bnShift: 'ঢ', row: 'home', hand: 'left'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ', row: 'home', hand: 'left'}, {key: 'g', bn: 'গ', bnShift: 'ঘ', row: 'home', hand: 'left'},
+    {key: 'h', bn: '্', bnShift: 'হ', row: 'home', hand: 'right'}, {key: 'j', bn: 'জ', bnShift: 'ঝ', row: 'home', hand: 'right'}, {key: 'k', bn: 'ক', bnShift: 'খ', row: 'home', hand: 'right'}, {key: 'l', bn: 'ল', bnShift: 'ষ', row: 'home', hand: 'right'},
+    // Bottom Row
+    {key: 'z', bn: '্য', bnShift: 'ং', row: 'bottom', hand: 'left'}, {key: 'x', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left'}, {key: 'c', bn: 'চ', bnShift: 'ছ', row: 'bottom', hand: 'left'}, {key: 'v', bn: 'দ', bnShift: 'ধ', row: 'bottom', hand: 'left'}, {key: 'b', bn: 'ব', bnShift: 'ভ', row: 'bottom', hand: 'left'},
+    {key: 'n', bn: 'ন', bnShift: 'ণ', row: 'bottom', hand: 'right'}, {key: 'm', bn: 'ম', row: 'bottom', hand: 'right'}, {key: ',', bn: 'ৃ', bnShift: 'ঞ', row: 'bottom', hand: 'right'},
+];
+
 const generateDrills = (chars: string[], count: number): {prompt: string, key: string, shift?: boolean}[] => {
     const drills: {prompt: string, key: string, shift?: boolean}[] = [];
-    const keyMap = homaRowKeyMap.flatMap(r => r.keys);
 
     for (let i = 0; i < count; i++) {
         const char = chars[Math.floor(Math.random() * chars.length)];
@@ -22,105 +33,168 @@ const generateDrills = (chars: string[], count: number): {prompt: string, key: s
     return drills;
 };
 
-
-const homaRowKeyMap = [
-    {
-        row: 'home',
-        keys: [
-            {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
-            {key: 'h', bn: '্', bnShift: 'হ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
-        ]
-    },
-     {
-        row: 'top',
-        keys: [
-            {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
-            {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'}
-        ]
-    },
-    {
-       row: 'bottom',
-       keys: [
-            {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-            {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'},
-       ]
-    }
-];
-
-
 export const lessons: Lesson[] = [
-  // Home Row Lessons - Stage 1
+  // --- HOME ROW ---
   {
     id: "home-row-1-1-left-hand-chars",
-    title: "হোম রো ১.১: বাম হাত (অক্ষর)",
+    title: "১.১: হোম রো - বাম হাত (অক্ষর)",
     level: "Beginner",
-    drills: generateDrills(['া', 'স', 'ড', 'ফ', 'গ'], 20)
+    row: "home-row",
+    drills: generateDrills(['া', 'স', 'ড', 'ফ', 'গ'], 100)
   },
   {
     id: "home-row-1-2-left-hand-words",
-    title: "হোম রো ১.২: বাম হাত (শব্দ)",
+    title: "১.২: হোম রো - বাম হাত (শব্দ)",
     level: "Beginner",
-    text: "সাদ ডগা ফাগা গাসা কsaga ফাদ ডাস গড"
+    row: "home-row",
+    text: "সাদ ডগা ফাগা গাসা ডগ ফাদ ডাস গড কsaga আসাদ"
   },
   {
     id: "home-row-1-3-right-hand-chars",
-    title: "হোম রো ১.৩: ডান হাত (অক্ষর)",
+    title: "১.৩: হোম রো - ডান হাত (অক্ষর)",
     level: "Beginner",
-    drills: generateDrills(['্', 'জ', 'ক', 'ল'], 20)
+    row: "home-row",
+    drills: generateDrills(['্', 'জ', 'ক', 'ল'], 100)
   },
    {
     id: "home-row-1-4-right-hand-words",
-    title: "হোম রো ১.৪: ডান হাত (শব্দ)",
+    title: "১.৪: হোম রো - ডান হাত (শব্দ)",
     level: "Beginner",
-    text: "কাজ কলম লজ কজল কাজল কল"
+    row: "home-row",
+    text: "কাজ কলম লজ কজল কাজল কল জল"
   },
   {
     id: "home-row-1-5-shift-chars",
-    title: "হোম রো ১.৫: শিফট কী (অক্ষর)",
+    title: "১.৫: হোম রো - শিফট কী (অক্ষর)",
     level: "Beginner",
-    drills: generateDrills(['অ', 'শ', 'ঢ', 'ৎ', 'ঘ', 'হ', 'ঝ', 'খ', 'ষ'], 20)
+    row: "home-row",
+    drills: generateDrills(['অ', 'শ', 'ঢ', 'ৎ', 'ঘ', 'হ', 'ঝ', 'খ', 'ষ'], 100)
   },
    {
     id: "home-row-1-6-shift-words",
-    title: "হোম রো ১.৬: শিফট কী (শব্দ)",
+    title: "১.৬: হোম রো - শিফট কী (শব্দ)",
     level: "Beginner",
-    text: "অশোক ঢাক ঘষাৎ হঠাৎ আশঙ্কা ঘোষণা"
+    row: "home-row",
+    text: "অশোক ঢাক ঘষাৎ হঠাৎ আশঙ্কা ঘোষণা আশা ভাষা"
   },
   {
     id: "home-row-1-7-paragraph-1",
-    title: "হোম রো ১.৭: অনুচ্ছেদ অনুশীলন ১",
+    title: "১.৭: হোম রো - অনুচ্ছেদ অনুশীলন ১",
     level: "Beginner",
+    row: "home-row",
     text: "সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজা। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজা। কাকা কাজলা সকল কাজ।"
   },
   {
     id: "home-row-1-8-paragraph-2",
-    title: "হোম রো ১.৮: অনুচ্ছেদ অনুশীলন ২",
+    title: "১.৮: হোম রো - অনুচ্ছেদ অনুশীলন ২",
     level: "Beginner",
+    row: "home-row",
     text: "অঘোষ সকাশ। শশাrakash। ঘষাঘষি। শশাঙ্ক। আকাশ। সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। আকাশ সকল শশাঙ্ক। শশাঙ্ক আকাশ সকল। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক।"
   },
+  
+  // --- TOP ROW ---
+  {
+    id: "top-row-2-1-left-hand-chars",
+    title: "২.১: টপ রো - বাম হাত (অক্ষর)",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateDrills(['ক্ষ', 'ঙ', 'ে', 'র', 'ট'], 100)
+  },
+  {
+    id: "top-row-2-2-left-hand-words",
+    title: "২.২: টপ রো - বাম হাত (শব্দ)",
+    level: "Beginner",
+    row: "top-row",
+    text: "টেক্কা টক্কর টের টাকা টেরা টকটক টগর টেকসই"
+  },
+  {
+    id: "top-row-2-3-right-hand-chars",
+    title: "২.৩: টপ রো - ডান হাত (অক্ষর)",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateDrills(['য', 'ু', 'ি', 'ো', 'প'], 100)
+  },
+  {
+    id: "top-row-2-4-right-hand-words",
+    title: "২.৪: টপ রো - ডান হাত (শব্দ)",
+    level: "Beginner",
+    row: "top-row",
+    text: "যুপ যূপি পিউপাপা পুপু পিয়া পিপি"
+  },
+  {
+    id: "top-row-2-5-shift-chars",
+    title: "২.৫: টপ রো - শিফট কী (অক্ষর)",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateDrills(['ঁ', 'ঃ', 'ৈ', 'ড়', 'ঠ', 'য়', 'ূ', 'ী', 'ৌ', 'ঢ়'], 100)
+  },
+  {
+    id: "top-row-2-6-shift-words",
+    title: "২.৬: টপ রো - শিফট কী (শব্দ)",
+    level: "Beginner",
+    row: "top-row",
+    text: "ঐক্য তৌল মৌন দৌড়ୌ হায়য় ঈষৎ ঈহা ঊষা ঊন"
+  },
+  {
+    id: "top-row-2-7-paragraph",
+    title: "২.৭: টপ রো - অনুচ্ছেদ অনুশীলন",
+    level: "Beginner",
+    row: "top-row",
+    text: "ঐরাবত রৌদ্র পানে চেয়ে থাকে। টুপটাপ জল পড়ে। টিনের চালে টিনের চালে। ইঁদুর দৌড়ে পালায়। ঐ দেখ পেঁচা। টেকো মাথা। টোপা কূল। টৈ টৈ করে। টইটম্বুর পুকুর। কৈ মাছ। টক দই। টোকা দিলে খুলে যায়। টোল পড়া গাল। টোপর মাথায় বর। টোস্ট বিস্কুট। টাকা পয়সা। টেরা চোখ। টর্চ লাইট। টহল পুলিশ। টমেটো। টমটম গাড়ি। টসটস করে। টলমল পায়ে হাঁটে।"
+  },
+
+  // --- BOTTOM ROW ---
+  {
+    id: "bottom-row-3-1-left-hand-chars",
+    title: "৩.১: বটম রো - বাম হাত (অক্ষর)",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: generateDrills(['্য', 'ত', 'চ', 'দ', 'ব'], 100)
+  },
+  {
+    id: "bottom-row-3-2-left-hand-words",
+    title: "৩.২: বটম রো - বাম হাত (শব্দ)",
+    level: "Beginner",
+    row: "bottom-row",
+    text: "তথ্য তত্ত্ব ত্যক্ত চ্যুত চচ্চড়ি চাতক চাদর"
+  },
+  {
+    id: "bottom-row-3-3-right-hand-chars",
+    title: "৩.৩: বটম রো - ডান হাত (অক্ষর)",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: generateDrills(['ন', 'ম', 'ৃ'], 100)
+  },
+  {
+    id: "bottom-row-3-4-right-hand-words",
+    title: "৩.৪: বটম রো - ডান হাত (শব্দ)",
+    level: "Beginner",
+    row: "bottom-row",
+    text: "নম্র नमी नम्रता नमकीन মনন মানব"
+  },
+  {
+    id: "bottom-row-3-5-shift-chars",
+    title: "৩.৫: বটম রো - শিফট কী (অক্ষর)",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: generateDrills(['ং', 'থ', 'ছ', 'ধ', 'ভ', 'ণ', 'ঞ'], 100)
+  },
+  {
+    id: "bottom-row-3-6-shift-words",
+    title: "৩.৬: বটম রো - শিফট কী (শব্দ)",
+    level: "Beginner",
+    row: "bottom-row",
+    text: "এবং রং ढंग থৈ থৈ ছবি ছায়া ধন্যবাদ ভীষণ"
+  },
+  {
+    id: "bottom-row-3-7-paragraph",
+    title: "৩.৭: বটম রো - অনুচ্ছেদ অনুশীলন",
+    level: "Beginner",
+    row: "bottom-row",
+    text: "চঞ্চল বালক। চোখে চশমা। চিবুক চওড়া। চাচা চাচি। চিংড়ি চচ্চড়ি। চমৎকার চাদর। চৈত্র মাস। চৈতির চৈতন্য। চোখে চোখে কথা। চৌকাঠের চৌবাচ্চা। চৌচির মাঠ। চৌদ্দ চৌকো। চৌকিদার চৌকস। চৌরাস্তার মোড়। চৌষট্টি। চ্যাংড়া ছেলে। চ্যালা। চ্যাটচেটে। চ্যাঁ চ্যাঁ। চ্যুতির চ্যবনপ্রাশ। চ্যুত ফল। চ্যুত বৃক্ষ। চ্যুত পুষ্প।"
+  },
+  
   // Other Beginner Lessons
-  {
-    id: "top-row-1",
-    title: "টপ রো অনুশীলন",
-    level: "Beginner",
-    drills: [
-        { prompt: 'ক্ষ', key: 'q' }, { prompt: 'ঙ', key: 'w' }, { prompt: 'ে', key: 'e' }, { prompt: 'র', key: 'r' }, { prompt: 'ট', key: 't' },
-        { prompt: 'য', key: 'y' }, { prompt: 'ু', key: 'u' }, { prompt: 'ি', key: 'i' }, { prompt: 'ো', key: 'o' }, { prompt: 'প', key: 'p' },
-        { prompt: 'ঁ', key: 'q', shift: true }, { prompt: 'ঃ', key: 'w', shift: true }, { prompt: 'ৈ', key: 'e', shift: true }, { prompt: 'ড়', key: 'r', shift: true }, { prompt: 'ঠ', key: 't', shift: true },
-        { prompt: 'য়', key: 'y', shift: true }, { prompt: 'ূ', key: 'u', shift: true }, { prompt: 'ী', key: 'i', shift: true }, { prompt: 'ৌ', key: 'o', shift: true }, { prompt: 'ঢ়', key: 'p', shift: true }
-    ]
-  },
-  {
-    id: "bottom-row-1",
-    title: "বটম রো অনুশীলন",
-    level: "Beginner",
-    drills: [
-        { prompt: '্য', key: 'z' }, { prompt: 'ত', key: 'x' }, { prompt: 'চ', key: 'c' }, { prompt: 'দ', key: 'v' }, { prompt: 'ব', key: 'b' },
-        { prompt: 'ন', key: 'n' }, { prompt: 'ম', key: 'm' }, { prompt: 'ৃ', key: '\\' },
-        { prompt: 'ং', key: 'z', shift: true }, { prompt: 'থ', key: 'x', shift: true }, { prompt: 'ছ', key: 'c', shift: true }, { prompt: 'ধ', key: 'v', shift: true }, { prompt: 'ভ', key: 'b', shift: true },
-        { prompt: 'ণ', key: 'n', shift: true }, { prompt: 'ঞ', key: '\\', shift: true }
-    ]
-  },
   {
     id: "char-practice-1",
     title: "বর্ণমালা অনুশীলন",
@@ -187,3 +261,10 @@ export const practiceParagraphs: string[] = [
   "ষড়ঋতুর দেশ বাংলাদেশ। গ্রীষ্ম, বর্ষা, শরৎ, হেমন্ত, শীত ও বসন্ত এই ছয়টি ঋতু চক্রাকারে আসে। প্রতিটি ঋতুরই রয়েছে নিজস্ব রূপ ও বৈশিষ্ট্য। বর্ষার বৃষ্টি যেমন প্রকৃতিকে সজীব করে তোলে, তেমনি বসন্তের আগমনে প্রকৃতি নতুন সাজে সেজে ওঠে। এই ঋতু বৈচিত্র্যই বাংলাদেশকে করেছে অনন্য।",
   "ডিজিটাল বাংলাদেশ বর্তমান সরকারের একটি গুরুত্বপূর্ণ কর্মসূচি। এর মূল লক্ষ্য হলো প্রযুক্তির ব্যবহার করে দেশের মানুষের জীবনযাত্রার মান উন্নয়ন করা। শিক্ষা, স্বাস্থ্য, কৃষি, যোগাযোগসহ সকল ক্ষেত্রে ডিজিটাল প্রযুক্তির ছোঁয়া লেগেছে। এর ফলে দেশ দ্রুত উন্নতির দিকে এগিয়ে যাচ্ছে।",
 ];
+
+
+export type RowDrillCategory = {
+    id: 'home-row' | 'top-row' | 'bottom-row';
+    name: string;
+    description: string;
+}

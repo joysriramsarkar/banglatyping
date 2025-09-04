@@ -10,43 +10,65 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, PlayCircle } from "lucide-react"
 import Link from "next/link"
-import { lessons } from "@/lib/lessons"
+import { lessons, RowDrillCategory } from "@/lib/lessons"
 
-const lessonsByLevel = {
-  "Beginner": [],
-  "Intermediate": [],
-  "Advanced": [],
-};
+const rowCategories: RowDrillCategory[] = [
+  { 
+    id: 'home-row', 
+    name: 'হোম রো', 
+    description: 'কীবোর্ডের মাঝের সারি, টাইপিংয়ের ভিত্তি।'
+  },
+  { 
+    id: 'top-row', 
+    name: 'টপ রো',
+    description: 'হোম রো-এর উপরের সারি।'
+   },
+  { 
+    id: 'bottom-row', 
+    name: 'বটম রো',
+    description: 'হোম রো-এর নিচের সারি।'
+  },
+];
 
-// This is a bit of a hack to group home row lessons.
-const homeRowBeginnerLessons = lessons.filter(lesson => lesson.level === "Beginner" && lesson.id.startsWith("home-row"));
-const otherBeginnerLessons = lessons.filter(lesson => lesson.level === "Beginner" && !lesson.id.startsWith("home-row"));
-
-lessons.forEach(lesson => {
-    if (lesson.level !== "Beginner") {
-        lessonsByLevel[lesson.level].push(lesson);
-    }
-});
+const beginnerLessons = lessons.filter(lesson => lesson.level === "Beginner" && !lesson.row);
+const intermediateLessons = lessons.filter(lesson => lesson.level === "Intermediate");
+const advancedLessons = lessons.filter(lesson => lesson.level === "Advanced");
 
 const lessonPlan = [
-  {
+   {
     level: "শিক্ষানবিশ (Beginner)",
     description: "কীবোর্ডের সাথে পরিচিতি এবং মৌলিক অক্ষর অনুশীলন।",
-    lessons: otherBeginnerLessons,
-    isHomeRow: true,
-    homeRowLessons: homeRowBeginnerLessons
+    isRowDrills: true,
+    lessons: beginnerLessons
   },
   {
     level: "মধ্যম (Intermediate)",
     description: "সাধারণ শব্দ এবং বাক্য দিয়ে নির্ভুলতা ও গতি বৃদ্ধি।",
-    lessons: lessonsByLevel["Intermediate"],
+    lessons: intermediateLessons,
   },
   {
     level: "উন্নত (Advanced)",
     description: "জটিল অনুচ্ছেদ এবং দ্রুত গতির জন্য অনুশীলন।",
-    lessons: lessonsByLevel["Advanced"],
+    lessons: advancedLessons,
   },
 ]
+
+const LessonListItem = ({ lesson }: { lesson: any }) => (
+    <div className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+        <div className="flex items-center gap-4">
+        <PlayCircle className="h-6 w-6 text-muted-foreground" />
+        <div>
+            <p className="font-medium">{lesson.title}</p>
+        </div>
+        </div>
+        <Button asChild>
+        <Link href={`/practice/${lesson.id}`}>
+            শুরু করুন
+        </Link>
+        </Button>
+    </div>
+);
+
 
 export default function LessonsPage() {
   return (
@@ -64,45 +86,24 @@ export default function LessonsPage() {
             <CardContent>
                 <div className="space-y-4 pt-4">
                   
-                  {levelData.isHomeRow && (
-                    <Accordion type="single" collapsible className="w-full border rounded-lg px-4">
-                        <AccordionItem value="home-row">
-                          <AccordionTrigger className="text-lg font-semibold">হোম রো অনুশীলন</AccordionTrigger>
+                  {levelData.isRowDrills && (
+                    <Accordion type="multiple" className="w-full space-y-4">
+                      {rowCategories.map(category => (
+                        <AccordionItem value={category.id} key={category.id} className="border rounded-lg px-4">
+                          <AccordionTrigger className="text-lg font-semibold">{category.name}</AccordionTrigger>
                           <AccordionContent className="space-y-4 pt-4">
-                              {levelData.homeRowLessons.map(lesson => (
-                                <div key={lesson.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
-                                  <div className="flex items-center gap-4">
-                                    <PlayCircle className="h-6 w-6 text-muted-foreground" />
-                                    <div>
-                                      <p className="font-medium">{lesson.title}</p>
-                                    </div>
-                                  </div>
-                                  <Button asChild>
-                                    <Link href={`/practice/${lesson.id}`}>
-                                      শুরু করুন
-                                    </Link>
-                                  </Button>
-                                </div>
+                              <p className="text-sm text-muted-foreground">{category.description}</p>
+                              {lessons.filter(l => l.row === category.id).map(lesson => (
+                                <LessonListItem key={lesson.id} lesson={lesson} />
                               ))}
                           </AccordionContent>
                         </AccordionItem>
-                      </Accordion>
+                      ))}
+                    </Accordion>
                   )}
 
                   {levelData.lessons.map(lesson => (
-                    <div key={lesson.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <PlayCircle className="h-6 w-6 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{lesson.title}</p>
-                        </div>
-                      </div>
-                      <Button asChild>
-                        <Link href={`/practice/${lesson.id}`}>
-                          শুরু করুন
-                        </Link>
-                      </Button>
-                    </div>
+                    <LessonListItem key={lesson.id} lesson={lesson} />
                   ))}
                 </div>
             </CardContent>

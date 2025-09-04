@@ -6,6 +6,7 @@ export interface Lesson {
   level: "Beginner" | "Intermediate" | "Advanced";
   text?: string;
   drills?: Drill[];
+  row?: 'home-row' | 'top-row' | 'bottom-row';
 }
 
 export interface TypingStats {

@@ -1,5 +1,6 @@
 
 
+
 "use client";
 
 import * as React from "react";
@@ -7,13 +8,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTimer } from "@/hooks/use-timer";
-import { Zap, Target, Timer, XCircle, Pause, Play, Home, CheckCircle } from "lucide-react";
+import { Zap, Target, Timer, XCircle, Pause, Play, Home, CheckCircle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TestResults from "./test-results";
-import { practiceParagraphs } from "@/lib/lessons";
+import { lessons, practiceParagraphs } from "@/lib/lessons";
 import { Input } from "./ui/input";
 import { useRouter } from 'next/navigation';
-import type { Drill } from "@/lib/types";
+import type { Drill, Lesson } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
 
@@ -36,7 +37,7 @@ const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, va
   </div>
 );
 
-const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
+const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lessonId?: string }) => {
     const [currentDrillIndex, setCurrentDrillIndex] = useState(0);
     const [status, setStatus] = useState<'pending' | 'correct' | 'incorrect'>('pending');
     const totalDrills = drills.length;
@@ -58,14 +59,17 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
 
         const currentDrill = drills[currentDrillIndex];
 
-        const codeIsCorrect = `Key${currentDrill.key.toUpperCase()}` === event.code || 
-                              (currentDrill.key === ' ' && event.code === 'Space') ||
-                              (currentDrill.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
-                              (currentDrill.key === '\\' && event.code === 'Backslash');
-        
+        // Match based on physical key (`event.code`) and required shift state
+        const keyIsCorrect = `Key${currentDrill.key.toUpperCase()}` === event.code || 
+                             (currentDrill.key === ' ' && event.code === 'Space') ||
+                             (currentDrill.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
+                             (currentDrill.key === '\\' && event.code === 'Backslash') ||
+                             (currentDrill.key === ',' && event.code === 'Comma') ||
+                             (currentDrill.key === '.' && event.code === 'Period');
+                             
         const shiftIsCorrect = !!currentDrill.shift === event.shiftKey;
 
-        if (codeIsCorrect && shiftIsCorrect) {
+        if (keyIsCorrect && shiftIsCorrect) {
             setStatus('correct');
             setCurrentDrillIndex(prev => prev + 1);
         } else {
@@ -86,10 +90,18 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
             }
         };
     }, [handleKeyPress]);
+    
+    let nextLesson: Lesson | null = null;
+    if(lessonId) {
+        const currentLessonIndex = lessons.findIndex(l => l.id === lessonId);
+        if(currentLessonIndex !== -1 && currentLessonIndex < lessons.length - 1) {
+            nextLesson = lessons[currentLessonIndex + 1];
+        }
+    }
 
     if (currentDrillIndex >= totalDrills) {
         return (
-            <Card className="text-center p-8">
+            <Card className="text-center p-8 max-w-lg mx-auto">
                 <CardHeader>
                     <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                     <CardTitle className="text-2xl">অনুশীলন সম্পন্ন!</CardTitle>
@@ -97,6 +109,11 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2">
                     <Button onClick={() => setCurrentDrillIndex(0)}>আবার চেষ্টা করুন</Button>
+                    {nextLesson && (
+                         <Button onClick={() => router.push(`/practice/${nextLesson?.id}`)}>
+                            পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    )}
                     <Button onClick={() => router.push('/dashboard/lessons')} variant="outline">পাঠক্রমে ফিরে যান</Button>
                 </CardContent>
             </Card>
@@ -111,7 +128,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                 <div className="w-full md:w-2/3 space-y-8">
                     {/* Prompt Display */}
                     <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px]">
-                        {drills.slice(currentDrillIndex, Math.min(currentDrillIndex + 8, totalDrills)).map((drill, index) => {
+                        {drills.slice(currentDrillIndex, Math.min(currentDrillIndex + 10, totalDrills)).map((drill, index) => {
                             const isCurrent = index === 0;
                             let boxClass = "bg-secondary";
                             if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
@@ -119,7 +136,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                             
                             return (
                                 <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-2xl font-bold", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drill.prompt === ' ' ? '-' : drill.prompt}
+                                   {drill.prompt === ' ' ? 'স্পেস' : drill.prompt}
                                 </div>
                             )
                         })}
@@ -143,7 +160,6 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                     </Card>
                      <div className="flex justify-end gap-2 mt-4">
                         <Button variant="outline" onClick={() => router.push('/dashboard/lessons')}>বাতিল</Button>
-                        <Button onClick={() => setCurrentDrillIndex(p => Math.min(p + 1, totalDrills))}>পরবর্তী</Button>
                     </div>
                 </div>
             </div>
@@ -162,7 +178,7 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
     ],
     bottom: [
         {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৃ', bnShift: 'ঞ'},
     ],
     space: [{key: ' ', bn: '-'}],
 };
@@ -274,6 +290,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     }
   }, [isFinished, pause, calculateStats]);
 
+
   const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.normalize('NFC');
 
@@ -293,13 +310,14 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
             pause();
         }
     }, 4000);
-
+    
     // Auto-finish if it's the last word and it's correct
     if (currentWordIndex === words.length - 1 && value.normalize('NFC') === words[currentWordIndex].normalize('NFC')) {
       const newTypedWords = [...typedWords, value.trim()];
       setTypedWords(newTypedWords);
       setCurrentInput(value);
-      finishSession();
+      // Use a short timeout to allow state to update before finishing
+      setTimeout(() => finishSession(), 50);
       return;
     }
 
@@ -387,8 +405,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         correctPart = currentWord.substring(0, i);
         
         if (i < normalizedInput.length) { // Mistake found
-          incorrectPart = normalizedInput.substring(i);
-          remainingPart = currentWord.substring(i);
+          incorrectPart = currentWord.substring(i, normalizedInput.length);
+          remainingPart = currentWord.substring(normalizedInput.length);
         } else {
           remainingPart = currentWord.substring(i);
         }
@@ -397,8 +415,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         return (
             <>
             <span className="text-green-500">{correctPart}</span>
-            <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
-            <span className="text-muted-foreground opacity-50">{remainingPart.substring(incorrectPart.length)}</span>
+            <span className="bg-red-500/20 text-red-500 underline">{incorrectPart}</span>
+            <span className="text-muted-foreground opacity-50">{remainingPart}</span>
             </>
         );
     };
@@ -424,16 +442,16 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
       <Card className="w-full p-6 text-2xl tracking-wider font-mono leading-relaxed relative select-none">
           <p>
             {words.map((word, index) => (
-                <React.Fragment key={index}>
-                    <span className={cn(
-                        "transition-colors rounded px-1", 
-                        getWordClass(index),
-                        index === currentWordIndex && "bg-yellow-100 dark:bg-yellow-800/50"
-                    )}>
-                        {word.normalize('NFC')}
-                    </span>
-                    {' '}
-                </React.Fragment>
+              <span
+                key={index}
+                className={cn(
+                  'transition-colors px-1',
+                  getWordClass(index),
+                  index === currentWordIndex && 'bg-yellow-100 dark:bg-yellow-800/50 rounded'
+                )}
+              >
+                {word.normalize('NFC') + (index === words.length - 1 ? '' : ' ')}
+              </span>
             ))}
           </p>
       </Card>
@@ -480,6 +498,7 @@ export { VisualTypingDrill };
     
 
     
+
 
 
 
