@@ -18,15 +18,23 @@ const lessonsByLevel = {
   "Advanced": [],
 };
 
+// This is a bit of a hack to group home row lessons.
+const homeRowBeginnerLessons = lessons.filter(lesson => lesson.level === "Beginner" && lesson.id.startsWith("home-row"));
+const otherBeginnerLessons = lessons.filter(lesson => lesson.level === "Beginner" && !lesson.id.startsWith("home-row"));
+
 lessons.forEach(lesson => {
-    lessonsByLevel[lesson.level].push(lesson);
+    if (lesson.level !== "Beginner") {
+        lessonsByLevel[lesson.level].push(lesson);
+    }
 });
 
 const lessonPlan = [
   {
     level: "শিক্ষানবিশ (Beginner)",
     description: "কীবোর্ডের সাথে পরিচিতি এবং মৌলিক অক্ষর অনুশীলন।",
-    lessons: lessonsByLevel["Beginner"],
+    lessons: otherBeginnerLessons,
+    isHomeRow: true,
+    homeRowLessons: homeRowBeginnerLessons
   },
   {
     level: "মধ্যম (Intermediate)",
@@ -55,6 +63,32 @@ export default function LessonsPage() {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4 pt-4">
+                  
+                  {levelData.isHomeRow && (
+                    <Accordion type="single" collapsible className="w-full border rounded-lg px-4">
+                        <AccordionItem value="home-row">
+                          <AccordionTrigger className="text-lg font-semibold">হোম রো অনুশীলন</AccordionTrigger>
+                          <AccordionContent className="space-y-4 pt-4">
+                              {levelData.homeRowLessons.map(lesson => (
+                                <div key={lesson.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                                  <div className="flex items-center gap-4">
+                                    <PlayCircle className="h-6 w-6 text-muted-foreground" />
+                                    <div>
+                                      <p className="font-medium">{lesson.title}</p>
+                                    </div>
+                                  </div>
+                                  <Button asChild>
+                                    <Link href={`/practice/${lesson.id}`}>
+                                      শুরু করুন
+                                    </Link>
+                                  </Button>
+                                </div>
+                              ))}
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                  )}
+
                   {levelData.lessons.map(lesson => (
                     <div key={lesson.id} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
                       <div className="flex items-center gap-4">

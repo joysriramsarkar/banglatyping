@@ -12,7 +12,11 @@ const generateDrills = (chars: string[], count: number): {prompt: string, key: s
                 prompt: char,
                 key: mapping.key,
                 shift: mapping.bnShift === char
-            })
+            });
+            // Add a space after every 4 characters, but not for the last one
+            if ((i + 1) % 4 === 0 && i < count - 1) {
+                 drills.push({ prompt: ' ', key: ' ' });
+            }
         }
     }
     return drills;
@@ -24,7 +28,7 @@ const homaRowKeyMap = [
         row: 'home',
         keys: [
             {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
-            {key: 'h', bn: '্', bnShift: 'হ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ষ', bnShift: 'ল'}, // Note: l is swapped in image vs normal avro
+            {key: 'h', bn: '্', bnShift: 'হ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
         ]
     },
      {
@@ -62,19 +66,19 @@ export const lessons: Lesson[] = [
     id: "home-row-1-3-right-hand-chars",
     title: "হোম রো ১.৩: ডান হাত (অক্ষর)",
     level: "Beginner",
-    drills: generateDrills(['্', 'জ', 'ক', 'ল', 'ষ'], 20)
+    drills: generateDrills(['্', 'জ', 'ক', 'ল'], 20)
   },
    {
     id: "home-row-1-4-right-hand-words",
     title: "হোম রো ১.৪: ডান হাত (শব্দ)",
     level: "Beginner",
-    text: "কাজ কলম লজ জষ কাজল কল"
+    text: "কাজ কলম লজ কজল কাজল কল"
   },
   {
     id: "home-row-1-5-shift-chars",
     title: "হোম রো ১.৫: শিফট কী (অক্ষর)",
     level: "Beginner",
-    drills: generateDrills(['অ', 'শ', 'ঢ', 'ৎ', 'ঘ', 'হ', 'ঝ', 'খ', 'ল'], 20)
+    drills: generateDrills(['অ', 'শ', 'ঢ', 'ৎ', 'ঘ', 'হ', 'ঝ', 'খ', 'ষ'], 20)
   },
    {
     id: "home-row-1-6-shift-words",
