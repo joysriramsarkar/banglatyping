@@ -43,7 +43,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
     const router = useRouter();
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter'];
+        const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
         if (modifierKeys.includes(event.key) || status !== 'pending' || currentDrillIndex >= totalDrills) {
             event.preventDefault();
             return;
@@ -53,13 +53,11 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         const currentDrill = drills[currentDrillIndex];
         
         let keyPressedCorrectly = false;
-        const keyToPress = `Key${currentDrill.key.toUpperCase()}`;
+        // Using event.code is more reliable for physical key presses regardless of layout
+        const keyToPress = currentDrill.key === ' ' ? 'Space' : `Key${currentDrill.key.toUpperCase()}`;
 
-        if (currentDrill.key === ' ') {
-            if (event.code === 'Space') {
-                keyPressedCorrectly = true;
-            }
-        } else if (event.code === keyToPress) {
+        if (event.code === keyToPress) {
+            // Check if shift key is required and if it was pressed
             if (!!currentDrill.shift === event.shiftKey) {
                 keyPressedCorrectly = true;
             }
@@ -233,7 +231,7 @@ const HandGuide = ({ highlightKey }: { highlightKey: string }) => {
     return (
         <div className="flex justify-center items-end gap-8 h-48">
              <div className="relative">
-                <Image src="https://picsum.photos/200/150" width={200} height={150} alt="Left Hand" data-ai-hint="left hand" className="transform -scale-x-100" />
+                <Image src="https://picsum.photos/200/150" width={200} height={150} alt="Left Hand" data-ai-hint="left hand" style={{transform: "scaleX(-1)"}} />
                 <div className="absolute top-0 left-0 w-full h-full">
                     {/* Pinky */}
                     <div style={getFingerHighlightStyle('left', 'pinky')} className="absolute top-[35px] left-[25px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
@@ -438,15 +436,20 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
             break;
         }
     }
-
+    
+    // The rest of the original word that hasn't been typed yet
     remainingPart = currentWord.substring(i);
-    incorrectPart = normalizedInput.substring(i);
+
+    // The part of the input that is incorrect
+    if (normalizedInput.length > i) {
+        incorrectPart = normalizedInput.substring(i);
+    }
 
     return (
       <>
         <span className="text-green-500">{correctPart}</span>
         <span className="text-red-500 underline bg-red-500/20">{incorrectPart}</span>
-        <span className="text-muted-foreground opacity-50">{remainingPart}</span>
+        <span className="text-muted-foreground opacity-50">{remainingPart.substring(incorrectPart.length)}</span>
       </>
     );
   };
@@ -520,3 +523,4 @@ export { VisualTypingDrill };
     
 
     
+
