@@ -44,7 +44,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
-        if (modifierKeys.includes(event.key) || status !== 'pending' || currentDrillIndex >= totalDrills) {
+        if (modifierKeys.includes(event.key) || currentDrillIndex >= totalDrills) {
             if (event.key !== 'Shift') event.preventDefault();
             return;
         }
@@ -71,7 +71,7 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                 setStatus('pending');
             }, 500);
         }
-    }, [currentDrillIndex, drills, status, totalDrills]);
+    }, [currentDrillIndex, drills, totalDrills]);
 
 
     useEffect(() => {
@@ -422,7 +422,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
         let correctPart = '';
         let incorrectPart = '';
-        let remainingPart = currentWord;
+        let remainingPart = '';
         
         let i = 0;
         while (i < normalizedInput.length && i < currentWord.length) {
@@ -434,12 +434,12 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         }
         
         correctPart = currentWord.substring(0, i);
-        if (i < normalizedInput.length) { // There is a mistake
-            incorrectPart = currentWord.substring(i, normalizedInput.length);
-            remainingPart = currentWord.substring(normalizedInput.length);
-        } else { // No mistake yet
-            remainingPart = currentWord.substring(i);
-        }
+
+        const mistakeIndex = i;
+        
+        incorrectPart = normalizedInput.substring(mistakeIndex);
+        remainingPart = currentWord.substring(normalizedInput.length);
+
 
         return (
             <>
@@ -520,6 +520,7 @@ export { VisualTypingDrill };
     
 
     
+
 
 
 
