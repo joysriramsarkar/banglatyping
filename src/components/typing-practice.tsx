@@ -58,17 +58,21 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
         const currentDrill = drills[currentDrillIndex];
 
         const codeIsCorrect = `Key${currentDrill.key.toUpperCase()}` === event.code || 
-                              (currentDrill.key === ' ' && event.code === 'Space') || 
+                              (currentDrill.key === ' ' && event.code === 'Space') ||
+                              (currentDrill.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
                               (currentDrill.key === '\\' && event.code === 'Backslash');
         
         const shiftIsCorrect = !!currentDrill.shift === event.shiftKey;
 
         if (codeIsCorrect && shiftIsCorrect) {
             setStatus('correct');
-            setCurrentDrillIndex(prev => prev + 1);
-            statusTimeoutRef.current = setTimeout(() => {
-                setStatus('pending');
-            }, 300);
+            setCurrentDrillIndex(prev => {
+                if (prev + 1 >= totalDrills) {
+                    return prev + 1;
+                }
+                return prev + 1;
+            });
+            
         } else {
             setStatus('incorrect');
             statusTimeoutRef.current = setTimeout(() => {
@@ -129,9 +133,6 @@ const VisualTypingDrill = ({ drills }: { drills: Drill[] }) => {
                     {/* Virtual Keyboard */}
                     <VirtualKeyboard highlightKey={currentDrill.key} needsShift={!!currentDrill.shift} />
                     
-                    {/* Hand Guide */}
-                    <HandGuide highlightKey={currentDrill.key} />
-
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">
                     <Card>
@@ -171,21 +172,6 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
     space: [{key: ' ', bn: '-'}],
 };
 
-const keyToFingerMap: Record<string, { hand: 'left' | 'right', finger: 'pinky' | 'ring' | 'middle' | 'index' | 'thumb' }> = {
-    'q': { hand: 'left', finger: 'pinky' }, 'a': { hand: 'left', finger: 'pinky' }, 'z': { hand: 'left', finger: 'pinky' },
-    'w': { hand: 'left', finger: 'ring' }, 's': { hand: 'left', finger: 'ring' }, 'x': { hand: 'left', finger: 'ring' },
-    'e': { hand: 'left', finger: 'middle' }, 'd': { hand: 'left', finger: 'middle' }, 'c': { hand: 'left', finger: 'middle' },
-    'r': { hand: 'left', finger: 'index' }, 'f': { hand: 'left', finger: 'index' }, 'v': { hand: 'left', finger: 'index' },
-    't': { hand: 'left', finger: 'index' }, 'g': { hand: 'left', finger: 'index' }, 'b': { hand: 'left', finger: 'index' },
-    'y': { hand: 'right', finger: 'index' }, 'h': { hand: 'right', finger: 'index' }, 'n': { hand: 'right', finger: 'index' },
-    'u': { hand: 'right', finger: 'index' }, 'j': { hand: 'right', finger: 'index' }, 'm': { hand: 'right', finger: 'index' },
-    'i': { hand: 'right', finger: 'middle' }, 'k': { hand: 'right', finger: 'middle' },
-    'o': { hand: 'right', finger: 'ring' }, 'l': { hand: 'right', finger: 'ring' },
-    'p': { hand: 'right', finger: 'pinky' }, '\\': { hand: 'right', finger: 'pinky' },
-    ' ': { hand: 'left', finger: 'thumb' }, // or right thumb
-};
-
-
 const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string, needsShift: boolean }) => (
     <div className="p-4 bg-background rounded-lg shadow-inner space-y-2">
         {Object.values(keyboardLayout).map((row, rowIndex) => (
@@ -220,53 +206,6 @@ const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string, n
         ))}
     </div>
 );
-
-const HandGuide = ({ highlightKey }: { highlightKey: string }) => {
-    const fingerInfo = keyToFingerMap[highlightKey.toLowerCase()];
-
-    const getFingerHighlightStyle = (hand: 'left' | 'right', finger: 'pinky' | 'ring' | 'middle' | 'index' | 'thumb'): React.CSSProperties => {
-        if (fingerInfo && fingerInfo.hand === hand && fingerInfo.finger === finger) {
-            return { filter: 'drop-shadow(0 0 12px hsl(var(--primary)))', transform: 'scale(1.1)' };
-        }
-        return {};
-    };
-
-    return (
-        <div className="flex justify-center items-end gap-8 h-48">
-             <div className="relative">
-                <Image src="https://picsum.photos/200/150" width={200} height={150} alt="Left Hand" data-ai-hint="left hand" style={{transform: "scaleX(-1)"}} />
-                <div className="absolute top-0 left-0 w-full h-full">
-                    {/* Pinky */}
-                    <div style={getFingerHighlightStyle('left', 'pinky')} className="absolute top-[35px] left-[25px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
-                    {/* Ring */}
-                    <div style={getFingerHighlightStyle('left', 'ring')} className="absolute top-[15px] left-[55px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
-                    {/* Middle */}
-                    <div style={getFingerHighlightStyle('left', 'middle')} className="absolute top-[5px] left-[85px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
-                    {/* Index */}
-                    <div style={getFingerHighlightStyle('left', 'index')} className="absolute top-[15px] left-[115px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
-                    {/* Thumb */}
-                    <div style={getFingerHighlightStyle('left', 'thumb')} className="absolute top-[80px] left-[140px] w-6 h-6 bg-primary/50 rounded-full transition-all"></div>
-                </div>
-            </div>
-            <div className="relative">
-                <Image src="https://picsum.photos/200/150" width={200} height={150} alt="Right Hand" data-ai-hint="right hand" />
-                 <div className="absolute top-0 left-0 w-full h-full">
-                    {/* Index */}
-                    <div style={getFingerHighlightStyle('right', 'index')} className="absolute top-[15px] left-[30px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
-                    {/* Middle */}
-                    <div style={getFingerHighlightStyle('right', 'middle')} className="absolute top-[5px] left-[60px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
-                    {/* Ring */}
-                    <div style={getFingerHighlightStyle('right', 'ring')} className="absolute top-[15px] left-[90px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
-                    {/* Pinky */}
-                    <div style={getFingerHighlightStyle('right', 'pinky')} className="absolute top-[35px] left-[118px] w-5 h-5 bg-primary/50 rounded-full transition-all"></div>
-                     {/* Thumb */}
-                    <div style={getFingerHighlightStyle('right', 'thumb')} className="absolute top-[80px] left-[5px] w-6 h-6 bg-primary/50 rounded-full transition-all"></div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 
 export default function TypingPractice({ textToType: initialText, timeLimit, lessonId }: TypingPracticeProps) {
   const [textToType, setTextToType] = useState(initialText?.normalize('NFC') || '');
@@ -360,6 +299,16 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         }
     }, 4000);
 
+    // Auto-finish if it's the last word and it's correct
+    if (currentWordIndex === words.length - 1 && value.normalize('NFC') === words[currentWordIndex].normalize('NFC')) {
+      const newTypedWords = [...typedWords, value.trim()];
+      setTypedWords(newTypedWords);
+      setCurrentInput(value);
+      finishSession();
+      return;
+    }
+
+
     if (value.endsWith(' ')) {
         if(currentInput.trim() === '') {
             setCurrentInput('');
@@ -418,7 +367,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     if (wordIdx < currentWordIndex) {
         return typedWords[wordIdx]?.normalize('NFC') === words[wordIdx]?.normalize('NFC') ? "text-green-500" : "text-red-500 line-through";
     }
-    return "text-primary bg-yellow-100 dark:bg-yellow-800/50 rounded px-1";
+    return "text-primary";
   }
 
   const currentWord = words[currentWordIndex]?.normalize('NFC') || '';
@@ -480,9 +429,16 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
       <Card className="w-full p-6 text-2xl tracking-wider font-mono leading-relaxed relative select-none">
           <p>
             {words.map((word, index) => (
-                <span key={index} className={cn("transition-colors", getWordClass(index))}>
-                    {word.normalize('NFC')}{' '}
-                </span>
+                <React.Fragment key={index}>
+                    <span className={cn(
+                        "transition-colors", 
+                        getWordClass(index),
+                        index === currentWordIndex && "bg-yellow-100 dark:bg-yellow-800/50 rounded px-1"
+                    )}>
+                        {word.normalize('NFC')}
+                    </span>
+                    {' '}
+                </React.Fragment>
             ))}
           </p>
       </Card>
@@ -529,6 +485,7 @@ export { VisualTypingDrill };
     
 
     
+
 
 
 
