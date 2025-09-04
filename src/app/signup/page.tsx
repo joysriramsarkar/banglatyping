@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const GoogleIcon = () => (
     <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
@@ -16,11 +18,45 @@ const GoogleIcon = () => (
 
 export default function SignupPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Mock signup logic
-    router.push("/dashboard");
+    setIsLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    // Mock signup logic with a delay
+    setTimeout(() => {
+      try {
+        if (!name || !email || !password) {
+            throw new Error("অনুগ্রহ করে সমস্ত তথ্য পূরণ করুন।");
+        }
+        // In a real app, you would make an API call here.
+        // For this demo, we'll use localStorage.
+        localStorage.setItem("user", JSON.stringify({ name, email, isLoggedIn: true }));
+        
+        toast({
+          title: "সাফল্য!",
+          description: "আপনার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে।",
+        });
+        
+        router.push("/dashboard");
+
+      } catch (error: any) {
+        toast({
+          variant: "destructive",
+          title: "ত্রুটি",
+          description: error.message || "অ্যাকাউন্ট তৈরিতে একটি সমস্যা হয়েছে।",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }, 1000);
   };
 
   return (
@@ -35,20 +71,20 @@ export default function SignupPage() {
           <form onSubmit={handleSignup} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="name">নাম</Label>
-              <Input id="name" placeholder="আপনার নাম" required />
+              <Input id="name" name="name" placeholder="আপনার নাম" required disabled={isLoading} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="email">ইমেল</Label>
-              <Input id="email" type="email" placeholder="email@example.com" required />
+              <Input id="email" name="email" type="email" placeholder="email@example.com" required disabled={isLoading} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">পাসওয়ার্ড</Label>
-              <Input id="password" type="password" required />
+              <Input id="password" name="password" type="password" required disabled={isLoading} />
             </div>
-            <Button type="submit" className="w-full">
-              অ্যাকাউন্ট তৈরি করুন
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "লোড হচ্ছে..." : "অ্যাকাউন্ট তৈরি করুন"}
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" disabled={isLoading}>
               <GoogleIcon />
               গুগল দিয়ে সাইন আপ করুন
             </Button>
