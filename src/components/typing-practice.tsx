@@ -87,10 +87,9 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
         if (keyIsCorrect && shiftIsCorrect) {
             setStatus('correct');
-            if(currentStep < currentPromptChars.length - 1){
+             if(currentStep < currentPromptChars.length - 1){
                 setCurrentStep(prev => prev + 1);
             } else {
-                 const nextDrillIndex = drills.findIndex(d => d.prompt !== currentTargetKey.prompt);
                  const lastIndexOfCurrentPrompt = drills.map(d => d.prompt).lastIndexOf(currentTargetKey.prompt);
                  setCurrentDrillIndex(lastIndexOfCurrentPrompt + 1);
             }
@@ -165,15 +164,19 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const getVisibleDrills = () => {
         const visible: Drill[] = [];
         let i = currentDrillIndex;
-        while(visible.length < 10 && i < totalDrills) {
-            const drill = drills[i];
-            // If it's a combined prompt, only add it once
-            if (i === 0 || (drills[i-1] && drills[i-1].prompt !== drill.prompt)) {
-                visible.push(drill);
-            }
-            i++;
+        while(i < totalDrills && (visible.length === 0 || drills[i-1].prompt === drills[i].prompt)) {
+             i++;
         }
-        return visible;
+        
+        let startOfNextPrompt = i;
+        while(visible.length < 10 && startOfNextPrompt < totalDrills) {
+            const drill = drills[startOfNextPrompt];
+            if (!visible.some(v => v.prompt === drill.prompt)) {
+                 visible.push(drill);
+            }
+            startOfNextPrompt++;
+        }
+        return [currentDrill, ...visible];
     }
 
 
@@ -190,7 +193,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                             if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
                             
                              if (drill.prompt === ' ') {
-                                return <div key={index} className="h-16 w-16" />;
+                                return null;
                             }
                             
                             return (
@@ -553,4 +556,3 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   );
 }
     
-
