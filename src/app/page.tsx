@@ -50,7 +50,7 @@ export default function Home() {
       </main>
       
       <footer className="p-4 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} বাংলা টাইপিং মাস্টার. All rights reserved.
+        © {new Date().getFullYear()} বাংলা টাইপিং মাস্টার। সর্বস্বত্ব সংরক্ষিত।
       </footer>
     </div>
   );
