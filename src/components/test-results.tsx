@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Award, RefreshCw, Zap, Target, XCircle, Timer as TimerIcon, Home, ArrowRight } from "lucide-react";
 import { TypingStats, Lesson } from "@/lib/types";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Certificate from "./certificate";
 import {
   Dialog,
@@ -33,6 +33,9 @@ const StatItem = ({ icon: Icon, label, value, unit }: { icon: React.ElementType,
 export default function TestResults({ stats, onRestart, lessonId }: { stats: TypingStats, onRestart: () => void, lessonId?: string }) {
   const { wpm, accuracy, errors, timeElapsed } = stats;
   const router = useRouter();
+  const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
+  const restartButtonRef = useRef<HTMLButtonElement>(null);
+
 
   const canGetCertificate = wpm >= 40 && accuracy >= 95;
   
@@ -43,6 +46,24 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
         nextLesson = lessons[currentLessonIndex + 1];
     }
   }
+
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        if (nextLessonButtonRef.current) {
+          nextLessonButtonRef.current.click();
+        } else if (restartButtonRef.current) {
+          restartButtonRef.current.click();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [nextLesson]);
+
 
   return (
     <Card className="w-full max-w-2xl mx-auto">
@@ -83,7 +104,7 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
                     </DialogContent>
                  </Dialog>
             )}
-            <Button onClick={onRestart} variant="outline" className="w-full">
+            <Button ref={restartButtonRef} onClick={onRestart} variant="outline" className="w-full">
               <RefreshCw className="mr-2 h-4 w-4" />
               পুনরায় চেষ্টা করুন
             </Button>
@@ -95,7 +116,7 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
               পাঠক্রমে ফিরে যান
             </Button>
             {nextLesson && (
-                 <Button onClick={() => router.push(`/practice/${nextLesson?.id}`)} className="w-full">
+                 <Button ref={nextLessonButtonRef} onClick={() => router.push(`/practice/${nextLesson?.id}`)} className="w-full">
                     পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
             )}

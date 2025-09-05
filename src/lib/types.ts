@@ -6,7 +6,7 @@ export interface Lesson {
   level: "Beginner" | "Intermediate" | "Advanced";
   text?: string;
   drills?: Drill[];
-  row?: 'home-row' | 'top-row' | 'bottom-row';
+  row?: 'home-row' | 'top-row' | 'bottom-row' | 'kar-row';
 }
 
 export interface TypingStats {
@@ -20,4 +20,10 @@ export interface Drill {
   prompt: string; // The character(s) the user needs to type
   key: string; // The key on the keyboard to press
   shift?: boolean;
+}
+
+export type RowDrillCategory = {
+    id: 'home-row' | 'top-row' | 'bottom-row' | 'kar-row';
+    name: string;
+    description: string;
 }

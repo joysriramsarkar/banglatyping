@@ -9,25 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, PlayCircle, ChevronRight } from "lucide-react"
 import Link from "next/link"
-import { lessons, RowDrillCategory } from "@/lib/lessons"
-
-const rowCategories: RowDrillCategory[] = [
-  { 
-    id: 'home-row', 
-    name: 'হোম রো', 
-    description: 'কীবোর্ডের মাঝের সারি, টাইপিংয়ের ভিত্তি।'
-  },
-  { 
-    id: 'top-row', 
-    name: 'টপ রো',
-    description: 'হোম রো-এর উপরের সারি।'
-   },
-  { 
-    id: 'bottom-row', 
-    name: 'বটম রো',
-    description: 'হোম রো-এর নিচের সারি।'
-  },
-];
+import { lessons, rowCategories, RowDrillCategory } from "@/lib/lessons"
 
 const beginnerLessons = lessons.filter(lesson => lesson.level === "Beginner" && !lesson.row);
 const intermediateLessons = lessons.filter(lesson => lesson.level === "Intermediate");
