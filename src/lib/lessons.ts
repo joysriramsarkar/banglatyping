@@ -2,16 +2,38 @@
 
 import type { Lesson, RowDrillCategory, Drill } from "./types";
 
-const keyMap = [
+const keyMap: {key: string, bn: string, bnShift?: string, row: 'top'|'home'|'bottom'|'other', hand: 'left'|'right'}[] = [
     // Top Row
-    {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ', row: 'top', hand: 'left'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ', row: 'top', hand: 'left'}, {key: 'e', bn: 'ে', bnShift: 'ৈ', row: 'top', hand: 'left'}, {key: 'r', bn: 'র', bnShift: 'ড়', row: 'top', hand: 'left'}, {key: 't', bn: 'ট', bnShift: 'ঠ', row: 'top', hand: 'left'}, 
-    {key: 'y', bn: 'য', bnShift: 'য়', row: 'top', hand: 'right'}, {key: 'u', bn: 'ু', bnShift: 'ূ', row: 'top', hand: 'right'}, {key: 'i', bn: 'ি', bnShift: 'ী', row: 'top', hand: 'right'}, {key: 'o', bn: 'ো', bnShift: 'ৌ', row: 'top', hand: 'right'}, {key: 'p', bn: 'প', bnShift: 'ঢ়', row: 'top', hand: 'right'},
+    {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ', row: 'top', hand: 'left'}, 
+    {key: 'w', bn: 'ঙ', bnShift: 'ঃ', row: 'top', hand: 'left'}, 
+    {key: 'e', bn: 'ে', bnShift: 'ৈ', row: 'top', hand: 'left'}, 
+    {key: 'r', bn: 'র', bnShift: 'ড়', row: 'top', hand: 'left'}, 
+    {key: 't', bn: 'ট', bnShift: 'ঠ', row: 'top', hand: 'left'}, 
+    {key: 'y', bn: 'য', bnShift: 'য়', row: 'top', hand: 'right'}, 
+    {key: 'u', bn: 'ু', bnShift: 'ূ', row: 'top', hand: 'right'}, 
+    {key: 'i', bn: 'ি', bnShift: 'ী', row: 'top', hand: 'right'}, 
+    {key: 'o', bn: 'ো', bnShift: 'ৌ', row: 'top', hand: 'right'}, 
+    {key: 'p', bn: 'প', bnShift: 'ঢ়', row: 'top', hand: 'right'},
     // Home Row
-    {key: 'a', bn: 'া', bnShift: 'অ', row: 'home', hand: 'left'}, {key: 's', bn: 'স', bnShift: 'শ', row: 'home', hand: 'left'}, {key: 'd', bn: 'ড', bnShift: 'ঢ', row: 'home', hand: 'left'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ', row: 'home', hand: 'left'}, {key: 'g', bn: 'গ', bnShift: 'ঘ', row: 'home', hand: 'left'},
-    {key: 'h', bn: '্', bnShift: 'হ', row: 'home', hand: 'right'}, {key: 'j', bn: 'জ', bnShift: 'ঝ', row: 'home', hand: 'right'}, {key: 'k', bn: 'ক', bnShift: 'খ', row: 'home', hand: 'right'}, {key: 'l', bn: 'ল', bnShift: 'ষ', row: 'home', hand: 'right'},
+    {key: 'a', bn: 'া', bnShift: 'অ', row: 'home', hand: 'left'}, 
+    {key: 's', bn: 'স', bnShift: 'শ', row: 'home', hand: 'left'}, 
+    {key: 'd', bn: 'ড', bnShift: 'ঢ', row: 'home', hand: 'left'}, 
+    {key: 'f', bn: 'ফ', bnShift: 'ৎ', row: 'home', hand: 'left'}, 
+    {key: 'g', bn: 'গ', bnShift: 'ঘ', row: 'home', hand: 'left'},
+    {key: 'h', bn: '্', bnShift: 'হ', row: 'home', hand: 'right'}, 
+    {key: 'j', bn: 'জ', bnShift: 'ঝ', row: 'home', hand: 'right'}, 
+    {key: 'k', bn: 'ক', bnShift: 'খ', row: 'home', hand: 'right'}, 
+    {key: 'l', bn: 'ল', bnShift: 'ষ', row: 'home', hand: 'right'},
     // Bottom Row
-    {key: 'z', bn: '্য', bnShift: 'ং', row: 'bottom', hand: 'left'}, {key: 'x', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left'}, {key: 'c', bn: 'চ', bnShift: 'ছ', row: 'bottom', hand: 'left'}, {key: 'v', bn: 'দ', bnShift: 'ধ', row: 'bottom', hand: 'left'}, {key: 'b', bn: 'ব', bnShift: 'ভ', row: 'bottom', hand: 'left'},
-    {key: 'n', bn: 'ন', bnShift: 'ণ', row: 'bottom', hand: 'right'}, {key: 'm', bn: 'ম', row: 'bottom', hand: 'right'}, {key: ',', bn: 'ৃ'}, {key: '.', bn: '।', bnShift: 'ঞ'},
+    {key: 'z', bn: '্য', bnShift: 'ং', row: 'bottom', hand: 'left'}, 
+    {key: 'x', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left'}, 
+    {key: 'c', bn: 'চ', bnShift: 'ছ', row: 'bottom', hand: 'left'}, 
+    {key: 'v', bn: 'দ', bnShift: 'ধ', row: 'bottom', hand: 'left'}, 
+    {key: 'b', bn: 'ব', bnShift: 'ভ', row: 'bottom', hand: 'left'},
+    {key: 'n', bn: 'ন', bnShift: 'ণ', row: 'bottom', hand: 'right'}, 
+    {key: 'm', bn: 'ম', row: 'bottom', hand: 'right'}, 
+    {key: ',', bn: 'ৃ', bnShift: ',', row: 'bottom', hand: 'right'}, 
+    {key: '.', bn: '।', bnShift: 'ঞ', row: 'bottom', hand: 'right'},
 ];
 
 
@@ -54,27 +76,29 @@ const generateKarDrillsForConsonant = (consonant: string, count: number): Drill[
         
         if (signMapping) {
             const combinedPrompt = consonant + sign;
-            // Push consonant
-            drills.push({
-                prompt: combinedPrompt,
-                key: conMapping.key,
-                shift: conMapping.bnShift === consonant,
-            });
 
-            // Push hasant for vowel signs (kar), but not for ja-phola
-            if (sign !== '্য') {
-                const hasantMapping = keyMap.find(k => k.bn === '্');
-                if (hasantMapping) {
-                     drills.push({ prompt: combinedPrompt, key: hasantMapping.key, shift: false });
-                }
+            const conKey = keyMap.find(k => k.bn === consonant || k.bnShift === consonant);
+            if(conKey) {
+                 drills.push({
+                    prompt: combinedPrompt,
+                    key: conKey.key,
+                    shift: conKey.bnShift === consonant,
+                });
+            }
+           
+            const hasantKey = keyMap.find(k => k.bn === '্');
+            if (hasantKey && sign !== '্য') {
+                 drills.push({ prompt: combinedPrompt, key: hasantKey.key, shift: false });
             }
             
-            // Push vowel sign/phola
-            drills.push({
-                prompt: combinedPrompt,
-                key: signMapping.key,
-                shift: signMapping.bnShift === sign,
-            });
+            const signKey = keyMap.find(k => k.bn === sign || k.bnShift === sign);
+             if (signKey) {
+                drills.push({
+                    prompt: combinedPrompt,
+                    key: signKey.key,
+                    shift: signKey.bnShift === sign,
+                });
+            }
         }
     }
     return drills;
@@ -235,7 +259,7 @@ export const lessons: Lesson[] = [
     title: "৩.৩: বটম রো - ডান হাত (অক্ষর)",
     level: "Beginner",
     row: "bottom-row",
-    drills: generateDrills(['ন', 'ম', 'ৃ'], 100)
+    drills: generateDrills(['ন', 'ম', 'ৃ', '।'], 100)
   },
   {
     id: "bottom-row-3-4-right-hand-words",
@@ -279,7 +303,7 @@ export const lessons: Lesson[] = [
     title: `${consonant}-এর সাথে কার-চিহ্ন অনুশীলন`,
     level: 'Beginner' as 'Beginner',
     row: 'kar-row' as 'kar-row',
-    drills: generateKarDrillsForConsonant(consonant, 11), // 11 vowel signs/pholas
+    drills: generateKarDrillsForConsonant(consonant, 22),
   })),
   
   // Other Beginner Lessons
@@ -288,6 +312,12 @@ export const lessons: Lesson[] = [
     title: "বর্ণমালা অনুশীলন",
     level: "Beginner",
     text: "ক খ গ ঘ ঙ চ ছ জ ঝ ঞ ট ঠ ড ঢ ণ ত থ দ ধ ন প ফ ব ভ ম য র ল শ ষ স হ ড় ঢ় য়",
+  },
+  {
+    id: "char-practice-2",
+    title: "কার-চিহ্ন ও ফলা অনুশীলন",
+    level: "Beginner",
+    text: "কা কি কী কু কূ কৃ কে কৈ কো কৌ ক্য ক্র ক্ষ জ্ঞ। খা খি খী খু খূ খৃ খে খৈ খো খৌ খ্য ખ્ર। গা গি গী গু গূ গৃ গে গৈ গো গৌ গ্য গ্র। ঘা ঘি ঘী ঘু ঘূ ঘৃ ঘে ঘৈ ঘো ঘৌ ঘ্যঘ্র। চ্চা চ্চি চ্চী চ্চু চ্চূ চ্চৃ চ্চে চ্চৈ চ্চো চ্চৌ চ্চ্য চ্চ্র। ",
   },
   {
     id: "sahaj-path-1",
@@ -455,9 +485,9 @@ export const practiceParagraphs: string[] = [
   "এক শিকারি, সিংহের পদচিহ্ন ধরিয়া, চলিয়া যাইতেছিল। কিয়ৎ ক্ষণ পরে, এক কাঠুরিয়াকে দেখিতে পাইয়া, তাহাকে জিজ্ঞাসিল, অহে ভাই! তুমি এ বনে কাঠ কাটিতেছ; সিংহের পদচিহ্ন সকল দেখিয়া, আমার বোধ হইতেছে, সে এই দিকে আসিয়াছে। তুমি কি তাহাকে দেখিয়াছ? সে কোন দিকে গেল, বলিতে পার? কাঠুরিয়া কহিল, হাঁ, আমি তাহাকে দেখিয়াছি, সে কোথায় আছে, তাহাও জানি। তুমি, আমার সঙ্গে আইস, আমি তোমায় দেখাইয়া দিতেছি। শিকারি, শুনিয়া, ভয়ে কাঁপিতে কাঁপিতে, কহিল, ভাই হে! আমার আর সিংহ দেখিয়া কাজ নাই; আমি সিংহের সন্ধান করিতেছিলাম, সত্য; কিন্তু, তাহাকে দেখিতে চাহি না।",
   "এক মৎস্যজীবী, জাল পাতিয়া, তীরে বসিয়াছিল। এক বানর, এক বৃক্ষের শাখায় বসিয়া, তাহার জাল পাতা দেখিতেছিল। কিয়ৎ ক্ষণ পরে, মৎস্যজীবী জাল ফেলিয়া রাখিয়া, কোনো কার্য্যোপলক্ষে, স্থানান্তরে গেল। তখন বানর, বৃক্ষ হইতে নামিয়া, জাল তুলিতে আরম্ভ করিল। সে মনে করিয়াছিল, জালের ভিতর মাছ আছে, তুলিলেই পাইব। কিন্তু, যেমন সে জাল তুলিতে গিয়াছে, অমনি তাহার সর্ব্ব শরীর জালে জড়াইয়া গেল। সে, প্রাণপণে চেষ্টা করিয়াও, জাল হইতে আপনাকে মুক্ত করিতে পারিল না। এমন সময়ে, মৎস্যজীবী আসিয়া উপস্থিত হইল। বানরকে জালে বদ্ধ দেখিয়া, সে, লাঠি হস্তে লইয়া, তাহার উপর এমন প্রহার করিতে লাগিল যে, বানর, তৎক্ষণাৎ, প্রাণত্যাগ করিল।",
   "এক অশ্ব, অতিশয় বৃদ্ধ হওয়াতে, আর কোনো কাজে লাগে না; এজন্য, তাহার প্রভু তাহাকে ছাড়িয়া দিয়াছিলেন। সে, এক কৃষকের ক্ষেত্রে প্রবেশ করিয়া, শস্য খাইতে আরম্ভ করিল। কৃষক, দেখিয়া, ক্রোধে অন্ধ হইয়া, লাঠি হস্তে লইয়া, অশ্বকে এমন প্রহার করিতে লাগিল যে, অশ্ব, যাতনায় অস্থির হইয়া, পলায়ন করিল। কিয়ৎ ক্ষণ পরে, ঐ কৃষক, ঐ অশ্বের পৃষ্ঠে আরোহণ করিয়া, কোনো স্থানে যাইতেছিল। দৈবযোগে, এক সিংহ, সেই স্থানে উপস্থিত হইয়া, কৃষকের উপর আক্রমণ করিল। অশ্ব, যেমন প্রভুর বিপদ উপস্থিত দেখিল, অমনি অতি বেগে দৌড়িতে আরম্ভ করিল, এবং, অল্প ক্ষণের মধ্যেই, তাঁহাকে লইয়া, নগরে উপস্থিত হইল।",
-  "অশ্ব ও অশ্বপাল। রীতিমত আহার পাইলে, এবং শরীর রীতিমত মার্জিত ও মর্দিত হইলে, অশ্বগণ বিলক্ষণ বলবান হয়, এবং সুশ্রী ও চিক্কণ দেখায়। কিন্তু, রীতিমত আহার না দিলে, মার্জনে ও মর্দ্দনে কোনো ফল হয় না। কোনো অশ্বপাল, প্রত্যহ, অশ্বের আহারদ্রব্যের কিয়ৎ অংশ বেচিয়া, বিলক্ষণ লাভ করিত। অশ্ব, রীতিমত আহার না পাইয়া, দিন দিন দুর্ব্বল হইতে লাগিল। দুষ্ট অশ্বপাল, লাভের লোভে, অশ্বের আহারদ্রব্য প্রত্যহ চুরি করিত, বটে; কিন্তু, মার্জন ও মর্দ্দন বিষয়ে, ত্রুটি করিত না।",
+  "অশ্ব ও অশ্বপাল। রীতিমত আহার পাইলে, এবং শরীর রীতিমত মার্জিত ও মর্দিত হইলে, অশ্বগণ বিলক্ষণ বলবান হয়, এবং সুশ্রী ও চিক্কণ দেখায়। কিন্তু, রীতিমত আহার না দিলে, মার্জন ও মর্দ্দনে কোনো ফল হয় না। কোনো অশ্বপাল, প্রত্যহ, অশ্বের আহারদ্রব্যের কিয়ৎ অংশ বেচিয়া, বিলক্ষণ লাভ করিত। অশ্ব, রীতিমত আহার না পাইয়া, দিন দিন দুর্ব্বল হইতে লাগিল। দুষ্ট অশ্বপাল, লাভের লোভে, অশ্বের আহারদ্রব্য প্রত্যহ চুরি করিত, বটে; কিন্তু, মার্জন ও মর্দ্দন বিষয়ে, ত্রুটি করিত না।",
   "সর্প ও কৃষক। এক কৃষক, শীতকালে, মাঠ দিয়া চলিয়া যাইতেছিল। সে দেখিল, একটি সর্প, শীতে আড়ষ্ট হইয়া, পথের ধারে পড়িয়া আছে। কৃষকের অতিশয় দয়া হইল। সে, তাহাকে তুলিয়া লইয়া, আপন উত্তরীয় দ্বারা আচ্ছাদিত করিয়া, গৃহে আনিয়া, উনানের ধারে রাখিল। সর্প, অল্প ক্ষণের মধ্যেই, উষ্ণ হইয়া, উঠিল। তখন সে, আপনার স্বভাবসিদ্ধ হিংস্র ভাব অবলম্বন করিয়া, ফণা ধরিয়া উঠিল, এবং কৃষকের পুত্রকে দংশন করিতে উদ্যত হইল। কৃষক, কুঠার হস্তে লইয়া, এক আঘাতে, তাহার দুই খণ্ড করিয়া ফেলিল।",
-  "মাছি ও মধুর কলসী। এক দোকানে মধুর কলসী উলটাইয়া পড়িয়াছিল। তাহাতে চারি দিকে মধু ছড়াইয়া যায়। মধুর গন্ধ পাইয়া, ঝাঁকে ঝাঁকে, মাছি আসিয়া সেই মধু খাইতে লাগিল। যত ক্ষণ এক ফোঁটা মধু পড়িয়া রহিল, তাহারা ঐ স্থান হইতে নড়িল না। অধিক ক্ষণ তথায় থাকাতে, ক্রমে ক্রমে, সমুদয় মাছির পা মধুতে জড়াইয়া গেল; মাছি সকল আর, কোনো মতে, উড়িতে পারিল না; এবং, আর যে উড়িয়া যাইতে পারিবেক, তাহারও প্রত্যাশা রহিল না। তখন তাহারা, আপনাদিগকে ধিক্কার দিয়া, আক্ষেপ করিয়া, কহিতে লাগিল, আমরা কি নির্বোধ; ক্ষণিক সুখের জন্যে, প্রাণ হারাইলাম।"
+  "মাছি ও মধুর কলসী। এক দোকানে মধুর কলসী উলটাইয়া পড়িয়াছিল। তাহাতে চারি দিকে মধু ছড়াইয়া যায়। মধুর গন্ধ পাইয়া, ঝাঁকে ঝাঁকে, মাছি আসিয়া সেই মধু খাইতে লাগিল। যত ক্ষণ এক ফোঁটা মধু পড়িয়া রহিল, তাহারা ঐ স্থান হইতে নড়িল না। অধিক ক্ষণ তথায় থাকাতে, ক্রমে ক্রমে, সমুদয় মাছির পা মধুতে জড়াইয়া গেল; মাছি সকল আর, কোনো মতে, উড়িতে পারিলেন না; এবং, আর যে উড়িয়া যাইতে পারিবেক, তাহারও প্রত্যাশা রহিল না। তখন তাহারা, আপনাদিগকে ধিক্কার দিয়া, আক্ষেপ করিয়া, কহিতে লাগিল, আমরা কি নির্বোধ; ক্ষণিক সুখের জন্যে, প্রাণ হারাইলাম।"
 ];
 
 
