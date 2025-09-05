@@ -53,12 +53,12 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const isCompleted = currentDrillIndex >= drills.length;
     const totalDrills = drills.length;
     const progress = totalDrills > 0 ? (currentDrillIndex / totalDrills) * 100 : 0;
-    const currentDrill = drills[currentDrillIndex];
+    const currentDrill = !isCompleted ? drills[currentDrillIndex] : null;
     const currentStep = currentDrill?.steps[currentStepIndex];
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         if (isCompleted) return;
-        
+
         const currentDrill = drills[drillState.currentDrillIndex];
         const currentStep = currentDrill?.steps[drillState.currentStepIndex];
         if (!currentStep) return;
@@ -73,13 +73,22 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
+        
+        let keyIsCorrect = false;
+        
+        // The `key` property for space is " ", but the event.key is " ". Normalizing to lower case is safe.
+        // For other keys like '\', event.key is "\\" while our stored key is '\'. So direct comparison is needed.
+        if (currentStep.key === ' ') {
+            keyIsCorrect = event.key === ' ';
+        } else {
+            keyIsCorrect = event.key.toLowerCase() === currentStep.key.toLowerCase();
+        }
 
-        const keyIsCorrect = event.key.toLowerCase() === currentStep.key.toLowerCase();
         const shiftIsCorrect = currentStep.shift === event.shiftKey;
 
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
-                const isLastStep = prev.currentStepIndex === currentDrill.steps.length - 1;
+                const isLastStep = prev.currentStepIndex >= currentDrill.steps.length - 1;
                 if (isLastStep) {
                     return {
                         currentDrillIndex: prev.currentDrillIndex + 1,
@@ -115,9 +124,15 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
     let nextLesson: Lesson | null = null;
     if (lessonId) {
-        const currentLessonIndex = lessons.findIndex(l => l.id === lessonId);
-        if (currentLessonIndex !== -1 && currentLessonIndex < lessons.length - 1) {
-            nextLesson = lessons[currentLessonIndex + 1];
+        const currentLessonIndexInAllLessons = lessons.findIndex(l => l.id === lessonId);
+        if (currentLessonIndexInAllLessons !== -1 && currentLessonIndexInAllLessons < lessons.length - 1) {
+            // Find the next lesson in the same row/category
+            const currentLesson = lessons[currentLessonIndexInAllLessons];
+            nextLesson = lessons.find(l => l.row === currentLesson.row && lessons.indexOf(l) > currentLessonIndexInAllLessons) || null;
+            // If no next lesson in same row, find from all lessons
+            if(!nextLesson) {
+                 nextLesson = lessons[currentLessonIndexInAllLessons + 1]
+            }
         }
     }
     
@@ -272,7 +287,7 @@ const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | 
                         </div>
                     ) : (
                          <div className="flex items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-64">
-                            <span className="text-lg font-bold">Space</span>
+                            <span className="text-lg font-bold"></span>
                         </div>
                     )}
                 </div>
