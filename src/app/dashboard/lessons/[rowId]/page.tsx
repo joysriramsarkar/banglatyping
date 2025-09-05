@@ -35,7 +35,7 @@ export default function RowDrillPage() {
     const rowLessons = lessons.filter(l => l.row === categoryId);
 
     if (!category) {
-        return <div>ক্যাটাগরি খুঁজে পাওয়া যায়নি।</div>;
+        return <div className="p-4">ক্যাটাগরি খুঁজে পাওয়া যায়নি।</div>;
     }
 
     return (
@@ -49,9 +49,13 @@ export default function RowDrillPage() {
                 <p className="text-muted-foreground">{category.description}</p>
             </div>
             <div className="space-y-4">
-                {rowLessons.map((lesson) => (
-                    <LessonListItem key={lesson.id} lesson={lesson} />
-                ))}
+                {rowLessons.length > 0 ? (
+                    rowLessons.map((lesson) => (
+                       <LessonListItem key={lesson.id} lesson={lesson} />
+                    ))
+                ) : (
+                    <p>এই বিভাগে কোনো পাঠ পাওয়া যায়নি।</p>
+                )}
             </div>
         </div>
     );
