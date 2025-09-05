@@ -46,7 +46,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
     const restartButtonRef = useRef<HTMLButtonElement>(null);
     
-    const [currentPromptChars, setCurrentPromptChars] = useState<{prompt: string, key: string, shift?: boolean}[]>([]);
+    const [currentPromptChars, setCurrentPromptChars] = useState<Drill[]>([]);
     const [currentStep, setCurrentStep] = useState(0);
 
     const setupCurrentDrill = useCallback(() => {
@@ -90,6 +90,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
              if(currentStep < currentPromptChars.length - 1){
                 setCurrentStep(prev => prev + 1);
             } else {
+                 // Move to the next drill (the first key of the next prompt)
                  const lastIndexOfCurrentPrompt = drills.map(d => d.prompt).lastIndexOf(currentTargetKey.prompt);
                  setCurrentDrillIndex(lastIndexOfCurrentPrompt + 1);
             }
@@ -162,21 +163,19 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const currentDrill = drills[currentDrillIndex];
 
     const getVisibleDrills = () => {
-        const visible: Drill[] = [];
+        const uniquePrompts = [];
+        const seenPrompts = new Set();
         let i = currentDrillIndex;
-        while(i < totalDrills && (visible.length === 0 || drills[i-1].prompt === drills[i].prompt)) {
-             i++;
-        }
-        
-        let startOfNextPrompt = i;
-        while(visible.length < 10 && startOfNextPrompt < totalDrills) {
-            const drill = drills[startOfNextPrompt];
-            if (!visible.some(v => v.prompt === drill.prompt)) {
-                 visible.push(drill);
+
+        while (i < totalDrills && uniquePrompts.length < 10) {
+            const drill = drills[i];
+            if (!seenPrompts.has(drill.prompt)) {
+                uniquePrompts.push(drill);
+                seenPrompts.add(drill.prompt);
             }
-            startOfNextPrompt++;
+            i++;
         }
-        return [currentDrill, ...visible];
+        return uniquePrompts;
     }
 
 
@@ -191,10 +190,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                             let boxClass = "bg-secondary";
                             if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
                             if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
-                            
-                             if (drill.prompt === ' ') {
-                                return null;
-                            }
                             
                             return (
                                 <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-bold font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
@@ -555,4 +550,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     </div>
   );
 }
+    
+
     
