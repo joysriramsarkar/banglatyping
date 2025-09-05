@@ -6,8 +6,9 @@ import { lessons, rowCategories } from '@/lib/lessons';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import type { Lesson } from '@/lib/types';
 
-const LessonListItem = ({ lesson }: { lesson: any }) => (
+const LessonListItem = ({ lesson }: { lesson: Lesson }) => (
     <div className="flex items-center justify-between p-3 bg-secondary rounded-lg">
         <div className="flex items-center gap-4">
             <PlayCircle className="h-6 w-6 text-muted-foreground" />

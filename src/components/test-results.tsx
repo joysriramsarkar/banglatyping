@@ -50,7 +50,8 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Enter') {
-        if (nextLessonButtonRef.current) {
+        event.preventDefault();
+        if (nextLesson && nextLessonButtonRef.current) {
           nextLessonButtonRef.current.click();
         } else if (restartButtonRef.current) {
           restartButtonRef.current.click();

@@ -45,6 +45,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
     const restartButtonRef = useRef<HTMLButtonElement>(null);
+    const [drillStep, setDrillStep] = useState(0); // 0 for consonant, 1 for hasant, 2 for vowel
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
@@ -60,7 +61,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
         const currentDrill = drills[currentDrillIndex];
 
-        // Match based on physical key (`event.code`) and required shift state
         const keyIsCorrect = `Key${currentDrill.key.toUpperCase()}` === event.code || 
                              (currentDrill.key === ' ' && event.code === 'Space') ||
                              (currentDrill.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
@@ -68,6 +68,22 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                              (currentDrill.key === ',' && event.code === 'Period');
                              
         const shiftIsCorrect = !!currentDrill.shift === event.shiftKey;
+
+        // For vowel signs, we need to check if the previous key was a consonant + hasant
+        let logicIsCorrect = true;
+        if(currentDrill.prompt.length > 1) { // This is a combined char like 'কা'
+           if(drillStep === 0 && currentDrill.key.toLowerCase() === event.key.toLowerCase()) { // consonant
+               // Correct, move to next step
+           } else if (drillStep === 1 && currentDrill.key.toLowerCase() === event.key.toLowerCase()) { // hasant or vowel
+                // Correct, move to next step
+           } else if (drillStep === 2 && currentDrill.key.toLowerCase() === event.key.toLowerCase()) {
+                // Correct, move to next drill
+           }
+           else {
+               logicIsCorrect = false;
+           }
+        }
+
 
         if (keyIsCorrect && shiftIsCorrect) {
             setStatus('correct');
@@ -114,7 +130,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         return () => {
           window.removeEventListener('keydown', handleEnterPress);
         };
-      }, [currentDrillIndex, totalDrills]);
+      }, [currentDrillIndex, totalDrills, nextLesson]);
 
 
     if (currentDrillIndex >= totalDrills) {
@@ -140,21 +156,44 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
     const currentDrill = drills[currentDrillIndex];
 
+    const getVisibleDrills = () => {
+        const visible: Drill[] = [];
+        let i = currentDrillIndex;
+        while(visible.length < 10 && i < totalDrills) {
+            const drill = drills[i];
+            // If it's a combined prompt, only add it once
+            if(drill.prompt.length > 1) {
+                if(i === currentDrillIndex || (drills[i-1] && drills[i-1].prompt !== drill.prompt)) {
+                    visible.push(drill);
+                }
+            } else {
+                visible.push(drill);
+            }
+            i++;
+        }
+        return visible;
+    }
+
+
     return (
         <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-5xl mx-auto">
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-2/3 space-y-8">
                     {/* Prompt Display */}
                     <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px]">
-                        {drills.slice(currentDrillIndex, Math.min(currentDrillIndex + 10, totalDrills)).map((drill, index) => {
-                            const isCurrent = index === 0;
+                        {getVisibleDrills().map((drill, index) => {
+                            const isCurrent = drill.prompt === currentDrill.prompt && index === 0;
                             let boxClass = "bg-secondary";
                             if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
                             if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
                             
+                             if (drill.prompt === ' ') {
+                                return <div key={index} className="h-16 w-16" />;
+                            }
+                            
                             return (
                                 <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-bold font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drill.prompt === ' ' ? '' : drill.prompt}
+                                   {drill.prompt}
                                 </div>
                             )
                         })}
