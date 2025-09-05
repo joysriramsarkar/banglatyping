@@ -451,7 +451,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
               >
                 {word.normalize('NFC')}
               </span>
-              {index < words.length - 1 ? ' ' : ''}
+              <span> </span>
             </React.Fragment>
           ))}
         </p>
