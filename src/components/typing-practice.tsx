@@ -438,7 +438,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         </CardContent>
       </Card>
 
-       <Card className="w-full p-6 text-2xl tracking-wider font-mono leading-relaxed relative select-none">
+       <Card className="w-full p-6 text-2xl tracking-wider font-hind leading-relaxed relative select-none">
         <p>
           {words.map((word, index) => (
             <React.Fragment key={index}>
@@ -459,7 +459,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
        <div className="w-full h-24 flex flex-col items-center justify-center">
         <div className={cn(
-          "text-2xl font-mono p-2 flex items-center justify-center min-h-[3rem] w-full",
+          "text-2xl font-hind p-2 flex items-center justify-center min-h-[3rem] w-full",
         )}>
           {getPreviewContent()}
         </div>
@@ -469,7 +469,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
           value={currentInput}
           onChange={handleUserInputChange}
           className={cn(
-            "w-full text-center text-2xl font-mono p-6 border-t-0 rounded-t-none",
+            "w-full text-center text-2xl font-hind p-6 border-t-0 rounded-t-none",
              isError ? "border-red-500 focus-visible:ring-red-500" : "border-green-500 focus-visible:ring-green-500"
           )}
           disabled={isFinished}

@@ -93,7 +93,7 @@ export default function TestPage() {
                     htmlFor={`time-${time.value}`}
                     className={cn(
                         "flex flex-col items-center justify-center p-4 border rounded-lg cursor-pointer transition-colors hover:bg-accent",
-                        "data-[state=checked]:border-primary data-[state=checked]:ring-2 data-[state=checked]:ring-primary"
+                         selectedTime === time.value && "border-primary ring-2 ring-primary"
                     )}
                   >
                     <span className="text-2xl font-bold">{time.label}</span>
