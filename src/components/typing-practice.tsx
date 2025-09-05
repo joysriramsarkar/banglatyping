@@ -70,7 +70,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
 
-        const keyIsCorrect = currentStep.key.toLowerCase() === event.key.toLowerCase();
+        const keyIsCorrect = event.key.toLowerCase() === currentStep.key.toLowerCase();
         const shiftIsCorrect = currentStep.shift === event.shiftKey;
 
         if (keyIsCorrect && shiftIsCorrect) {
@@ -91,7 +91,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 setStatus('pending');
             }, 500);
         }
-    }, [currentDrill, currentStepIndex, isCompleted, drills]);
+    }, [currentDrill, currentStepIndex, isCompleted, drills, setCurrentDrillIndex, setCurrentStepIndex]);
 
 
     useEffect(() => {
@@ -257,7 +257,7 @@ const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | 
                 </div>
             ) : (
                  <div key={rowIndex} className="flex justify-center gap-1.5">
-                    {highlightKey === ' ' ? (
+                    {highlightKey?.toLowerCase() === ' ' ? (
                          <div className="flex items-center justify-center h-16 rounded-md bg-primary/20 border-primary text-primary border border-b-4 font-hind w-64">
                             <span className="text-lg font-bold">Space</span>
                         </div>
