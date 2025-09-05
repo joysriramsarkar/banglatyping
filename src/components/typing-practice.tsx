@@ -38,31 +38,35 @@ const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, va
 
 export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lessonId?: string }) => {
     const router = useRouter();
-    const [currentDrillIndex, setCurrentDrillIndex] = useState(0);
-    const [currentStepIndex, setCurrentStepIndex] = useState(0);
-    const [status, setStatus] = useState<'pending' | 'correct' | 'incorrect'>('pending');
-    
-    const isCompleted = currentDrillIndex >= drills.length;
+    const [drillState, setDrillState] = useState({
+        currentDrillIndex: 0,
+        currentStepIndex: 0,
+        status: 'pending' as 'pending' | 'correct' | 'incorrect',
+    });
+
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
     const restartButtonRef = useRef<HTMLButtonElement>(null);
+
+    const { currentDrillIndex, currentStepIndex, status } = drillState;
     
+    const isCompleted = currentDrillIndex >= drills.length;
     const totalDrills = drills.length;
     const progress = totalDrills > 0 ? (currentDrillIndex / totalDrills) * 100 : 0;
-    
     const currentDrill = drills[currentDrillIndex];
-    
+    const currentStep = currentDrill?.steps[currentStepIndex];
+
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        if (!currentDrill || isCompleted) return;
+        if (isCompleted) return;
+        
+        const currentDrill = drills[drillState.currentDrillIndex];
+        const currentStep = currentDrill?.steps[drillState.currentStepIndex];
+        if (!currentStep) return;
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
         if (modifierKeys.includes(event.key)) {
             return;
         }
-        
-        const currentStep = currentDrill.steps[currentStepIndex];
-        if (!currentStep) return;
-
         event.preventDefault();
 
         if (statusTimeoutRef.current) {
@@ -74,24 +78,29 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         const shiftIsCorrect = currentStep.shift === event.shiftKey;
 
         if (keyIsCorrect && shiftIsCorrect) {
-            setStatus('correct');
-            if (currentStepIndex < currentDrill.steps.length - 1) {
-                setCurrentStepIndex(prev => prev + 1);
-            } else {
-                if (currentDrillIndex < drills.length - 1) {
-                    setCurrentDrillIndex(prev => prev + 1);
-                    setCurrentStepIndex(0);
+            setDrillState(prev => {
+                const isLastStep = prev.currentStepIndex === currentDrill.steps.length - 1;
+                if (isLastStep) {
+                    return {
+                        currentDrillIndex: prev.currentDrillIndex + 1,
+                        currentStepIndex: 0,
+                        status: 'correct',
+                    };
                 } else {
-                    setCurrentDrillIndex(prev => prev + 1); // Go one beyond to show completion screen
+                    return {
+                        ...prev,
+                        currentStepIndex: prev.currentStepIndex + 1,
+                        status: 'correct',
+                    };
                 }
-            }
+            });
         } else {
-            setStatus('incorrect');
+            setDrillState(prev => ({ ...prev, status: 'incorrect' }));
             statusTimeoutRef.current = setTimeout(() => {
-                setStatus('pending');
+                setDrillState(prev => ({ ...prev, status: 'pending' }));
             }, 500);
         }
-    }, [currentDrill, currentStepIndex, isCompleted, drills, setCurrentDrillIndex, setCurrentStepIndex]);
+    }, [isCompleted, drills, drillState]);
 
 
     useEffect(() => {
@@ -113,9 +122,11 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     }
     
     const resetDrill = useCallback(() => {
-        setCurrentDrillIndex(0);
-        setCurrentStepIndex(0);
-        setStatus('pending');
+        setDrillState({
+            currentDrillIndex: 0,
+            currentStepIndex: 0,
+            status: 'pending',
+        });
     }, []);
 
     useEffect(() => {
@@ -159,8 +170,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const getVisibleDrills = () => {
         return drills.slice(currentDrillIndex, currentDrillIndex + 10);
     }
-
-    const currentStep = currentDrill?.steps[currentStepIndex];
 
     return (
         <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-5xl mx-auto">
