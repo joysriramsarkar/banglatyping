@@ -42,40 +42,39 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [status, setStatus] = useState<'pending' | 'correct' | 'incorrect'>('pending');
     
+    const isCompleted = currentDrillIndex >= drills.length;
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
     const restartButtonRef = useRef<HTMLButtonElement>(null);
-
+    
     const totalDrills = drills.length;
     const progress = totalDrills > 0 ? (currentDrillIndex / totalDrills) * 100 : 0;
     
     const currentDrill = drills[currentDrillIndex];
-    const currentStep = currentDrill?.steps[currentStepIndex];
     
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        if (!currentDrill) return;
+        if (!currentDrill || isCompleted) return;
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
         if (modifierKeys.includes(event.key)) {
             return;
         }
+        
+        const currentStep = currentDrill.steps[currentStepIndex];
+        if (!currentStep) return;
+
         event.preventDefault();
 
         if (statusTimeoutRef.current) {
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
-        
-        const keyIsCorrect = currentStep.key.toLowerCase() === event.key.toLowerCase() ||
-                             (currentStep.key === ' ' && event.code === 'Space') ||
-                             (currentStep.key === '\\' && event.code === 'Backslash');
 
-
-        const shiftIsCorrect = !!currentStep.shift === event.shiftKey;
+        const keyIsCorrect = currentStep.key.toLowerCase() === event.key.toLowerCase();
+        const shiftIsCorrect = currentStep.shift === event.shiftKey;
 
         if (keyIsCorrect && shiftIsCorrect) {
             setStatus('correct');
-            // Move to next step or next drill
             if (currentStepIndex < currentDrill.steps.length - 1) {
                 setCurrentStepIndex(prev => prev + 1);
             } else {
@@ -83,7 +82,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     setCurrentDrillIndex(prev => prev + 1);
                     setCurrentStepIndex(0);
                 } else {
-                     setCurrentDrillIndex(prev => prev + 1); // Go one beyond to show completion screen
+                    setCurrentDrillIndex(prev => prev + 1); // Go one beyond to show completion screen
                 }
             }
         } else {
@@ -92,7 +91,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 setStatus('pending');
             }, 500);
         }
-    }, [currentDrill, currentStep, currentDrillIndex, currentStepIndex, drills.length]);
+    }, [currentDrill, currentStepIndex, isCompleted, drills]);
+
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyPress);
@@ -120,7 +120,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
     useEffect(() => {
         const handleEnterPress = (event: KeyboardEvent) => {
-            if (event.key === 'Enter' && currentDrillIndex >= totalDrills) {
+            if (event.key === 'Enter' && isCompleted) {
                 if (nextLesson && nextLessonButtonRef.current) {
                     nextLessonButtonRef.current.click();
                 } else if(restartButtonRef.current) {
@@ -133,9 +133,9 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         return () => {
             window.removeEventListener('keydown', handleEnterPress);
         };
-    }, [currentDrillIndex, totalDrills, nextLesson]);
+    }, [isCompleted, nextLesson]);
 
-    if (currentDrillIndex >= totalDrills) {
+    if (isCompleted) {
         return (
             <Card className="text-center p-8 max-w-lg mx-auto">
                 <CardHeader>
@@ -159,6 +159,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const getVisibleDrills = () => {
         return drills.slice(currentDrillIndex, currentDrillIndex + 10);
     }
+
+    const currentStep = currentDrill?.steps[currentStepIndex];
 
     return (
         <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-5xl mx-auto">
