@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 const { fontFamily } = require("tailwindcss/defaultTheme")
@@ -23,6 +24,7 @@ export default {
         headline: ["var(--font-noto-sans-bengali)", "var(--font-inter)", ...fontFamily.sans],
         body: ["var(--font-noto-sans-bengali)", "var(--font-inter)", ...fontFamily.sans],
         code: ['monospace'],
+        hind: ["var(--font-hind-siliguri)", "var(--font-inter)", ...fontFamily.sans],
       },
       colors: {
         background: 'hsl(var(--background))',

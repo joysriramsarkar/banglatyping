@@ -1,6 +1,6 @@
 
 import type { Metadata } from 'next';
-import { Inter, Noto_Sans_Bengali } from 'next/font/google';
+import { Inter, Noto_Sans_Bengali, Hind_Siliguri } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
@@ -16,6 +16,12 @@ const noto_sans_bengali = Noto_Sans_Bengali({
   variable: '--font-noto-sans-bengali',
 });
 
+const hind_siliguri = Hind_Siliguri({
+  subsets: ['bengali'],
+  weight: ["400", "700"],
+  variable: '--font-hind-siliguri',
+});
+
 export const metadata: Metadata = {
   title: 'বাংলা টাইপিং মাস্টার',
   description: 'Master Bangla typing with interactive lessons and games.',
@@ -28,7 +34,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn("font-sans antialiased", inter.variable, noto_sans_bengali.variable)}>
+      <body className={cn("font-body antialiased", inter.variable, noto_sans_bengali.variable, hind_siliguri.variable)}>
         {children}
         <Toaster />
       </body>

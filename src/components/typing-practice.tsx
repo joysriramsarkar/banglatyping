@@ -134,8 +134,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                             if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
                             
                             return (
-                                <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-bold", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drill.prompt}
+                                <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-bold font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
+                                   {drill.prompt === ' ' ? '' : drill.prompt}
                                 </div>
                             )
                         })}
@@ -192,7 +192,7 @@ const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string, n
                         <div
                             key={keyData.key}
                             className={cn(
-                                "flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4",
+                                "flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind",
                                 keyData.key === ' ' ? 'w-64' : 'w-16',
                                 isHighlighted && 'bg-primary/20 border-primary text-primary'
                             )}
