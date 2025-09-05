@@ -29,8 +29,10 @@ export default function RowDrillPage() {
     const router = useRouter();
     const { rowId } = params;
 
-    const category = rowCategories.find(c => c.id === rowId);
-    const rowLessons = lessons.filter(l => l.row === rowId);
+    const categoryId = Array.isArray(rowId) ? rowId[0] : rowId;
+
+    const category = rowCategories.find(c => c.id === categoryId);
+    const rowLessons = lessons.filter(l => l.row === categoryId);
 
     if (!category) {
         return <div>ক্যাটাগরি খুঁজে পাওয়া যায়নি।</div>;
