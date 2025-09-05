@@ -135,7 +135,7 @@ const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lessonId?: s
                             
                             return (
                                 <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-2xl font-bold", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drill.prompt === ' ' ? 'স্পেস' : drill.prompt}
+                                   {drill.prompt === ' ' ? '' : drill.prompt}
                                 </div>
                             )
                         })}
@@ -484,27 +484,4 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
           <Home className="h-5 w-5" />
         </Button>
         <Button onClick={isPaused ? resume : pause} variant="outline" size="icon" disabled={!isActive} title={isPaused ? "চালিয়ে যান" : "থামুন"}>
-          {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-        </Button>
-      </div>
-    </div>
-  );
-}
-export { VisualTypingDrill };
-
-    
-
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
+          {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5"

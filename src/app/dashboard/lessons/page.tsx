@@ -1,4 +1,3 @@
-
 import {
   Accordion,
   AccordionContent,
@@ -8,7 +7,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, PlayCircle } from "lucide-react"
+import { CheckCircle, PlayCircle, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { lessons, RowDrillCategory } from "@/lib/lessons"
 
@@ -87,19 +86,19 @@ export default function LessonsPage() {
                 <div className="space-y-4 pt-4">
                   
                   {levelData.isRowDrills && (
-                    <Accordion type="multiple" className="w-full space-y-4">
+                     <div className="space-y-4">
                       {rowCategories.map(category => (
-                        <AccordionItem value={category.id} key={category.id} className="border rounded-lg px-4">
-                          <AccordionTrigger className="text-lg font-semibold">{category.name}</AccordionTrigger>
-                          <AccordionContent className="space-y-4 pt-4">
-                              <p className="text-sm text-muted-foreground">{category.description}</p>
-                              {lessons.filter(l => l.row === category.id).map(lesson => (
-                                <LessonListItem key={lesson.id} lesson={lesson} />
-                              ))}
-                          </AccordionContent>
-                        </AccordionItem>
+                        <Link href={`/dashboard/lessons/${category.id}`} key={category.id} className="block border rounded-lg p-4 hover:bg-accent transition-colors">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-lg font-semibold">{category.name}</h3>
+                                    <p className="text-sm text-muted-foreground">{category.description}</p>
+                                </div>
+                                <ChevronRight className="h-5 w-5 text-muted-foreground"/>
+                            </div>
+                        </Link>
                       ))}
-                    </Accordion>
+                    </div>
                   )}
 
                   {levelData.lessons.map(lesson => (
