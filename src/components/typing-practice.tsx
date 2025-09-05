@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -36,7 +35,7 @@ const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, va
   </div>
 );
 
-const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lessonId?: string }) => {
+export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lessonId?: string }) => {
     const [currentDrillIndex, setCurrentDrillIndex] = useState(0);
     const [status, setStatus] = useState<'pending' | 'correct' | 'incorrect'>('pending');
     const totalDrills = drills.length;
@@ -179,7 +178,7 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
         {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
         {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৃ', bnShift: 'ঞ'},
     ],
-    space: [{key: ' ', bn: '-'}],
+    space: [{key: ' ', bn: ''}],
 };
 
 const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string, needsShift: boolean }) => (
@@ -484,4 +483,10 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
           <Home className="h-5 w-5" />
         </Button>
         <Button onClick={isPaused ? resume : pause} variant="outline" size="icon" disabled={!isActive} title={isPaused ? "চালিয়ে যান" : "থামুন"}>
-          {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5"
+          {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+    

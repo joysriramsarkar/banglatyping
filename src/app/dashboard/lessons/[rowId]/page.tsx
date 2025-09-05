@@ -46,4 +46,10 @@ export default function RowDrillPage() {
                 <p className="text-muted-foreground">{category.description}</p>
             </div>
             <div className="space-y-4">
-                {rowLessons.map
+                {rowLessons.map((lesson) => (
+                    <LessonListItem key={lesson.id} lesson={lesson} />
+                ))}
+            </div>
+        </div>
+    );
+}
