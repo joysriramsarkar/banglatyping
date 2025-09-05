@@ -13,7 +13,7 @@ import TestResults from "./test-results";
 import { lessons, practiceParagraphs } from "@/lib/lessons";
 import { Input } from "./ui/input";
 import { useRouter } from 'next/navigation';
-import type { Drill, Lesson } from "@/lib/types";
+import type { Drill, Lesson, SingleDrill } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
 
@@ -37,73 +37,53 @@ const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, va
 );
 
 export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lessonId?: string }) => {
-    const [promptIndex, setPromptIndex] = useState(0);
-    const [stepIndex, setStepIndex] = useState(0);
+    const router = useRouter();
+    const [currentDrillIndex, setCurrentDrillIndex] = useState(0);
+    const [currentStepIndex, setCurrentStepIndex] = useState(0);
     const [status, setStatus] = useState<'pending' | 'correct' | 'incorrect'>('pending');
     
-    const router = useRouter();
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
     const restartButtonRef = useRef<HTMLButtonElement>(null);
 
-    const uniquePrompts = React.useMemo(() => {
-        const seen = new Set<string>();
-        return drills.filter(d => {
-            if (seen.has(d.prompt)) {
-                return false;
-            }
-            seen.add(d.prompt);
-            return true;
-        });
-    }, [drills]);
-
-    const totalPrompts = uniquePrompts.length;
-    const progress = (promptIndex / totalPrompts) * 100;
-
-    const getCurrentPromptDrills = useCallback(() => {
-        if (promptIndex >= totalPrompts) return [];
-        const currentPromptText = uniquePrompts[promptIndex].prompt;
-        return drills.filter(d => d.prompt === currentPromptText);
-    }, [promptIndex, totalPrompts, uniquePrompts, drills]);
-
-    const [currentSteps, setCurrentSteps] = useState<Drill[]>([]);
+    const totalDrills = drills.length;
+    const progress = totalDrills > 0 ? (currentDrillIndex / totalDrills) * 100 : 0;
     
-    useEffect(() => {
-        setCurrentSteps(getCurrentPromptDrills());
-        setStepIndex(0);
-    }, [promptIndex, getCurrentPromptDrills]);
-
-
+    const currentDrill = drills[currentDrillIndex];
+    const currentStep = currentDrill?.steps[currentStepIndex];
+    
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
-        if (modifierKeys.includes(event.key) || promptIndex >= totalPrompts) {
+        if (modifierKeys.includes(event.key) || !currentDrill) {
             return;
         }
         event.preventDefault();
 
         if (statusTimeoutRef.current) {
             clearTimeout(statusTimeoutRef.current);
+            statusTimeoutRef.current = null;
         }
-        
-        const targetStep = currentSteps[stepIndex];
-        if (!targetStep) return;
 
-        const keyIsCorrect = `Key${targetStep.key.toUpperCase()}` === event.code ||
-                             (targetStep.key === ' ' && event.code === 'Space') ||
-                             (targetStep.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
-                             (targetStep.key === '\\' && event.code === 'Backslash') ||
-                             (targetStep.key === ',' && event.code === 'Comma') ||
-                             (targetStep.key === '.' && event.code === 'Period');
+        const keyIsCorrect = `Key${currentStep.key.toUpperCase()}` === event.code ||
+                             (currentStep.key === ' ' && event.code === 'Space') ||
+                             (currentStep.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
+                             (currentStep.key === '\\' && event.code === 'Backslash') ||
+                             (currentStep.key === ',' && event.code === 'Comma') ||
+                             (currentStep.key === '.' && event.code === 'Period');
 
-        const shiftIsCorrect = !!targetStep.shift === event.shiftKey;
+        const shiftIsCorrect = !!currentStep.shift === event.shiftKey;
 
         if (keyIsCorrect && shiftIsCorrect) {
             setStatus('correct');
-            if (stepIndex < currentSteps.length - 1) {
-                setStepIndex(prev => prev + 1);
+            if (currentStepIndex < currentDrill.steps.length - 1) {
+                setCurrentStepIndex(prev => prev + 1);
             } else {
-                setPromptIndex(prev => prev + 1);
-                // The useEffect for promptIndex will reset stepIndex and currentSteps
+                if (currentDrillIndex < drills.length - 1) {
+                    setCurrentDrillIndex(prev => prev + 1);
+                    setCurrentStepIndex(0);
+                } else {
+                     setCurrentDrillIndex(prev => prev + 1); // Go one beyond to show completion screen
+                }
             }
         } else {
             setStatus('incorrect');
@@ -111,7 +91,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 setStatus('pending');
             }, 500);
         }
-    }, [promptIndex, totalPrompts, currentSteps, stepIndex]);
+    }, [currentDrill, currentStep, currentDrillIndex, currentStepIndex, drills.length]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyPress);
@@ -131,18 +111,18 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         }
     }
     
-     const resetDrill = useCallback(() => {
-        setPromptIndex(0);
-        setStepIndex(0);
+    const resetDrill = useCallback(() => {
+        setCurrentDrillIndex(0);
+        setCurrentStepIndex(0);
         setStatus('pending');
     }, []);
 
     useEffect(() => {
         const handleEnterPress = (event: KeyboardEvent) => {
-            if (event.key === 'Enter' && promptIndex >= totalPrompts) {
-                if (nextLessonButtonRef.current) {
+            if (event.key === 'Enter' && currentDrillIndex >= totalDrills) {
+                if (nextLesson && nextLessonButtonRef.current) {
                     nextLessonButtonRef.current.click();
-                } else if (restartButtonRef.current) {
+                } else if(restartButtonRef.current) {
                     restartButtonRef.current.click();
                 }
             }
@@ -152,9 +132,9 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         return () => {
             window.removeEventListener('keydown', handleEnterPress);
         };
-    }, [promptIndex, totalPrompts]);
+    }, [currentDrillIndex, totalDrills, nextLesson]);
 
-    if (promptIndex >= totalPrompts) {
+    if (currentDrillIndex >= totalDrills) {
         return (
             <Card className="text-center p-8 max-w-lg mx-auto">
                 <CardHeader>
@@ -175,17 +155,14 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         )
     }
 
-    const currentPrompt = uniquePrompts[promptIndex];
-    const currentStepInfo = currentSteps[stepIndex];
-
-    const getVisiblePrompts = () => {
-        return uniquePrompts.slice(promptIndex, promptIndex + 10);
+    const getVisibleDrills = () => {
+        return drills.slice(currentDrillIndex, currentDrillIndex + 10);
     }
     
     const getStepSequence = () => {
-        return currentSteps.map(step => (step.shift ? `Shift + ${step.key}` : step.key === ' ' ? 'Space' : step.key)).join(' → ');
+        if (!currentDrill) return '';
+        return currentDrill.steps.map(step => (step.shift ? `Shift + ${step.key}` : step.key === ' ' ? 'Space' : step.key)).join(' → ');
     }
-
 
     return (
         <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-5xl mx-auto">
@@ -193,27 +170,27 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 <div className="w-full md:w-2/3 space-y-4">
                     {/* Prompt Display */}
                     <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px]">
-                        {getVisiblePrompts().map((promptData, index) => {
+                        {getVisibleDrills().map((drillData, index) => {
                             const isCurrent = index === 0;
                             let boxClass = "bg-secondary";
                             if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
                             if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
                             
                             return (
-                                <div key={promptData.prompt + index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {promptData.prompt}
+                                <div key={drillData.prompt + index + currentDrillIndex} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
+                                   {drillData.prompt}
                                 </div>
                             )
                         })}
                     </div>
                      
                     {/* Step sequence display */}
-                    <div className="text-center font-mono text-muted-foreground p-2 bg-background/50 rounded-md">
+                    <div className="text-center font-mono text-muted-foreground p-2 bg-background/50 rounded-md min-h-[32px]">
                         {getStepSequence()}
                     </div>
                     
                     {/* Virtual Keyboard */}
-                    <VirtualKeyboard highlightKey={currentStepInfo?.key} needsShift={!!currentStepInfo?.shift} />
+                    <VirtualKeyboard highlightKey={currentStep?.key} needsShift={!!currentStep?.shift} />
                     
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">
@@ -248,49 +225,50 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
     ],
     bottom: [
         {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৃ'}, {key: '.', bn: '।', bnShift: 'ঞ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৃ', bnShift: ','}, {key: '.', bn: '।', bnShift: 'ঞ'},
     ],
     space: [{key: ' ', bn: ''}],
 };
 
-const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string, needsShift: boolean }) => (
+const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | undefined, needsShift: boolean }) => (
     <div className="p-4 bg-background rounded-lg shadow-inner space-y-2">
         {Object.values(keyboardLayout).map((row, rowIndex) => (
-            <div key={rowIndex} className="flex justify-center gap-1.5">
-                {row.map(keyData => {
-                    const isHighlighted = highlightKey && highlightKey.toLowerCase() === keyData.key.toLowerCase();
-                    return (
-                        <div
-                            key={keyData.key}
-                            className={cn(
-                                "flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind",
-                                keyData.key === ' ' ? 'w-0' : 'w-16',
-                                (keyData.key === ' ' && !isHighlighted) && 'bg-transparent border-0',
-                                isHighlighted && 'bg-primary/20 border-primary text-primary'
-                            )}
-                        >
-                            <span className={cn(
-                                "text-sm",
-                                (isHighlighted && needsShift) && "font-bold text-lg text-primary"
-                            )}>
-                                {keyData.bnShift}
-                            </span>
-                            <span className={cn(
-                                "text-lg font-bold",
-                                (isHighlighted && !needsShift) && "text-primary text-2xl"
-                            )}>
-                                {keyData.bn}
-                            </span>
-                        </div>
-                    );
-                })}
-            </div>
+             row.length > 1 ? (
+                <div key={rowIndex} className="flex justify-center gap-1.5">
+                    {row.map(keyData => {
+                        const isHighlighted = highlightKey && highlightKey.toLowerCase() === keyData.key.toLowerCase();
+                        return (
+                            <div
+                                key={keyData.key}
+                                className={cn(
+                                    "flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-16",
+                                    isHighlighted && 'bg-primary/20 border-primary text-primary'
+                                )}
+                            >
+                                <span className={cn(
+                                    "text-sm",
+                                    (isHighlighted && needsShift) && "font-bold text-lg text-primary"
+                                )}>
+                                    {keyData.bnShift}
+                                </span>
+                                <span className={cn(
+                                    "text-lg font-bold",
+                                    (isHighlighted && !needsShift) && "text-primary text-2xl"
+                                )}>
+                                    {keyData.bn}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                 <div key={rowIndex} className="flex justify-center gap-1.5">
+                    <div className={cn("flex items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-64", (highlightKey === ' ' && "bg-primary/20 border-primary text-primary"))}>
+                        <span className="text-lg font-bold">Space</span>
+                    </div>
+                </div>
+            )
         ))}
-         <div className="flex justify-center gap-1.5">
-            <div className={cn("flex items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-64", (highlightKey === ' ' && "bg-primary/20 border-primary text-primary"))}>
-                <span className="text-lg font-bold">Space</span>
-            </div>
-        </div>
     </div>
 );
 

@@ -16,10 +16,14 @@ export interface TypingStats {
   timeElapsed: number;
 }
 
+export interface SingleDrill {
+    key: string;
+    shift: boolean;
+}
+
 export interface Drill {
   prompt: string; // The character(s) the user needs to type
-  key: string; // The key on the keyboard to press
-  shift?: boolean;
+  steps: SingleDrill[];
 }
 
 export type RowDrillCategory = {
