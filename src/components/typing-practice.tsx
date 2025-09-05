@@ -43,6 +43,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const progress = (currentDrillIndex / totalDrills) * 100;
     const router = useRouter();
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
+    const restartButtonRef = useRef<HTMLButtonElement>(null);
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
@@ -63,8 +65,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                              (currentDrill.key === ' ' && event.code === 'Space') ||
                              (currentDrill.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
                              (currentDrill.key === '\\' && event.code === 'Backslash') ||
-                             (currentDrill.key === ',' && event.code === 'Comma') ||
-                             (currentDrill.key === '.' && event.code === 'Period');
+                             (currentDrill.key === ',' && event.code === 'Period');
                              
         const shiftIsCorrect = !!currentDrill.shift === event.shiftKey;
 
@@ -97,6 +98,24 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             nextLesson = lessons[currentLessonIndex + 1];
         }
     }
+    
+    useEffect(() => {
+        const handleEnterPress = (event: KeyboardEvent) => {
+          if (event.key === 'Enter' && currentDrillIndex >= totalDrills) {
+            if (nextLessonButtonRef.current) {
+              nextLessonButtonRef.current.click();
+            } else if (restartButtonRef.current) {
+              restartButtonRef.current.click();
+            }
+          }
+        };
+    
+        window.addEventListener('keydown', handleEnterPress);
+        return () => {
+          window.removeEventListener('keydown', handleEnterPress);
+        };
+      }, [currentDrillIndex, totalDrills]);
+
 
     if (currentDrillIndex >= totalDrills) {
         return (
@@ -107,9 +126,9 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     <CardDescription>খুব ভালো করেছেন!</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2">
-                    <Button onClick={() => setCurrentDrillIndex(0)}>আবার চেষ্টা করুন</Button>
+                    <Button ref={restartButtonRef} onClick={() => setCurrentDrillIndex(0)}>আবার চেষ্টা করুন</Button>
                     {nextLesson && (
-                         <Button onClick={() => router.push(`/practice/${nextLesson?.id}`)}>
+                         <Button ref={nextLessonButtonRef} onClick={() => router.push(`/practice/${nextLesson?.id}`)}>
                             পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     )}
