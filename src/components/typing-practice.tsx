@@ -437,21 +437,23 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         </CardContent>
       </Card>
 
-      <Card className="w-full p-6 text-2xl tracking-wider font-mono leading-relaxed relative select-none">
-          <p>
-            {words.map((word, index) => (
+       <Card className="w-full p-6 text-2xl tracking-wider font-mono leading-relaxed relative select-none">
+        <p>
+          {words.map((word, index) => (
+            <React.Fragment key={index}>
               <span
-                key={index}
                 className={cn(
                   'transition-colors',
                   getWordClass(index),
                   index === currentWordIndex && 'bg-yellow-100 dark:bg-yellow-800/50 rounded'
                 )}
               >
-                {word.normalize('NFC') + (index === words.length - 1 ? '' : ' ')}
+                {word.normalize('NFC')}
               </span>
-            ))}
-          </p>
+              {index < words.length - 1 && ' '}
+            </React.Fragment>
+          ))}
+        </p>
       </Card>
 
        <div className="w-full h-24 flex flex-col items-center justify-center">
