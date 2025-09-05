@@ -45,7 +45,22 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
     const restartButtonRef = useRef<HTMLButtonElement>(null);
-    const [drillStep, setDrillStep] = useState(0); // 0 for consonant, 1 for hasant, 2 for vowel
+    
+    const [currentPromptChars, setCurrentPromptChars] = useState<{prompt: string, key: string, shift?: boolean}[]>([]);
+    const [currentStep, setCurrentStep] = useState(0);
+
+    const setupCurrentDrill = useCallback(() => {
+        if (currentDrillIndex >= totalDrills) return;
+
+        const currentDrillPrompt = drills[currentDrillIndex].prompt;
+        const promptChars = drills.filter(d => d.prompt === currentDrillPrompt);
+        setCurrentPromptChars(promptChars);
+        setCurrentStep(0);
+    }, [currentDrillIndex, drills, totalDrills]);
+
+    useEffect(() => {
+        setupCurrentDrill();
+    }, [setupCurrentDrill]);
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
@@ -59,42 +74,33 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
           clearTimeout(statusTimeoutRef.current);
         }
 
-        const currentDrill = drills[currentDrillIndex];
-
-        const keyIsCorrect = `Key${currentDrill.key.toUpperCase()}` === event.code || 
-                             (currentDrill.key === ' ' && event.code === 'Space') ||
-                             (currentDrill.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
-                             (currentDrill.key === '\\' && event.code === 'Backslash') ||
-                             (currentDrill.key === ',' && event.code === 'Period');
+        const currentTargetKey = currentPromptChars[currentStep];
+        if (!currentTargetKey) return;
+        
+        const keyIsCorrect = `Key${currentTargetKey.key.toUpperCase()}` === event.code || 
+                             (currentTargetKey.key === ' ' && event.code === 'Space') ||
+                             (currentTargetKey.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
+                             (currentTargetKey.key === '\\' && event.code === 'Backslash') ||
+                             (currentTargetKey.key === ',' && event.code === 'Comma');
                              
-        const shiftIsCorrect = !!currentDrill.shift === event.shiftKey;
-
-        // For vowel signs, we need to check if the previous key was a consonant + hasant
-        let logicIsCorrect = true;
-        if(currentDrill.prompt.length > 1) { // This is a combined char like 'কা'
-           if(drillStep === 0 && currentDrill.key.toLowerCase() === event.key.toLowerCase()) { // consonant
-               // Correct, move to next step
-           } else if (drillStep === 1 && currentDrill.key.toLowerCase() === event.key.toLowerCase()) { // hasant or vowel
-                // Correct, move to next step
-           } else if (drillStep === 2 && currentDrill.key.toLowerCase() === event.key.toLowerCase()) {
-                // Correct, move to next drill
-           }
-           else {
-               logicIsCorrect = false;
-           }
-        }
-
+        const shiftIsCorrect = !!currentTargetKey.shift === event.shiftKey;
 
         if (keyIsCorrect && shiftIsCorrect) {
             setStatus('correct');
-            setCurrentDrillIndex(prev => prev + 1);
+            if(currentStep < currentPromptChars.length - 1){
+                setCurrentStep(prev => prev + 1);
+            } else {
+                 const nextDrillIndex = drills.findIndex(d => d.prompt !== currentTargetKey.prompt);
+                 const lastIndexOfCurrentPrompt = drills.map(d => d.prompt).lastIndexOf(currentTargetKey.prompt);
+                 setCurrentDrillIndex(lastIndexOfCurrentPrompt + 1);
+            }
         } else {
             setStatus('incorrect');
             statusTimeoutRef.current = setTimeout(() => {
                 setStatus('pending');
             }, 500);
         }
-    }, [currentDrillIndex, drills, totalDrills]);
+    }, [currentDrillIndex, drills, totalDrills, currentStep, currentPromptChars]);
 
 
     useEffect(() => {
@@ -162,11 +168,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         while(visible.length < 10 && i < totalDrills) {
             const drill = drills[i];
             // If it's a combined prompt, only add it once
-            if(drill.prompt.length > 1) {
-                if(i === currentDrillIndex || (drills[i-1] && drills[i-1].prompt !== drill.prompt)) {
-                    visible.push(drill);
-                }
-            } else {
+            if (i === 0 || (drills[i-1] && drills[i-1].prompt !== drill.prompt)) {
                 visible.push(drill);
             }
             i++;
@@ -182,7 +184,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     {/* Prompt Display */}
                     <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px]">
                         {getVisibleDrills().map((drill, index) => {
-                            const isCurrent = drill.prompt === currentDrill.prompt && index === 0;
+                            const isCurrent = drill.prompt === currentDrill.prompt;
                             let boxClass = "bg-secondary";
                             if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
                             if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
@@ -200,7 +202,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     </div>
                     
                     {/* Virtual Keyboard */}
-                    <VirtualKeyboard highlightKey={currentDrill.key} needsShift={!!currentDrill.shift} />
+                    <VirtualKeyboard highlightKey={currentPromptChars[currentStep]?.key} needsShift={!!currentPromptChars[currentStep]?.shift} />
                     
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">
@@ -235,7 +237,7 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
     ],
     bottom: [
         {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৃ', bnShift: 'ঞ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৃ'}, {key: '.', bn: '।', bnShift: 'ঞ'},
     ],
     space: [{key: ' ', bn: ''}],
 };
@@ -245,7 +247,7 @@ const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string, n
         {Object.values(keyboardLayout).map((row, rowIndex) => (
             <div key={rowIndex} className="flex justify-center gap-1.5">
                 {row.map(keyData => {
-                    const isHighlighted = highlightKey.toLowerCase() === keyData.key.toLowerCase();
+                    const isHighlighted = highlightKey && highlightKey.toLowerCase() === keyData.key.toLowerCase();
                     return (
                         <div
                             key={keyData.key}
@@ -551,3 +553,4 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   );
 }
     
+
