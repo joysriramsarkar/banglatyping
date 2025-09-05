@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -133,8 +134,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                             if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
                             
                             return (
-                                <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-2xl font-bold", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drill.prompt === ' ' ? '' : drill.prompt}
+                                <div key={index} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-bold", boxClass, isCurrent && "ring-2 ring-primary")}>
+                                   {drill.prompt}
                                 </div>
                             )
                         })}
@@ -450,7 +451,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
               >
                 {word.normalize('NFC')}
               </span>
-              {index < words.length - 1 && ' '}
+              {index < words.length - 1 ? ' ' : ''}
             </React.Fragment>
           ))}
         </p>
