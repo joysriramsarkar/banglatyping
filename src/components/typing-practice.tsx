@@ -53,8 +53,10 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const currentStep = currentDrill?.steps[currentStepIndex];
     
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
+        if (!currentDrill) return;
+
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
-        if (modifierKeys.includes(event.key) || !currentDrill) {
+        if (modifierKeys.includes(event.key)) {
             return;
         }
         event.preventDefault();
@@ -63,18 +65,17 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
-
-        const keyIsCorrect = `Key${currentStep.key.toUpperCase()}` === event.code ||
+        
+        const keyIsCorrect = currentStep.key.toLowerCase() === event.key.toLowerCase() ||
                              (currentStep.key === ' ' && event.code === 'Space') ||
-                             (currentStep.key.toLowerCase() === event.key.toLowerCase() && !event.code.startsWith('Key')) ||
-                             (currentStep.key === '\\' && event.code === 'Backslash') ||
-                             (currentStep.key === ',' && event.code === 'Comma') ||
-                             (currentStep.key === '.' && event.code === 'Period');
+                             (currentStep.key === '\\' && event.code === 'Backslash');
+
 
         const shiftIsCorrect = !!currentStep.shift === event.shiftKey;
 
         if (keyIsCorrect && shiftIsCorrect) {
             setStatus('correct');
+            // Move to next step or next drill
             if (currentStepIndex < currentDrill.steps.length - 1) {
                 setCurrentStepIndex(prev => prev + 1);
             } else {
@@ -158,11 +159,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const getVisibleDrills = () => {
         return drills.slice(currentDrillIndex, currentDrillIndex + 10);
     }
-    
-    const getStepSequence = () => {
-        if (!currentDrill) return '';
-        return currentDrill.steps.map(step => (step.shift ? `Shift + ${step.key}` : step.key === ' ' ? 'Space' : step.key)).join(' → ');
-    }
 
     return (
         <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-5xl mx-auto">
@@ -184,11 +180,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                         })}
                     </div>
                      
-                    {/* Step sequence display */}
-                    <div className="text-center font-mono text-muted-foreground p-2 bg-background/50 rounded-md min-h-[32px]">
-                        {getStepSequence()}
-                    </div>
-                    
                     {/* Virtual Keyboard */}
                     <VirtualKeyboard highlightKey={currentStep?.key} needsShift={!!currentStep?.shift} />
                     
@@ -217,7 +208,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
     top: [
         {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'}, 
-        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'}
+        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'},
+        {key: '\\', bn: 'ৃ', bnShift: 'র্'}
     ],
     home: [
         {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
@@ -225,7 +217,7 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
     ],
     bottom: [
         {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৃ', bnShift: ','}, {key: '.', bn: '।', bnShift: 'ঞ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: '<'}, {key: '.', bn: '।', bnShift: 'ঞ'},
     ],
     space: [{key: ' ', bn: ''}],
 };
@@ -263,9 +255,15 @@ const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | 
                 </div>
             ) : (
                  <div key={rowIndex} className="flex justify-center gap-1.5">
-                    <div className={cn("flex items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-64", (highlightKey === ' ' && "bg-primary/20 border-primary text-primary"))}>
-                        <span className="text-lg font-bold">Space</span>
-                    </div>
+                    {highlightKey === ' ' ? (
+                         <div className="flex items-center justify-center h-16 rounded-md bg-primary/20 border-primary text-primary border border-b-4 font-hind w-64">
+                            <span className="text-lg font-bold">Space</span>
+                        </div>
+                    ) : (
+                         <div className="flex items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-64">
+                            <span className="text-lg font-bold">Space</span>
+                        </div>
+                    )}
                 </div>
             )
         ))}
