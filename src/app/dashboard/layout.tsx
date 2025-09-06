@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button"
 import { AuthProvider, useAuth } from "@/hooks/use-auth"
 import AuthGuard from "@/components/auth-guard"
 import { Skeleton } from "@/components/ui/skeleton"
+import React, { Suspense } from "react"
 
 function SidebarFooterContent() {
   const router = useRouter();
@@ -88,6 +89,25 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     { href: "/dashboard/profile", icon: User, label: "প্রোফাইল" },
   ]
 
+  const PageSkeleton = () => (
+    <div className="space-y-8 p-4 sm:px-6 sm:py-0">
+        <div className="space-y-2">
+            <Skeleton className="h-8 w-1/3" />
+            <Skeleton className="h-4 w-1/2" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+        </div>
+    </div>
+  );
+
   return (
       <div className="flex min-h-screen w-full flex-col bg-muted/40">
         <SidebarProvider>
@@ -125,7 +145,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 </div>
             </header>
             <main className="p-4 sm:px-6 sm:py-0">
-               {isProfilePage ? <AuthGuard>{children}</AuthGuard> : children}
+              <Suspense fallback={<PageSkeleton />}>
+                {isProfilePage ? <AuthGuard>{children}</AuthGuard> : children}
+              </Suspense>
             </main>
           </SidebarInset>
         </SidebarProvider>
