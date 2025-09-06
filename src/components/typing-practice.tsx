@@ -10,7 +10,7 @@ import { useTimer } from "@/hooks/use-timer";
 import { Zap, Target, Timer, XCircle, Pause, Play, Home, CheckCircle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TestResults from "./test-results";
-import { lessons, practiceParagraphs } from "@/lib/lessons";
+import { lessons, practiceParagraphs, keyMap } from "@/lib/lessons";
 import { Input } from "./ui/input";
 import { useRouter } from 'next/navigation';
 import type { Drill, Lesson, SingleDrill } from "@/lib/types";
@@ -57,11 +57,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const currentStep = currentDrill?.steps[currentStepIndex];
 
     const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        if (isCompleted) return;
-
-        const currentDrill = drills[drillState.currentDrillIndex];
-        const currentStep = currentDrill?.steps[drillState.currentStepIndex];
-        if (!currentStep) return;
+        if (isCompleted || !currentDrill || !currentStep) return;
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
         if (modifierKeys.includes(event.key)) {
@@ -74,16 +70,15 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
         
-        let keyIsCorrect = false;
+        const expectedKey = currentStep.key.toLowerCase();
+        const pressedKey = event.key.toLowerCase();
         
-        // The `key` property for space is " ", but the event.key is " ". Normalizing to lower case is safe.
-        // For other keys like '\', event.key is "\\" while our stored key is '\'. So direct comparison is needed.
-        if (currentStep.key === ' ') {
-            keyIsCorrect = event.key === ' ';
-        } else {
-            keyIsCorrect = event.key.toLowerCase() === currentStep.key.toLowerCase();
-        }
+        // Find the Bengali character associated with the expected English key
+        const keyMapping = keyMap.find(k => k.key.toLowerCase() === expectedKey);
+        const expectedBengaliChar = currentStep.shift ? keyMapping?.bnShift : keyMapping?.bn;
 
+        // Check if either the English key or the Bengali character matches
+        const keyIsCorrect = pressedKey === expectedKey || (expectedBengaliChar && pressedKey === expectedBengaliChar.toLowerCase());
         const shiftIsCorrect = currentStep.shift === event.shiftKey;
 
         if (keyIsCorrect && shiftIsCorrect) {
@@ -109,7 +104,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 setDrillState(prev => ({ ...prev, status: 'pending' }));
             }, 500);
         }
-    }, [isCompleted, drills, drillState]);
+    }, [isCompleted, drills, drillState, currentDrill, currentStep]);
 
 
     useEffect(() => {
@@ -126,10 +121,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     if (lessonId) {
         const currentLessonIndexInAllLessons = lessons.findIndex(l => l.id === lessonId);
         if (currentLessonIndexInAllLessons !== -1 && currentLessonIndexInAllLessons < lessons.length - 1) {
-            // Find the next lesson in the same row/category
             const currentLesson = lessons[currentLessonIndexInAllLessons];
             nextLesson = lessons.find(l => l.row === currentLesson.row && lessons.indexOf(l) > currentLessonIndexInAllLessons) || null;
-            // If no next lesson in same row, find from all lessons
             if(!nextLesson) {
                  nextLesson = lessons[currentLessonIndexInAllLessons + 1]
             }
@@ -325,7 +318,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const calculateStats = useCallback(() => {
     if (time > 0) {
       const typedCharsCount = typedWords.join(' ').length;
-      // Using the standard WPM calculation (5 chars = 1 word)
       const grossWpm = (typedCharsCount / 5) / (time / 60);
       setWpm(Math.round(grossWpm > 0 ? grossWpm : 0));
     }
@@ -389,12 +381,10 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         }
     }, 4000);
     
-    // Auto-finish if it's the last word and it's correct
     if (currentWordIndex === words.length - 1 && value.normalize('NFC') === words[currentWordIndex].normalize('NFC')) {
       const newTypedWords = [...typedWords, value.trim()];
       setTypedWords(newTypedWords);
       setCurrentInput(value);
-      // Use a short timeout to allow state to update before finishing
       setTimeout(() => finishSession(), 50);
       return;
     }
