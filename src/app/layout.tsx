@@ -37,6 +37,11 @@ export default function RootLayout({
       <body className={cn("font-body antialiased", inter.variable, noto_sans_bengali.variable, hind_siliguri.variable)}>
         {children}
         <Toaster />
+        {process.env.NODE_ENV === 'development' && (
+          <div className="fixed bottom-2 right-2 z-50 rounded bg-yellow-400 px-2 py-1 text-xs font-bold text-black">
+            DEV
+          </div>
+        )}
       </body>
     </html>
   );
