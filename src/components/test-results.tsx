@@ -1,7 +1,8 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Award, RefreshCw, Zap, Target, XCircle, Timer as TimerIcon, Home, ArrowRight } from "lucide-react";
-import { TypingStats, Lesson } from "@/lib/types";
+import { TypingStats, Lesson, TestSummary } from "@/lib/types";
 import { useState, useEffect, useRef } from "react";
 import Certificate from "./certificate";
 import {
@@ -14,8 +15,14 @@ import {
 import { lessons } from "@/lib/lessons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+
 
 const toBengaliNumber = (num: number | string) => {
+    if (typeof num === 'undefined' || num === null) return '০';
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
 };
@@ -33,9 +40,11 @@ const StatItem = ({ icon: Icon, label, value, unit }: { icon: React.ElementType,
 export default function TestResults({ stats, onRestart, lessonId }: { stats: TypingStats, onRestart: () => void, lessonId?: string }) {
   const { wpm, accuracy, errors, timeElapsed } = stats;
   const router = useRouter();
+  const { user, userData } = useAuth();
+  const { toast } = useToast();
   const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
   const restartButtonRef = useRef<HTMLButtonElement>(null);
-
+  const [isSaving, setIsSaving] = useState(false);
 
   const canGetCertificate = wpm >= 40 && accuracy >= 95;
   
@@ -46,6 +55,35 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
         nextLesson = lessons[currentLessonIndex + 1];
     }
   }
+
+  useEffect(() => {
+    const saveResults = async () => {
+      if (user && !isSaving) {
+        setIsSaving(true);
+        try {
+          const statsCollectionRef = collection(db, `users/${user.uid}/stats`);
+          const resultData: TestSummary = {
+            wpm,
+            accuracy,
+            errors,
+            timeElapsed,
+            lessonId: lessonId || 'typing-test',
+            timestamp: serverTimestamp(),
+          };
+          await addDoc(statsCollectionRef, resultData);
+          toast({ title: "সাফল্য!", description: "আপনার ফলাফল সংরক্ষণ করা হয়েছে।" });
+        } catch (error) {
+          console.error("Error saving results: ", error);
+          toast({ variant: "destructive", title: "ত্রুটি", description: "ফলাফল সংরক্ষণ করা যায়নি।" });
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    };
+
+    saveResults();
+  }, [user, wpm, accuracy, errors, timeElapsed, lessonId, toast]);
+
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -101,7 +139,7 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
                         <DialogHeader className="sr-only">
                            <DialogTitle>সাফল্যের সনদপত্র</DialogTitle>
                         </DialogHeader>
-                        <Certificate name="ব্যবহারকারী" wpm={wpm} accuracy={accuracy} />
+                        <Certificate name={userData?.displayName || 'ব্যবহারকারী'} wpm={wpm} accuracy={accuracy} />
                     </DialogContent>
                  </Dialog>
             )}

@@ -1,3 +1,4 @@
+
 export type KeyboardLayout = "Avro Phonetic" | "Bijoy Classic" | "BanglaWord";
 
 export interface Lesson {
@@ -31,4 +32,21 @@ export type RowDrillCategory = {
     id: 'home-row' | 'top-row' | 'bottom-row' | 'kar-row';
     name: string;
     description: string;
+}
+
+export interface TestSummary {
+  wpm: number;
+  accuracy: number;
+  errors: number;
+  timeElapsed: number;
+  lessonId: string;
+  timestamp: any; // Firestore ServerTimestamp
+}
+
+export interface UserTypingStats {
+  averageWpm: number;
+  averageAccuracy: number;
+  lessonsCompleted: number;
+  testsTaken: number;
+  highestWpm: number;
 }

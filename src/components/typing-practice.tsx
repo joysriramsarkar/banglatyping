@@ -21,6 +21,7 @@ interface TypingPracticeProps {
   textToType: string;
   timeLimit?: number; // in minutes
   lessonId?: string;
+  onRestart?: () => void;
 }
 
 const toBengaliNumber = (num: number | string) => {
@@ -57,14 +58,10 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const currentDrillStep = currentDrill?.steps[currentStepIndex];
 
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        if (isCompleted || !currentDrill || !currentDrillStep) {
-            return;
-        };
+        if (isCompleted || !currentDrill || !currentDrillStep) return;
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
-        if (modifierKeys.includes(event.key)) {
-            return;
-        }
+        if (modifierKeys.includes(event.key)) return;
         
         if (event.key === 'Enter') {
            if(isCompleted) {
@@ -83,9 +80,10 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
-        
+
         const { key: expectedKey, shift: expectedShift } = currentDrillStep;
 
+        // Handle spacebar separately and more robustly
         if (expectedKey === ' ') {
             if (event.code === 'Space') {
                  setDrillState(prev => {
@@ -104,14 +102,11 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             return;
         }
 
-
         let expectedCode = '';
-        if (expectedKey === ' ') {
-            expectedCode = 'Space';
-        } else if (/[a-zA-Z]/.test(expectedKey)) {
+        if (/[a-zA-Z]/.test(expectedKey)) {
           expectedCode = `Key${expectedKey.toUpperCase()}`;
-        } else if (expectedKey.startsWith('Digit')) {
-            expectedCode = expectedKey;
+        } else if (/[0-9]/.test(expectedKey)) {
+             expectedCode = `Digit${expectedKey}`;
         } else {
              switch(expectedKey) {
                 case '[': expectedCode = 'BracketLeft'; break;
@@ -123,12 +118,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 case '.': expectedCode = 'Period'; break;
                 case '/': expectedCode = 'Slash'; break;
                 case '-': expectedCode = 'Minus'; break;
-                default: expectedCode = expectedKey; // Fallback for other keys
+                default: expectedCode = expectedKey;
             }
-        }
-        
-        if (/[0-9]/.test(expectedKey)) {
-             expectedCode = `Digit${expectedKey}`;
         }
 
         const isCorrect = event.code === expectedCode && event.shiftKey === expectedShift;
@@ -236,16 +227,17 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
 
     const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, isCompleted: boolean, key: string | number) => {
+        let boxClass = "bg-secondary";
+        if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
+        if (isCompleted) boxClass = "bg-green-100/80 border-green-500";
+        
         if(drillData.prompt === ' '){
             return (
-                <div key={key} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2", isCurrent && "ring-2 ring-primary", isCompleted ? 'border-green-500 bg-green-100' : 'border-dashed' )}>
+                <div key={key} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2", boxClass, isCurrent && "ring-2 ring-primary" )}>
                      {isCompleted ? <CheckCircle className="h-6 w-6 text-green-600" /> : <span className="text-muted-foreground italic">স্পেস</span>}
                 </div>
             )
         }
-        let boxClass = "bg-secondary";
-        if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
-        if (isCompleted) boxClass = "bg-green-100/80 border-green-500";
         
         return (
             <div key={key} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
@@ -377,9 +369,7 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
         align === 'right' && 'ml-auto',
     );
     
-    const hasMultipleChars = bnExtra || bnShiftExtra;
-
-    if (key.includes('Shift') || key.includes('Backspace') || key === 'Enter' || key === ' ' || key === 'Tab' || key === 'CapsLock' || key.includes('Control') || key.includes('Alt')) {
+    if (key.includes('Shift') || key === ' ' ) {
         return (
             <div className={baseKeyClasses}>
                 <span className="text-sm font-bold">{bn}</span>
@@ -387,7 +377,7 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
         )
     }
 
-    if (hasMultipleChars) {
+    if (bnExtra || bnShiftExtra) {
        return (
             <div className={cn(baseKeyClasses, "grid grid-cols-2 grid-rows-2 p-1 text-center")}>
                  <span className="text-sm text-muted-foreground">{bnShiftExtra}</span>
@@ -421,12 +411,19 @@ const SimplifiedKeyboard = ({ highlightKey, needsShift }: { highlightKey: string
         {Object.values(simplifiedKeyboardLayout).map((row, rowIndex) => (
             <div key={rowIndex} className="flex justify-center gap-1.5">
                 {row.map(keyData => {
-                    const isHighlighted = highlightKey && (
-                        keyData.key.toLowerCase() === highlightKey.toLowerCase() ||
-                        (highlightKey === 'Shift' && keyData.key.toLowerCase().includes('shift'))
-                    );
+                    let isHighlighted = false;
+                    if (highlightKey) {
+                        if (highlightKey === ' ') {
+                           isHighlighted = keyData.key === ' ';
+                        } else if (keyData.key.toLowerCase().includes('shift')) {
+                           isHighlighted = false; // shift state is handled separately by `needsShift`
+                        }
+                        else {
+                           isHighlighted = keyData.key.toLowerCase() === highlightKey.toLowerCase();
+                        }
+                    }
                     
-                    return <Key key={keyData.key} data={keyData} isHighlighted={!!isHighlighted} needsShift={needsShift} />;
+                    return <Key key={keyData.key} data={keyData} isHighlighted={isHighlighted} needsShift={needsShift} />;
                 })}
             </div>
         ))}
@@ -434,7 +431,7 @@ const SimplifiedKeyboard = ({ highlightKey, needsShift }: { highlightKey: string
 );
 
 
-export default function TypingPractice({ textToType: initialText, timeLimit, lessonId }: TypingPracticeProps) {
+export default function TypingPractice({ textToType: initialText, timeLimit, lessonId, onRestart: customOnRestart }: TypingPracticeProps) {
   const [textToType, setTextToType] = useState(initialText?.normalize('NFC') || '');
   const [words, setWords] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -475,6 +472,10 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   
 
   const resetTest = useCallback((isNewTest = true) => {
+    if (customOnRestart) {
+        customOnRestart();
+        return;
+    }
     reset();
     setCurrentInput("");
     setWpm(0);
@@ -493,7 +494,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     setCurrentWordIndex(0);
     setTypedWords([]);
     inputRef.current?.focus();
-  }, [reset, initialText, timeLimit]);
+  }, [reset, initialText, timeLimit, customOnRestart]);
   
   const finishSession = useCallback(() => {
     if(isFinished) return;
@@ -638,7 +639,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const isError = normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
 
   if(isFinished) {
-    return <TestResults stats={{ wpm: wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
+    return <TestResults stats={{ wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
   }
 
   return (
@@ -709,6 +710,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 

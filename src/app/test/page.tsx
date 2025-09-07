@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRouter } from "next/navigation";
 
-
 const timeOptions = [
     { value: 1, label: '১' },
     { value: 2, label: '২' },
@@ -27,8 +26,8 @@ const toBengaliNumber = (num: number | string) => {
 };
 
 export default function TestPage() {
-  const [selectedTime, setSelectedTime] = useState<number | null>(null);
-  const [selectedParagraph, setSelectedParagraph] = useState<string | null>(null);
+  const [selectedTime, setSelectedTime] = useState<number | null>(1);
+  const [selectedParagraph, setSelectedParagraph] = useState<string | null>(practiceParagraphs[0]);
   const [testStarted, setTestStarted] = useState(false);
   const router = useRouter();
 
@@ -38,6 +37,12 @@ export default function TestPage() {
     }
   };
 
+  const restartTest = () => {
+    setTestStarted(false);
+    setSelectedTime(1);
+    setSelectedParagraph(practiceParagraphs[0]);
+  }
+
   if (testStarted && selectedParagraph && selectedTime) {
     return (
       <div>
@@ -45,7 +50,7 @@ export default function TestPage() {
             <h1 className="text-3xl font-bold font-headline">টাইপিং টেস্ট</h1>
             <p className="text-muted-foreground">{toBengaliNumber(selectedTime)} মিনিটের পরীক্ষা</p>
         </div>
-        <TypingPractice textToType={selectedParagraph} timeLimit={selectedTime} />
+        <TypingPractice textToType={selectedParagraph} timeLimit={selectedTime} onRestart={restartTest} />
       </div>
     );
   }
