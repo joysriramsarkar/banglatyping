@@ -56,5 +56,8 @@ export const useTimer = (initialTime = 0) => {
     pause: handlePause,
     resume: handleResume,
     reset: handleReset,
+    setTime, // Expose setTime for interval callback
   };
 };
+
+    

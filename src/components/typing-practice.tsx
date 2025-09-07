@@ -92,7 +92,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
     
     const maxTime = 360; // 6 minutes
-    const { time, isActive, start, pause, resume } = useTimer();
+    const { time, isActive, start, pause, resume, reset: resetTimer } = useTimer();
     const timeLeft = maxTime - time;
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -118,33 +118,46 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
 
         const finalWpm = time > 0 ? ((totalCharsTyped / 5) / (time / 60)) : 0;
         setWpm(Math.round(finalWpm));
-
     }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
     
+    // Effect for starting the timer and the WPM calculation interval
     useEffect(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-            const currentWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
-            const correctChars = totalCharsTyped - totalErrors;
-            const currentAccuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 100;
-            
-            setWpmHistory(prev => [...prev, { time, wpm: currentWpm }]);
-
-            if (time >= 240 && currentWpm >= 25 && currentAccuracy >= accuracyGoal) {
-                finishDrill();
-            }
-
-            if (time >= maxTime) {
-                finishDrill();
-            }
-
+             // This runs on an interval, not directly in the render, so it doesn't need to be a dependency
+             // It will get the latest `time` and `totalCharsTyped` from the closure
+             setTime(currentTime => {
+                 setTotalCharsTyped(currentTotalChars => {
+                    const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
+                    setWpmHistory(prev => [...prev, { time: currentTime, wpm: currentWpm }]);
+                    return currentTotalChars;
+                 });
+                 return currentTime;
+             });
         }, 30000); // Update every 30 seconds
 
         return () => {
             if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    }, [start, time, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
+    // Effect for checking win/loss conditions based on time
+    useEffect(() => {
+        if (!isActive || isFinished) return;
+
+        const currentWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
+        const correctChars = totalCharsTyped - totalErrors;
+        const currentAccuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 100;
+
+        if (time >= 240 && currentWpm >= 25 && currentAccuracy >= accuracyGoal) {
+            finishDrill();
+        }
+
+        if (time >= maxTime) {
+            finishDrill();
+        }
+    }, [time, isActive, isFinished, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
 
 
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
@@ -201,9 +214,10 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
 
         // Handle other keys
         let expectedCode = '';
-        if (/[a-zA-Z]/.test(expectedKey)) {
+        // This logic is complex because of different keyboard layouts and event.code values
+        if (expectedKey.match(/^[a-z]$/)) {
           expectedCode = `Key${expectedKey.toUpperCase()}`;
-        } else if (/[0-9]/.test(expectedKey)) {
+        } else if (expectedKey.match(/^[0-9]$/)) {
              expectedCode = `Digit${expectedKey}`;
         } else {
              switch(expectedKey) {
@@ -216,7 +230,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                 case '.': expectedCode = 'Period'; break;
                 case '/': expectedCode = 'Slash'; break;
                 case '-': expectedCode = 'Minus'; break;
-                default: expectedCode = expectedKey;
+                default: expectedCode = expectedKey; // Fallback for special keys
             }
         }
        
@@ -296,8 +310,9 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         setTotalCharsTyped(0);
         setTotalErrors(0);
         setWpmHistory([]);
-        start(); // Restart the timer
-    }, [initialDrills, start]);
+        resetTimer();
+        start();
+    }, [initialDrills, resetTimer, start]);
 
     const startCustomDrill = () => {
         const erredChars = Array.from(erredCharacters.keys());
@@ -401,8 +416,6 @@ type KeyLayoutData = {
     bnShift?: string;
     bnExtra?: string;
     bnShiftExtra?: string;
-    bnExtra2?: string;
-    bnShiftExtra2?: string;
     width?: string;
     align?: 'left' | 'right';
     special?: 'shift';
@@ -457,7 +470,7 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
 };
 
 const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighlighted: boolean, needsShift: boolean }) => {
-    const { key, bn, bnShift, bnExtra, bnShiftExtra, bnExtra2, bnShiftExtra2, width, align, special } = data;
+    const { key, bn, bnShift, bnExtra, bnShiftExtra, width, align, special } = data;
 
     const isShiftKey = special === 'shift';
 
