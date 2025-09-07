@@ -179,6 +179,35 @@ export const generateDrills = (chars: string[], count: number): Drill[] => {
     return drills;
 };
 
+const getStepsForWord = (word: string): SingleDrill[] => {
+    return word.split('').flatMap(char => getStepsForChar(char));
+};
+
+const generateWordDrills = (words: string[], count: number): Drill[] => {
+    const drills: Drill[] = [];
+    for (let i = 0; i < count; i++) {
+        const word = words[Math.floor(Math.random() * words.length)];
+        const steps = getStepsForWord(word);
+
+        if (steps.length > 0) {
+            drills.push({
+                prompt: word,
+                steps: steps
+            });
+        }
+        // Add a space after each word
+        drills.push({
+            prompt: ' ',
+            steps: [{ key: ' ', shift: false, display: ' ' }]
+        });
+    }
+     if (drills.length > 0 && drills[drills.length - 1].prompt === ' ') {
+        drills.pop();
+    }
+    return drills;
+}
+
+
 const consonants: {bn: string, en: string}[] = [
     { bn: 'ক', en: 'ka' }, { bn: 'খ', en: 'kha' }, { bn: 'গ', en: 'ga' }, { bn: 'ঘ', en: 'gha' }, { bn: 'ঙ', en: 'nga' }, 
     { bn: 'চ', en: 'ca' }, { bn: 'ছ', en: 'cha' }, { bn: 'জ', en: 'ja' }, { bn: 'ঝ', en: 'jha' }, { bn: 'ঞ', en: 'nja' }, 
@@ -262,6 +291,11 @@ const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Dri
     return drills;
 };
 
+const homeRowWords = "জল ফল গল ডল জাল গাল ফাল সাল জগ গজ সাজ ডগা গজা জলা ফালা গালা ডালা সাজা সফল ফসল গজল ফস লগা অজ অঘ অলস অশ খল খস খাসা ঘষা ঘাস ঢল ঝল শখ সৎ হজ হল সহ ঢাল গলা ঝাল শসা শাখা শাল শালা হলফ হাসা হাল জগৎ জঙ্গল জলসা সহসা অলস জজ শাস হাহা খসখস খলখল ঝলসা অঢল".split(" ");
+const topRowWords = "ক্ষর রঙ রট রক্ষ টের ঠের এঁর ওঁর রঙে এঁটে ঠরঠর পর পট পিঠ পুড় পুর পীর টুপ টিপ টুঁটি টোপর টোপ ঠুঁটো ঠোঁট রূপ রূঢ় রীতি ঢের ক্ষয় ক্ষীর ক্ষুর যূপ যেই উর ঊরু পিউ টুট টুটি টোটো টইটই টুঁ রিপু পুঁটি পৈঠা পৈতে ইঁট এয়ো রুই রুটি পুঁই পিঁড়ি পরে পড়ে টর ঠর ঊর উঠ রোঁ টীট পুঁ ঠুঁই".split(" ");
+const bottomRowWords = "তথ্য তব বদ মন বন ভব ধন নদ দম নব মদ বধ ছন্দ বন্ধ মধ্য ভবন দম্ভ দ্বন্দ্ব চন্দন মন্থন তন নত মত মম নভ পণ বচন দমন মদন নন্দন বন্ধন বন্দন দন্ত ধন্য নব্য".split(" ");
+
+
 export const lessons: Lesson[] = [
   // --- HOME ROW ---
   {
@@ -272,57 +306,43 @@ export const lessons: Lesson[] = [
     drills: generateDrills(['া', 'স', 'ড', 'ফ', 'গ'], 100)
   },
   {
-    id: "home-row-1-2-left-hand-words",
-    title: "১.২: হোম রো - বাম হাত (শব্দ)",
-    level: "Beginner",
-    row: "home-row",
-    text: "সাদ ডগা ফাগা গাসা ডগ ফাদ ডাস গড কসাগা আসাদ"
-  },
-  {
-    id: "home-row-1-3-right-hand-chars",
-    title: "১.৩: হোম রো - ডান হাত (অক্ষর)",
+    id: "home-row-1-2-right-hand-chars",
+    title: "১.২: হোম রো - ডান হাত (অক্ষর)",
     level: "Beginner",
     row: "home-row",
     drills: generateDrills(['্', 'জ', 'ক', 'ল'], 100)
   },
-   {
-    id: "home-row-1-4-right-hand-words",
-    title: "১.৪: হোম রো - ডান হাত (শব্দ)",
-    level: "Beginner",
-    row: "home-row",
-    text: "কাজ কলম লজ কজল কাজল কল জল"
-  },
   {
-    id: "home-row-1-5-shift-left-hand",
-    title: "১.৫: হোম রো - শিফট কী (বাম হাত)",
+    id: "home-row-1-3-shift-left-hand",
+    title: "১.৩: হোম রো - শিফট কী (বাম হাত)",
     level: "Beginner",
     row: "home-row",
     drills: generateDrills(['অ', 'শ', 'ঢ', 'ৎ', 'ঘ'], 100)
   },
   {
-    id: "home-row-1-6-shift-right-hand",
-    title: "১.৬: হোম রো - শিফট কী (ডান হাত)",
+    id: "home-row-1-4-shift-right-hand",
+    title: "১.৪: হোম রো - শিফট কী (ডান হাত)",
     level: "Beginner",
     row: "home-row",
     drills: generateDrills(['হ', 'ঝ', 'খ', 'ষ'], 100)
   },
    {
-    id: "home-row-1-7-shift-words",
-    title: "১.৭: হোম রো - শিফট কী (শব্দ)",
+    id: "home-row-1-5-word-drill",
+    title: "১.৫: হোম রো - শব্দ অনুশীলন",
     level: "Beginner",
     row: "home-row",
-    text: "অশোক ঢাক ঘষাৎ হঠাৎ আশঙ্কা ঘোষণা আশা ভাষা"
+    drills: generateWordDrills(homeRowWords, 50)
   },
   {
-    id: "home-row-1-8-paragraph-1",
-    title: "১.৮: হোম রো - অনুচ্ছেদ অনুশীলন ১",
+    id: "home-row-1-6-paragraph-1",
+    title: "১.৬: হোম রো - অনুচ্ছেদ অনুশীলন ১",
     level: "Beginner",
     row: "home-row",
     text: "সকল কাজল কাকা। কাজলা কাকা সকল কাজ। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজ। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজ। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজ। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজ। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজ। কাকা কাজলা সকল কাজ। সকল কাজল কাকা। কাজলা কাকা সকল কাজ। কাকা কাজলা সকল কাকা। সকল কাকা কাজল। কাজলা সকল কাকা কাজ। কাকা কাজলা সকল কাজ।"
   },
   {
-    id: "home-row-1-9-paragraph-2",
-    title: "১.৯: হোম রো - অনুচ্ছেদ অনুশীলন ২",
+    id: "home-row-1-7-paragraph-2",
+    title: "১.৭: হোম রো - অনুচ্ছেদ অনুশীলন ২",
     level: "Beginner",
     row: "home-row",
     text: "অঘোষ সকাশ। শশাঙ্ক। ঘষাঘষি। শশাঙ্ক। আকাশ। সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। আকাশ সকল শশাঙ্ক। শশাঙ্ক আকাশ সকল। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক। আকাশ শশাঙ্ক সকল। সকল শশাঙ্ক আকাশ। শশাঙ্ক আকাশ সকল। আকাশ সকল শশাঙ্ক। শশাঙ্ক সকল আকাশ। সকল আকাশ শশাঙ্ক।"
@@ -337,50 +357,36 @@ export const lessons: Lesson[] = [
     drills: generateDrills(['ঙ', 'র', 'ট', 'ে', 'ক্ষ'], 100)
   },
   {
-    id: "top-row-2-2-left-hand-words",
-    title: "২.২: টপ রো - বাম হাত (শব্দ)",
-    level: "Beginner",
-    row: "top-row",
-    text: "টেক্কা টক্কর টের টাকা টেরা টকটক টগর টেকসই"
-  },
-  {
-    id: "top-row-2-3-right-hand-chars",
-    title: "২.৩: টপ রো - ডান হাত (অক্ষর)",
+    id: "top-row-2-2-right-hand-chars",
+    title: "২.২: টপ রো - ডান হাত (অক্ষর)",
     level: "Beginner",
     row: "top-row",
     drills: generateDrills(['য', 'ু', 'ি', 'ো', 'প', 'ড', 'ব', 'ৃ'], 100)
   },
   {
-    id: "top-row-2-4-right-hand-words",
-    title: "২.৪: টপ রো - ডান হাত (শব্দ)",
-    level: "Beginner",
-    row: "top-row",
-    text: "যুপ যূপি পিউপাপা পুপু পিয়া পিপি"
-  },
-  {
-    id: "top-row-2-5-shift-left-hand",
-    title: "২.৫: টপ রো - শিফট কী (বাম হাত)",
+    id: "top-row-2-3-shift-left-hand",
+    title: "২.৩: টপ রো - শিফট কী (বাম হাত)",
     level: "Beginner",
     row: "top-row",
     drills: generateDrills(['ঁ', 'ঃ', 'ৈ', 'ড়', 'ঠ'], 100)
   },
   {
-    id: "top-row-2-6-shift-right-hand",
-    title: "২.৬: টপ রো - শিফট কী (ডান হাত)",
+    id: "top-row-2-4-shift-right-hand",
+    title: "২.৪: টপ রো - শিফট কী (ডান হাত)",
     level: "Beginner",
     row: "top-row",
     drills: generateDrills(['য়', 'ূ', 'ী', 'ৌ', 'ঢ়', 'ঢ', 'ভ', 'ঞ'], 100)
   },
   {
-    id: "top-row-2-7-shift-words",
-    title: "২.৭: টপ রো - শিফট কী (শব্দ)",
+    id: "top-row-2-5-word-drill",
+    title: "২.৫: টপ রো - শব্দ অনুশীলন",
     level: "Beginner",
     row: "top-row",
-    text: "ঐক্য তৌল মৌন দৌড় হায়য় ঈষৎ ঈহা ঊষা ঊন"
+    drills: generateWordDrills(topRowWords, 50)
   },
   {
-    id: "top-row-2-8-paragraph",
-    title: "২.৮: টপ রো - অনুচ্ছেদ অনুশীলন",
+    id: "top-row-2-6-paragraph",
+    title: "২.৬: টপ রো - অনুচ্ছেদ অনুশীলন",
     level: "Beginner",
     row: "top-row",
     text: "ঐরাবত রৌদ্র پানে চেয়ে থাকে। টুপটাপ জল পড়ে। টিনের চালে টিনের চালে। ইঁদুর দৌড়ে পালায়। ঐ দেখ পেঁচা। টেকো মাথা। টোপা কূল। টৈ টৈ করে। টইটম্বুর পুকুর। কৈ মাছ। টক দই। টোকা দিলে খুলে যায়। টোল পড়া গাল। টোপর মাথায় বর। টোস্ট বিস্কুট। টাকা পয়সা। টেরা চোখ। টর্চ লাইট। টহল পুলিশ। টমেটো। টমটম গাড়ি। টসটস করে। টলমল পায়ে হাঁটে।"
@@ -395,50 +401,36 @@ export const lessons: Lesson[] = [
     drills: generateDrills(['্য', 'ত', 'চ', 'দ', 'ব'], 100)
   },
   {
-    id: "bottom-row-3-2-left-hand-words",
-    title: "৩.২: বটম রো - বাম হাত (শব্দ)",
-    level: "Beginner",
-    row: "bottom-row",
-    text: "তথ্য তত্ত্ব ত্যক্ত চ্যুত চচ্চড়ি চাতক চাদর"
-  },
-  {
-    id: "bottom-row-3-3-right-hand-chars",
-    title: "৩.৩: বটম রো - ডান হাত (অক্ষর)",
+    id: "bottom-row-3-2-right-hand-chars",
+    title: "৩.২: বটম রো - ডান হাত (অক্ষর)",
     level: "Beginner",
     row: "bottom-row",
     drills: generateDrills(['ন', 'ম'], 100)
   },
   {
-    id: "bottom-row-3-4-right-hand-words",
-    title: "৩.৪: বটম রো - ডান হাত (শব্দ)",
-    level: "Beginner",
-    row: "bottom-row",
-    text: "নম্র নম্রতা নামকিন মনন মানব"
-  },
-  {
-    id: "bottom-row-3-5-shift-left-hand",
-    title: "৩.৫: বটম রো - শিফট কী (বাম হাত)",
+    id: "bottom-row-3-3-shift-left-hand",
+    title: "৩.৩: বটম রো - শিফট কী (বাম হাত)",
     level: "Beginner",
     row: "bottom-row",
     drills: generateDrills(['ং', 'থ', 'ছ', 'ধ', 'ভ'], 100)
   },
    {
-    id: "bottom-row-3-6-shift-right-hand",
-    title: "৩.৬: বটম রো - শিফট কী (ডান হাত)",
+    id: "bottom-row-3-4-shift-right-hand",
+    title: "৩.৪: বটম রো - শিফট কী (ডান হাত)",
     level: "Beginner",
     row: "bottom-row",
     drills: generateDrills(['ণ', 'ম'], 100)
   },
-  {
-    id: "bottom-row-3-7-shift-words",
-    title: "৩.৭: বটম রো - শিফট কী (শব্দ)",
+   {
+    id: "bottom-row-3-5-word-drill",
+    title: "৩.৫: বটম রো - শব্দ অনুশীলন",
     level: "Beginner",
     row: "bottom-row",
-    text: "এবং রং ঢং থৈ থৈ ছবি ছায়া ধন্যবাদ ভীষণ"
+    drills: generateWordDrills(bottomRowWords, 50)
   },
   {
-    id: "bottom-row-3-8-paragraph",
-    title: "৩.৮: বটম রো - অনুচ্ছেদ অনুশীলন",
+    id: "bottom-row-3-6-paragraph",
+    title: "৩.৬: বটম রো - অনুচ্ছেদ অনুশীলন",
     level: "Beginner",
     row: "bottom-row",
     text: "চঞ্চল বালক। চোখে চশমা। চিবুক চওড়া। চাচা চাচি। চিংড়ি চচ্চড়ি। চমৎকার চাদর। চৈত্র মাস। চৈতির চৈতন্য। চোখে চোখে কথা। চৌকাঠের চৌবাচ্চা। চৌচির মাঠ। চৌদ্দ চৌকো। চৌকিদার চৌকস। চৌরাস্তার মোড়। চৌষট্টি। চ্যাংড়া ছেলে। চ্যালা। চ্যাটচেটে। চ্যাঁ চ্যাঁ। চ্যুতির চ্যবনপ্রাশ। চ্যুত ফল। চ্যুত বৃক্ষ। চ্যুত পুষ্প।"
