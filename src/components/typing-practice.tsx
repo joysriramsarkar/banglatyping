@@ -70,16 +70,16 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
         
-        const expectedKey = currentStep.key.toLowerCase();
-        const pressedKey = event.key.toLowerCase();
-        
-        // Find the Bengali character associated with the expected English key
-        const keyMapping = keyMap.find(k => k.key.toLowerCase() === expectedKey);
-        const expectedBengaliChar = currentStep.shift ? keyMapping?.bnShift : keyMapping?.bn;
-
-        // Check if either the English key or the Bengali character matches
-        const keyIsCorrect = pressedKey === expectedKey || (expectedBengaliChar && pressedKey === expectedBengaliChar.toLowerCase());
         const shiftIsCorrect = currentStep.shift === event.shiftKey;
+        
+        // Check if either the English key or the Bengali character matches
+        const pressedKey = event.key;
+        const expectedEnglishKey = currentStep.key;
+        const expectedBengaliChar = currentStep.display;
+
+        // Space key has event.key as " " but event.code as "Space"
+        const keyIsCorrect = (pressedKey.toLowerCase() === expectedEnglishKey.toLowerCase()) || 
+                             (pressedKey === expectedBengaliChar);
 
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
@@ -122,9 +122,17 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         const currentLessonIndexInAllLessons = lessons.findIndex(l => l.id === lessonId);
         if (currentLessonIndexInAllLessons !== -1 && currentLessonIndexInAllLessons < lessons.length - 1) {
             const currentLesson = lessons[currentLessonIndexInAllLessons];
-            nextLesson = lessons.find(l => l.row === currentLesson.row && lessons.indexOf(l) > currentLessonIndexInAllLessons) || null;
-            if(!nextLesson) {
-                 nextLesson = lessons[currentLessonIndexInAllLessons + 1]
+            // Find the next lesson in the same row
+            let foundNextInRow = false;
+            for(let i = currentLessonIndexInAllLessons + 1; i < lessons.length; i++) {
+                if(lessons[i].row === currentLesson.row) {
+                    nextLesson = lessons[i];
+                    foundNextInRow = true;
+                    break;
+                }
+            }
+             if (!foundNextInRow) {
+                 nextLesson = lessons.find(l => lessons.indexOf(l) > currentLessonIndexInAllLessons && l.row !== currentLesson.row) || null;
             }
         }
     }
@@ -564,3 +572,4 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
