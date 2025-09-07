@@ -106,7 +106,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const currentDrillStep = currentDrill?.steps[currentStepIndex];
 
     const finishDrill = useCallback(() => {
-        if(isFinished) return;
+        if (isFinished) return;
         pause();
         if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
@@ -123,13 +123,20 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-             setWpmHistory(prevHistory => {
-                 const newTime = prevHistory.length > 0 ? prevHistory[prevHistory.length - 1].time + 30 : 30;
-                 const currentWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
-                 return [...prevHistory, { time: newTime, wpm: currentWpm }];
-             });
-        }, 30000); 
-    }, [start, time, totalCharsTyped]);
+            setWpmHistory(prevHistory => {
+                const newTime = prevHistory.length > 0 ? prevHistory[prevHistory.length - 1].time + 30 : 30;
+                 // We need to read the latest state from inside the interval
+                setTime(currentTime => {
+                    setTotalCharsTyped(currentTotalChars => {
+                        const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
+                        return [...prevHistory, { time: newTime, wpm: currentWpm }];
+                    });
+                    return currentTime;
+                });
+                return prevHistory;
+            });
+        }, 30000);
+    }, [start, setTime]);
 
     useEffect(() => {
         startDrill();
@@ -813,5 +820,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 }
 
     
+
 
 
