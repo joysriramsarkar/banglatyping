@@ -84,16 +84,11 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
 
-        const expectedKey = currentStep.key;
-        const expectedShift = currentStep.shift;
+        const { key: expectedKey, shift: expectedShift, display: expectedDisplay } = currentStep;
         
         let expectedCode = `Key${expectedKey.toUpperCase()}`;
-        if (expectedKey.length > 1) { // e.g. 'Space', 'Quote'
-            expectedCode = expectedKey;
-        } else if (/\d/.test(expectedKey)) { // e.g. 'Digit1'
-            expectedCode = `Digit${expectedKey}`;
-        } else if (/[\[\]\\;',./]/.test(currentStep.key)) {
-           switch(currentStep.key) {
+        if (expectedKey.length > 1 && !expectedKey.startsWith('Digit')) {
+           switch(expectedKey) {
                case '[': expectedCode = 'BracketLeft'; break;
                case ']': expectedCode = 'BracketRight'; break;
                case '\\': expectedCode = 'Backslash'; break;
@@ -102,23 +97,36 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                case ',': expectedCode = 'Comma'; break;
                case '.': expectedCode = 'Period'; break;
                case '/': expectedCode = 'Slash'; break;
+               case ' ': expectedCode = 'Space'; break;
+               default: expectedCode = expectedKey;
            }
+        } else if (/[0-9]/.test(expectedKey)) {
+             expectedCode = `Digit${expectedKey}`;
         }
         
-        const keyIsCorrect = event.code.toUpperCase() === expectedCode.toUpperCase();
-        const shiftIsCorrect = event.shiftKey === expectedShift;
+        const codeMatch = event.code === expectedCode;
+        const displayMatch = event.key === expectedDisplay;
+        const keyMatch = event.key.toLowerCase() === expectedKey.toLowerCase();
+        
+        const isCorrect = (codeMatch || displayMatch || keyMatch) && event.shiftKey === expectedShift;
         
         console.log({
             pressedKey: event.key,
             pressedCode: event.code,
-            expectedDrill: currentDrill.prompt,
-            expectedStep: currentStep,
+            shiftPressed: event.shiftKey,
+            expected: currentStep,
             expectedCode,
-            keyMatch: keyIsCorrect,
-            shiftMatch: shiftIsCorrect,
+            isCorrect,
+            matches: {
+                code: codeMatch,
+                display: displayMatch,
+                key: keyMatch,
+                shift: event.shiftKey === expectedShift,
+            }
         });
 
-        if (keyIsCorrect && shiftIsCorrect) {
+
+        if (isCorrect) {
             setDrillState(prev => {
                 const isLastStepInDrill = prev.currentStepIndex >= (currentDrill.steps.length - 1);
                 
@@ -638,6 +646,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
