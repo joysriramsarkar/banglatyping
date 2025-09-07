@@ -14,9 +14,6 @@ export const keyMap: {key: string; bn: string; bnShift?: string; row: 'top'|'hom
     {key: 'i', bn: 'ি', bnShift: 'ী', row: 'top', hand: 'right'}, 
     {key: 'o', bn: 'ো', bnShift: 'ৌ', row: 'top', hand: 'right'}, 
     {key: 'p', bn: 'প', bnShift: 'ঢ়', row: 'top', hand: 'right'},
-    {key: '[', bn: 'ড', bnShift: 'ঢ', row: 'top', hand: 'right'},
-    {key: ']', bn: 'ব', bnShift: 'ভ', row: 'top', hand: 'right'},
-    {key: '\\', bn: 'ৃ', bnShift: 'ঞ', row: 'top', hand: 'right'},
     // Home Row
     {key: 'a', bn: 'া', bnShift: 'অ', row: 'home', hand: 'left'}, 
     {key: 's', bn: 'স', bnShift: 'শ', row: 'home', hand: 'left'}, 
@@ -27,8 +24,6 @@ export const keyMap: {key: string; bn: string; bnShift?: string; row: 'top'|'hom
     {key: 'j', bn: 'জ', bnShift: 'ঝ', row: 'home', hand: 'right'}, 
     {key: 'k', bn: 'ক', bnShift: 'খ', row: 'home', hand: 'right'}, 
     {key: 'l', bn: 'ল', bnShift: 'ষ', row: 'home', hand: 'right'},
-    {key: ';', bn: 'ে', bnShift: 'এ', row: 'home', hand: 'right'},
-    {key: "'", bn: 'ো', bnShift: 'ও', row: 'home', hand: 'right'},
     // Bottom Row
     {key: 'z', bn: '্য', bnShift: 'ং', row: 'bottom', hand: 'left'},
     {key: 'x', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left'}, 
@@ -37,9 +32,8 @@ export const keyMap: {key: string; bn: string; bnShift?: string; row: 'top'|'hom
     {key: 'b', bn: 'ব', bnShift: 'ভ', row: 'bottom', hand: 'left'},
     {key: 'n', bn: 'ন', bnShift: 'ণ', row: 'bottom', hand: 'right'}, 
     {key: 'm', bn: 'ম', bnShift: 'ম', row: 'bottom', hand: 'right'}, 
-    {key: ',', bn: ',', bnShift: 'ৎ', row: 'bottom', hand: 'right'}, 
-    {key: '.', bn: '।', bnShift: '.', row: 'bottom', hand: 'right'},
-    {key: '/', bn: 'ও', bnShift: 'ঁ', row: 'bottom', hand: 'right'},
+    // Other
+    {key: '\\', bn: 'ৃ', bnShift: 'ঞ', row: 'other', hand: 'right'},
 ];
 
 const findKey = (bengaliChar: string) => keyMap.find(k => k.bn === bengaliChar || k.bnShift === bengaliChar);
@@ -48,34 +42,30 @@ if (!hasantKey) {
   throw new Error("Hasant key mapping not found!");
 }
 
-const standaloneVowels: Record<string, string> = {
-    'আ': 'া',
-    'ই': 'ি',
-    'ঈ': 'ী',
-    'উ': 'ু',
-    'ঊ': 'ূ',
-    'ঋ': 'ৃ',
-    'এ': 'ে',
-    'ঐ': 'ৈ',
-    'ও': 'ো',
-    'ঔ': 'ৌ',
+const vowelSigns: Record<string, string> = {
+    'া': 'আ', 'ি': 'ই', 'ী': 'ঈ', 'ু': 'উ', 'ূ': 'ঊ',
+    'ৃ': 'ঋ', 'ে': 'এ', 'ৈ': 'ঐ', 'ো': 'ও', 'ৌ': 'ঔ'
 };
 
 const getStepsForChar = (char: string): SingleDrill[] => {
     const steps: SingleDrill[] = [];
 
-    // Case 1: Is it a standalone vowel that can be formed with hasant?
-    if (char in standaloneVowels) {
-        const vowelSign = standaloneVowels[char];
-        const signKey = findKey(vowelSign);
+    // Case 1: Is it a standalone vowel?
+    const vowelSignEntries = Object.entries(vowelSigns);
+    const vowelEntry = vowelSignEntries.find(([_, vowel]) => vowel === char);
+
+    if (vowelEntry) {
+        const [sign, _] = vowelEntry;
+        const signKey = findKey(sign);
+
         if (signKey) {
             steps.push({ key: hasantKey.key, shift: hasantKey.bnShift === '্', display: '্' });
-            steps.push({ key: signKey.key, shift: signKey.bnShift === vowelSign, display: vowelSign });
+            steps.push({ key: signKey.key, shift: signKey.bnShift === sign, display: sign });
             return steps;
         }
     }
     
-    // Case 2: Is it a direct mapping? (consonant, vowel sign, or 'অ')
+    // Case 2: Is it a direct mapping? (consonant, vowel sign, 'অ' or other direct keys)
     const directMapping = findKey(char);
     if (directMapping) {
         steps.push({
@@ -85,36 +75,36 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         });
         return steps;
     }
-
-    // Case 3: Is it a conjunct consonant? (যুক্তাক্ষর)
-    // This part can be expanded to handle complex conjuncts if needed.
-    // For example, 'জ্ঞ' = 'জ' + '্' + 'ঞ'
-    if (char === 'জ্ঞ') {
-        const jKey = findKey('জ');
-        const njoKey = findKey('ঞ');
-        if (jKey && hasantKey && njoKey) {
-            steps.push({ key: jKey.key, shift: jKey.bnShift === 'জ', display: 'জ' });
-            steps.push({ key: hasantKey.key, shift: hasantKey.bnShift === '্', display: '্' });
-            steps.push({ key: njoKey.key, shift: njoKey.bnShift === 'ঞ', display: 'ঞ' });
-            return steps;
+    
+    // Case 3: Is it a conjunct? (যুক্তাক্ষর) e.g., consonant + hasant + consonant
+    if (char.length > 1) {
+        // Simple case: Try to break it into char + hasant + char
+        const firstChar = char.normalize('NFC')[0];
+        const secondChar = char.normalize('NFC')[1];
+        if (secondChar === '্') { // It's a hasant combination
+             const firstKey = findKey(firstChar);
+             const thirdChar = char.normalize('NFC')[2];
+             const thirdKey = findKey(thirdChar);
+             if(firstKey && thirdKey && hasantKey) {
+                steps.push({ key: firstKey.key, shift: !!firstKey.bnShift && firstKey.bnShift === firstChar, display: firstChar});
+                steps.push({ key: hasantKey.key, shift: false, display: '্'});
+                steps.push({ key: thirdKey.key, shift: !!thirdKey.bnShift && thirdKey.bnShift === thirdChar, display: thirdChar});
+                return steps;
+             }
         }
     }
-    
+
     // Case 4: Is it a consonant + vowel sign combination?
     const lastChar = char.slice(-1);
-    const kar = vowelSigns[lastChar as keyof typeof standaloneVowels] ? lastChar : null;
+    const kar = vowelSigns[lastChar as keyof typeof vowelSigns] ? lastChar : null;
     if (kar) {
         const baseChar = char.slice(0, -1);
-        const baseKey = findKey(baseChar);
+        const baseSteps = getStepsForChar(baseChar); // Recursively get steps for base (could be conjunct)
         const karKey = findKey(kar);
-        if (baseKey && karKey) {
-            // Check if base is a conjunct
-            const baseSteps = getStepsForChar(baseChar);
-            if (baseSteps.length > 0) {
-                 steps.push(...baseSteps);
-                 steps.push({ key: karKey.key, shift: karKey.bnShift === kar, display: kar });
-                 return steps;
-            }
+        if (baseSteps.length > 0 && karKey) {
+            steps.push(...baseSteps);
+            steps.push({ key: karKey.key, shift: karKey.bnShift === kar, display: kar });
+            return steps;
         }
     }
 
@@ -149,6 +139,10 @@ const generateDrills = (chars: string[], count: number): Drill[] => {
             spaceCounter++;
         }
     }
+    // Ensure the last drill is not a space
+    if (drills.length > 0 && drills[drills.length - 1].prompt === ' ') {
+        drills.pop();
+    }
     return drills;
 };
 
@@ -162,7 +156,7 @@ const consonants: {bn: string, en: string}[] = [
     { bn: 'স', en: 'sa' }, { bn: 'হ', en: 'ha' }, { bn: 'ড়', en: 'rra' }, { bn: 'ঢ়', en: 'rrha' }, { bn: 'য়', en: 'yya' }
 ];
 
-const vowelSigns: { sign: string; name: string }[] = [
+const vowelSignsForCompounds: { sign: string; name: string }[] = [
     { sign: 'া', name: 'a-kar' },
     { sign: 'ি', name: 'i-kar' },
     { sign: 'ী', name: 'ee-kar' },
@@ -173,6 +167,7 @@ const vowelSigns: { sign: string; name: string }[] = [
     { sign: 'ৈ', name: 'oi-kar' },
     { sign: 'ো', name: 'o-kar' },
     { sign: 'ৌ', name: 'ou-kar' },
+    { sign: '্য', name: 'ja-fola'}
 ];
 
 
@@ -186,7 +181,7 @@ const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: 
     if (sign.sign === '্য') {
          const jaFolaKey = findKey('্য');
          if(jaFolaKey){
-             steps.push({ key: jaFolaKey.key, shift: false, display: '্য'});
+             steps.push({ key: jaFolaKey.key, shift: !!jaFolaKey.bnShift && jaFolaKey.bnShift === '্য', display: '্য'});
          } else {
              return null;
          }
@@ -211,9 +206,7 @@ const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Dri
     const drills: Drill[] = [];
     let spaceCounter = 0;
 
-    const allSigns = [...vowelSigns, { sign: '্য', name: 'ja-fola' }];
-
-    const combinations = allSigns.flatMap(sign => Array(15).fill(sign));
+    const combinations = vowelSignsForCompounds.flatMap(sign => Array(15).fill(sign));
     combinations.sort(() => Math.random() - 0.5);
 
     for (const sign of combinations) {
@@ -380,7 +373,7 @@ export const lessons: Lesson[] = [
     title: "৩.৩: বটম রো - ডান হাত (অক্ষর)",
     level: "Beginner",
     row: "bottom-row",
-    drills: generateDrills(['ন', 'ম', '।', '.'], 100)
+    drills: generateDrills(['ন', 'ম'], 100)
   },
   {
     id: "bottom-row-3-4-right-hand-words",
@@ -533,7 +526,7 @@ export const practiceParagraphs: string[] = [
   "ঐ সাদা ছাতা। দাদা যায় হাটে। গায়ে লাল জামা। মামা যায় খাতা হাতে। গায়ে শাদা শাল। মামা আনে চাল ডাল। আর কেনে শাক। আর কেনে আটা। দাদা কেনে পাকা আটা, সাত আনা দিয়ে। আর, আখ আর জাম চার আনা। বাবা খাবে। কাকা খাবে। আর খাবে মামা। তার পরে কাজ আছে। বাবা কাজে যাবে। এই সাধারণ দৃশ্যগুলো আমাদের জীবনের অংশ।",
   "নদীর ঘাটের কাছে নৌকা বাঁধা আছে, নাইতে যখন যাই, দেখি সে জলের ঢেউয়ে নাচে। আজ গিয়ে সেইখানে দেখি দূরের পানে মাঝনদীতে নৌকা, কোথায় चले ভাঁটার টানে। জানি না কোন দেশে পৌঁছে যাবে শেষে, সেখানেতে কেমন মানুষ থাকে কেমন বেশে। থাকি ঘরের কোণে, সাধ জাগে মোর মনে, অমনি করে যাই ভেসে, ভাই, নতুন নগর বনে। দূর সাগরের পারে, জলের ধারে ধারে, নারিকেলের বনগুলি সব দাঁড়িয়ে সারে সারে। পাহাড়-চূড়া সাজে নীল আকাশের মাঝে, বরফ ভেঙে ডিঙিয়ে যাওয়া কেউ তা পারে না-যে। কোন সে বনের তলে নতুন ফুলে ফলে নতুন নতুন পশু কত বেড়ায় দলে দলে! কত রাতের শেষে নৌকা-যে যায় ভেসে; বাবা কেন আপিসে যায়, যায় না নতুন দেশে?",
   "আমাদের ছোটো নদী চলে বাঁকে বাঁke, বৈশাখ মাসে তার হাঁটুজল থাকে। পার হয়ে যায় গোরু, পার হয় গাড়ি, দুই ধার উঁচু তার, ঢালু তার পাড়ি। চিকচিক করে বালি, কোথা নাই কাদা, এক ধারে কাশবন ফুলে ফুলে শাদা। কিচিমিচি করে সেথা শালিকের ঝাঁক, রাতে ওঠে থেকে থেকে শেয়ালের হাঁক। আর-পারে আমবন তালবন চলে, গাঁয়ের বামুনপাড়া তারি ছায়াতলে। তীরে তীরে ছেলেমেয়ে নাহিবার কালে গামছায় জল ভরি গায়ে তারা ঢালে। সকালে বিকালে কভু নাওয়া হলে পরে আঁচলে ছাঁকিয়া তারা ছোটো মাছ ধরে। বালি দিয়ে মাজে থালা, ঘটিগুলি মাজে, বধূরা কাপড় কেচে যায় গৃহকাজে। আষাঢ়ে বাদল নামে, নদী ভর-ভর- মাতিয়া ছুটিয়া চলে ধারা খরতর। মহাবেগে কলকল কোলাহল ওঠে, ঘোলাজলে পাকগুলি ঘুরে ঘুরে ছোটে। দুই কূলে বনে বনে পড়ে যায় সাড়া, বরষার উৎসবে জেগে ওঠে পাড়া।",
-  "এসেছে শরৎ, হিমের পরশ লেগেছে হাওয়ার 'পরে- সকালবেলায় ঘাসের আগায় শিশিরের রেখা ধরে। আমলকী-বন কাঁপে, যেন তার বুক করে দুরু দুরু পেয়েছে খবর পাতা-খসানোর সময় হয়েছে শুরু। শিউলির ডালে কুঁড়ি ভরে এল, টগর ফুটিল মেলা, মালতীলতায় খোঁজ নিয়ে যায় মৌমাছি দুই বেলা। গগনে গগনে বরষণ-শেষে মেঘেরা পেয়েছে ছাড়া, বাতাসে বাতাসে ফেরে ভেসে ভেসে, নাই কোনো কাজে তাড়া। দীঘিভরা জল করে ঢলঢল, নানা ফুল ধারে ধারে, কচি ধানগাছে ক্ষেত ভরে আছে- হাওয়া দোলা দেয় তারে। যে দিকে তাকাই সোনার আলোয় দেখি যে ছুটির ছবি, পূজার ফুলের বনে ওঠে ওই পূজার দিনের রবি।",
+  "এসেছে শরৎ, হিমের পরশ লেগেছে হাওয়ার 'পরে- সকালবেলায় ঘাসের আগায় শিশিরের রেখা ধরে। আমলকী-বন কাঁপে, যেন তার বুক করে দুরু দুরু পেয়েছে খবর পাতা-খসানোর সময় হয়েছে শুরু। শিউলির ডালে কুঁড়ি ভরে এল, টগর ফুটিল মেলা, মালতীলতায় খোঁজ নিয়ে যায় মৌমাছি দুই বেলা। গগনে গগনে বরষণ-শেষে মেঘেরা পেয়েছে ছাড়া, বাতাসে বাতাসে ফেরে ভেসে ভেসে, নাই কোনো কাজে তাড়া। দীঘিভرا জল করে ঢলঢল, নানা ফুল ধারে ধারে, কচি ধানগাছে ক্ষেত ভরে আছে- হাওয়া দোলা দেয় তারে। যে দিকে তাকাই সোনার আলোয় দেখি যে ছুটির ছবি, পূজার ফুলের বনে ওঠে ওই পূজার দিনের রবি।",
   "একদা, এক বাঘের গলায় হাড় ফুটিয়াছিল। বাঘ বিস্তর চেষ্টা পাইল, কিছুতেই হাড় বাহির করিতে পারিল না; যন্ত্রণায় অস্থির হইয়া চারি দিকে দৌড়িয়া বেড়াইতে লাগিল। সে যে জন্তুকে সম্মুখে দেখে, তাহাকেই বলে, ভাই হে! যদি তুমি, আমার গলা হইতে, হাড় বাহির করিয়া দাও, তাহা হইলে, আমি তোমায় বিলক্ষণ পুরস্কার দি, এবং, চির কালের জন্যে, তোমার কেনা হইয়া থাকি। কোনো জন্তুই সম্মত হইল না। অবশেষে, এক বক, পুরস্কারের লোভে, সম্মত হইল, এবং, বাঘের মুখের ভিতর, আপন লম্বা ঠোঁট প্রবেশ করাইয়া দিয়া, অনেক যত্নে ঐ হাড় বাহির করিয়া আনিল। বাঘ সুস্থ হইল। বক পুরস্কারের কথা উত্থাপিত করিবামাত্র, সে, দাঁত কড়মড় ও চক্ষু রক্তবর্ণ করিয়া, কহিল, অরে নির্বোধ! তুই বাঘের মুখে ঠোঁট প্রবেশ করাইয়া দিয়াছিলি। তুই যে নির্বিঘ্নে ঠোঁট বাহির করিয়া লইয়াছিস, তাহাই ভাগ্য করিয়া না মানিয়া, আবার পুরস্কার চাহিতেছিস। যদি বাঁচিবার সাধ থাকে, আমার সম্মুখ হইতে যা; নতুবা, এখনই তোর ঘাড় ভাঙিব। বক শুনিয়া, হতবুদ্ধি হইয়া, তৎক্ষণাৎ তথা হইতে প্রস্থান করিল।",
   "এক স্থানে, কতক গুলি ময়ূরপুচ্ছ পড়িয়া ছিল। এক দাঁড়কাক, দেখিয়া, মনে মনে বিবেচনা করিল, যদি আমি এই ময়ূরপুচ্ছ গুলি আপন পাখায় বসাইয়া দি, তাহা হইলে, আমিও ময়ূরের মত সুশ্রী হইব। এই ভাবিয়া, দাঁড়কাক ময়ূরপুচ্ছ গুলি আপন পাখায় বসাইয়া দিল, এবং, দাঁড়কাকদের নিকটে গিয়া, তোরা অতি নীচ ও অতি বিশ্রী, আর আমি তোদের সঙ্গে থাকিব না; এই বলিয়া, গালাগালি দিয়া, ময়ূরের দলে মিলিতে গেল। ময়ূরগণ, দেখিবা মাত্র, তাহাকে দাঁড়কাক বলিয়া বুঝিতে পারিল; সকলে মিলিয়া, তাহার পাখা হইতে, একটি একটি করিয়া, ময়ূরpuচ্ছ গুলি তুলিয়া লইল; এবং, তাহাকে নিতান্ত অপদার্থ স্থির করিয়া, এত ঠোকরাইতে আরম্ভ করিল যে, দাঁড়কাক, জ্বালায় অস্থির হইয়া, পলায়ন করিল। অনন্তর, সে পুনরায় আপন দলে মিলিতে গেল। তখন, দাঁড়কাকেরা উপহাস করিয়া কহিল, অরে নির্বোধ! তুই ময়ূরপুচ্ছ পাইয়া, অহঙ্কারে মত্ত হইয়া, আমাদিগকে ঘৃণা করিয়া ও গালাগালি দিয়া, ময়ূরের দলে মিলিতে গিয়াছিলি; সেখানে অপদস্থ হইয়া, আবার আমাদের দলে মিলিতে আসিয়াছিস। তুই অতি নির্লজ্জ। এই রূপে, যথোচিত তিরস্কার করিয়া, তাহারা সেই নির্বোধ দাঁড়কাককে তাড়াইয়া দিল।",
   "এক কুকুর, মাংসের এক খণ্ড মুখে করিয়া, নদী পার হইতেছিল। নদীর নির্মূল জলে, তাহার যে প্রতিবিম্ব পড়িয়াছিল, সেই প্রতিবিম্বকে অন্য কুকুর স্থির করিয়া, সে মনে মনে বিবেচনা করিল, এই কুকুরের মুখে যে মাংসখণ্ড আছে, কাড়িয়া লই; তাহা হইলে, আমার দুই খণ্ড মাংস হইবেক। এইরূপ লোভে পড়িয়া, মুখ বিস্তৃত করিয়া, কুকুর যেমন অলীক মাংসখণ্ড ধরিতে গেল, অমনি, উহার মুখস্থিত মাংসখণ্ড, জলে পড়িয়া, স্রোতে ভাসিয়া গেল। তখন সে, হতবুদ্ধি হইয়া, কিয়ৎ ক্ষণ, স্তব্ধ হইয়া রহিল; অনন্তর, এই বলিতে বলিতে, নদী পার হইয়া চলিয়া গেল, যাহারা, লোভের বশীভূত হইয়া, কল্পিত লাভের প্রত্যাশায়, ধাবমান হয়, তাহাদের এই দশাই ঘটে।",
@@ -569,5 +562,6 @@ export const rowCategories: RowDrillCategory[] = [
     
 
     
+
 
 
