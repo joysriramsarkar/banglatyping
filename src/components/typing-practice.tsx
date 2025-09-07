@@ -10,7 +10,7 @@ import { useTimer } from "@/hooks/use-timer";
 import { Zap, Target, Timer, XCircle, Pause, Play, Home, CheckCircle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TestResults from "./test-results";
-import { lessons, practiceParagraphs, keyMap } from "@/lib/lessons";
+import { lessons, practiceParagraphs } from "@/lib/lessons";
 import { Input } from "./ui/input";
 import { useRouter } from 'next/navigation';
 import type { Drill, Lesson, SingleDrill } from "@/lib/types";
@@ -86,24 +86,27 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         
         const { key: expectedKey, shift: expectedShift } = currentDrillStep;
 
-        if(expectedKey === ' ' && event.code === 'Space'){
+        if (expectedKey === ' ' && event.code === 'Space') {
             setDrillState(prev => {
-                 return {
-                        currentDrillIndex: prev.currentDrillIndex + 1,
-                        currentStepIndex: 0,
-                        status: 'correct',
-                    };
+                return {
+                    currentDrillIndex: prev.currentDrillIndex + 1,
+                    currentStepIndex: 0,
+                    status: 'correct',
+                };
             });
             return;
         }
+
 
         let expectedCode = '';
         if (expectedKey === ' ') {
             expectedCode = 'Space';
         } else if (/[a-zA-Z]/.test(expectedKey)) {
           expectedCode = `Key${expectedKey.toUpperCase()}`;
+        } else if (expectedKey.startsWith('Digit')) {
+            expectedCode = expectedKey;
         } else {
-            switch(expectedKey) {
+             switch(expectedKey) {
                 case '[': expectedCode = 'BracketLeft'; break;
                 case ']': expectedCode = 'BracketRight'; break;
                 case '\\': expectedCode = 'Backslash'; break;
@@ -308,7 +311,6 @@ type KeyLayoutData = {
     align?: 'left' | 'right';
 };
 
-
 const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
     top: [
         {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'},
@@ -321,8 +323,8 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: 'i', bn: 'ি', bnShift: 'ী', bnExtra: 'ই', bnShiftExtra: 'ঈ'},
         {key: 'o', bn: 'ো', bnShift: 'ৌ', bnExtra: 'ও', bnShiftExtra: 'ঔ'},
         {key: 'p', bn: 'প', bnShift: 'ঢ়'},
-        {key: '[', bn: 'ড', bnShift: 'ঢ'},
-        {key: ']', bn: 'ব', bnShift: 'ভ'},
+        {key: '[', bn: '[', bnShift: '{'},
+        {key: ']', bn: ']', bnShift: '}'},
         {key: '\\', bn: 'ৃ', bnShift: 'ঞ', bnExtra: 'ঋ'},
     ],
     home: [
@@ -335,8 +337,8 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: 'j', bn: 'জ', bnShift: 'ঝ'},
         {key: 'k', bn: 'ক', bnShift: 'খ'},
         {key: 'l', bn: 'ল', bnShift: 'ষ'},
-        {key: ';', bn: 'ে', bnShift: 'এ' },
-        {key: "'", bn: 'ো', bnShift: 'ও' },
+        {key: ';', bn: ';', bnShift: ':'},
+        {key: "'", bn: "'", bnShift: '"'},
     ],
     bottom: [
         {key: 'ShiftLeft', bn: 'Shift', width: 'w-28', align: 'left'},
@@ -346,14 +348,14 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: 'v', bn: 'দ', bnShift: 'ধ'},
         {key: 'b', bn: 'ব', bnShift: 'ভ'},
         {key: 'n', bn: 'ন', bnShift: 'ণ'},
-        {key: 'm', bn: 'ম', bnShift: 'ম'},
-        {key: ',', bn: ',', bnShift: ':'},
-        {key: '.', bn: '।', bnShift: '.'},
-        {key: '/', bn: "'", bnShift: '"'},
+        {key: 'm', bn: 'ম'},
+        {key: ',', bn: ',', bnShift: '<'},
+        {key: '.', bn: '।', bnShift: '>'},
+        {key: '/', bn: '/', bnShift: '?'},
         {key: 'ShiftRight', bn: 'Shift', width: 'flex-grow', align: 'right'},
     ],
     space: [
-        {key: ' ', bn: 'Space', width: 'w-full'},
+        {key: ' ', bn: 'Space', width: 'w-96'},
     ]
 };
 
@@ -381,37 +383,15 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
     }
 
     if (hasMultipleChars) {
-        const bnExtraExists = !!bnExtra;
-        const bnShiftExtraExists = !!bnShiftExtra;
-        const bnShiftExists = !!bnShift;
-        const hasFour = bnExtraExists && bnShiftExtraExists && bnShiftExists;
-        const hasThree = !hasFour && [bnExtraExists, bnShiftExtraExists, bnShiftExists].filter(Boolean).length === 2;
-
-        if (hasFour) {
-            return (
-                <div className={baseKeyClasses}>
-                    <div className="absolute top-0 left-0 w-full h-full grid grid-cols-2 grid-rows-2 text-xs p-1">
-                        <span className="flex items-center justify-center text-muted-foreground">{bnShiftExtra}</span>
-                        <span className="flex items-center justify-center text-muted-foreground">{bnShift}</span>
-                        <span className="flex items-center justify-center text-muted-foreground">{bnExtra}</span>
-                        <span className="flex items-center justify-center font-bold text-lg">{bn}</span>
-                    </div>
-                </div>
-            )
-        }
-        if (hasThree) {
-             return (
-                <div className={baseKeyClasses}>
-                    <div className="absolute top-0 left-0 w-full h-full grid grid-cols-2 grid-rows-2 text-xs p-1">
-                         <span className="col-span-1 flex items-center justify-center text-muted-foreground">{bnShiftExtra || bnShift}</span>
-                         <span className="col-span-1 flex items-center justify-center text-muted-foreground">{bnShiftExtra ? bnShift: bnExtra}</span>
-                         <span className="col-span-2 flex items-center justify-center font-bold text-lg">{bn}</span>
-                    </div>
-                </div>
-            )
-        }
+       return (
+            <div className={cn(baseKeyClasses, "p-1")}>
+                <div className="absolute top-1 left-1.5 text-xs text-muted-foreground">{bnShiftExtra || bnShift}</div>
+                <div className="absolute top-1 right-1.5 text-xs text-muted-foreground">{bnShift}</div>
+                <div className="absolute bottom-1 left-1.5 text-xs text-muted-foreground">{bnExtra}</div>
+                <div className="absolute bottom-1 right-1.5 text-lg font-bold">{bn}</div>
+            </div>
+        )
     }
-
 
     return (
         <div className={baseKeyClasses}>
@@ -440,18 +420,14 @@ const SimplifiedKeyboard = ({ highlightKey, needsShift }: { highlightKey: string
                         keyData.key.toLowerCase() === highlightKey.toLowerCase() ||
                         (highlightKey === 'Shift' && keyData.key.toLowerCase().includes('shift'))
                     );
-                    let finalNeedsShift = needsShift;
-
-                    if (isHighlighted && (keyData.key === 'ShiftLeft' || keyData.key === 'ShiftRight')) {
-                       finalNeedsShift = true;
-                    }
                     
-                    return <Key key={keyData.key} data={keyData} isHighlighted={isHighlighted} needsShift={finalNeedsShift} />;
+                    return <Key key={keyData.key} data={keyData} isHighlighted={!!isHighlighted} needsShift={needsShift} />;
                 })}
             </div>
         ))}
     </div>
 );
+
 
 export default function TypingPractice({ textToType: initialText, timeLimit, lessonId }: TypingPracticeProps) {
   const [textToType, setTextToType] = useState(initialText?.normalize('NFC') || '');
@@ -728,6 +704,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
