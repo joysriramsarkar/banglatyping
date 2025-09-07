@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useParams, useSearchParams } from 'next/navigation';
@@ -21,6 +22,8 @@ export default function PracticePage() {
         }
         if (searchParams.has('accuracy')) {
             setAccuracyGoal(parseInt(searchParams.get('accuracy') as string));
+        } else {
+            setAccuracyGoal(95); // Default accuracy for word/paragraph drills
         }
     }, [lessonId, searchParams]);
 
@@ -33,13 +36,23 @@ export default function PracticePage() {
         );
     }
     
+    // Determine if the lesson is a word drill based on its ID
+    const isWordDrill = lesson.id.includes('-word-drill');
+
     return (
         <div>
             <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold font-headline">{lesson.title}</h1>
                 <p className="text-muted-foreground">{lesson.level} স্তরের পাঠ</p>
             </div>
-            {lesson.text && <TypingPractice textToType={lesson.text} lessonId={lesson.id} />}
+            {lesson.text && (
+                 <TypingPractice 
+                    textToType={lesson.text} 
+                    lessonId={lesson.id} 
+                    isPracticeDrill={isWordDrill}
+                    accuracyGoal={accuracyGoal}
+                />
+            )}
             {lesson.drills && <VisualTypingDrill drills={lesson.drills} lessonId={lesson.id} accuracyGoal={accuracyGoal} />}
         </div>
     );

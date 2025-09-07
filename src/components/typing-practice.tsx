@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -23,6 +24,8 @@ interface TypingPracticeProps {
   timeLimit?: number; // in minutes
   lessonId?: string;
   onRestart?: () => void;
+  isPracticeDrill?: boolean;
+  accuracyGoal?: number;
 }
 
 const toBengaliNumber = (num: number | string) => {
@@ -549,7 +552,7 @@ const SimplifiedKeyboard = ({ highlightKey, needsShift }: { highlightKey: string
 );
 
 
-export default function TypingPractice({ textToType: initialText, timeLimit, lessonId, onRestart: customOnRestart }: TypingPracticeProps) {
+export default function TypingPractice({ textToType: initialText, timeLimit, lessonId, onRestart: customOnRestart, isPracticeDrill = false, accuracyGoal = 95 }: TypingPracticeProps) {
   const [textToType, setTextToType] = useState(initialText?.normalize('NFC') || '');
   const [words, setWords] = useState<string[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -558,7 +561,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   
   const [totalErrors, setTotalErrors] = useState(0);
   const [totalChars, setTotalChars] = useState(0);
-  const [correctChars, setCorrectChars] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
   const [isFinished, setIsFinished] = useState(false);
@@ -566,35 +568,46 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
-  const totalTime = timeLimit ? timeLimit * 60 : 0;
+  const maxTime = isPracticeDrill ? 360 : (timeLimit ? timeLimit * 60 : 0);
   const { time, isActive, isPaused, start, pause, resume, reset } = useTimer();
 
-  const timeLeft = totalTime > 0 ? totalTime - time : time;
+  const timeLeft = maxTime > 0 ? maxTime - time : time;
 
   useEffect(() => {
     const newWords = textToType.split(' ').filter(w => w);
     setWords(newWords);
-  }, [textToType]);
+    // Loop the text for practice drills to ensure it's long enough
+    if(isPracticeDrill && newWords.length > 0) {
+        let repeatedText = '';
+        while(repeatedText.length < 5000) { // arbitrary large number
+            repeatedText += newWords.join(' ') + ' ';
+        }
+        setTextToType(repeatedText);
+        setWords(repeatedText.split(' ').filter(w => w));
+    }
+  }, [initialText, isPracticeDrill]);
 
 
   const calculateStats = useCallback(() => {
-      const typedEntries = typedWords.length + (currentInput.trim() ? 1 : 0);
-      const charactersTyped = typedWords.join(' ').length + currentInput.length;
-      if (time > 0) {
-        const grossWpm = (charactersTyped / 5) / (time / 60);
+    const charsTyped = typedWords.slice(0, currentWordIndex).join(" ").length;
+    const grossWpm = (charsTyped / 5) / (time / 60);
+    if(time > 0) {
         setWpm(Math.round(grossWpm > 0 ? grossWpm : 0));
-      }
-      
-      let correctCharacters = 0;
-      typedWords.forEach((word, index) => {
-          if(word === words[index]) {
-              correctCharacters += words[index].length + 1; // +1 for space
-          }
-      });
-      
-      const newAccuracy = charactersTyped > 0 ? (correctCharacters / charactersTyped) * 100 : 100;
-      setAccuracy(Math.round(newAccuracy > 0 ? newAccuracy : 0));
-  }, [time, typedWords, currentInput, words]);
+    }
+
+    let correctChars = 0;
+    typedWords.slice(0, currentWordIndex).forEach((word, index) => {
+        if (word === words[index]) {
+            correctChars += words[index].length + 1; // +1 for space
+        }
+    });
+
+    if (charsTyped > 0) {
+        setAccuracy(Math.round((correctChars / charsTyped) * 100));
+    } else {
+        setAccuracy(100);
+    }
+  }, [time, typedWords, words, currentWordIndex]);
   
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
@@ -616,7 +629,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     setAccuracy(100);
     setTotalErrors(0);
     setTotalChars(0);
-    setCorrectChars(0);
     setIsFinished(false);
     if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
@@ -670,9 +682,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
         if(typedWord !== expectedWord) {
             setTotalErrors(prev => prev + 1);
-            setCorrectChars(prev => prev); // No change
-        } else {
-            setCorrectChars(prev => prev + expectedWord.length + 1);
         }
 
         setCurrentWordIndex(prev => prev + 1);
@@ -692,19 +701,22 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   }, []);
 
   useEffect(() => {
+    if (!isActive || isPaused) return;
+
+    calculateStats();
+    
     const isTestFinished = currentWordIndex === words.length && words.length > 0;
-    if (isActive && !isPaused) {
-      calculateStats();
-      
-      const isTimeUp = timeLimit && time >= timeLimit * 60;
-      
-      if (isTestFinished || isTimeUp) {
-        finishSession();
-      }
-    } else if (isTestFinished) {
-        finishSession();
+    const isTimeUp = maxTime > 0 && time >= maxTime;
+    
+    let isGoalMet = false;
+    if (isPracticeDrill) {
+        isGoalMet = time >= 240 && wpm >= 25 && accuracy >= accuracyGoal;
     }
-  }, [time, isActive, isPaused, timeLimit, calculateStats, finishSession, currentWordIndex, words]);
+
+    if (isTestFinished || isTimeUp || isGoalMet) {
+      finishSession();
+    }
+  }, [time, isActive, isPaused, maxTime, calculateStats, finishSession, currentWordIndex, words, isPracticeDrill, wpm, accuracy, accuracyGoal]);
 
 
   useEffect(() => {
@@ -767,18 +779,20 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     return <TestResults stats={{ wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
   }
 
+  const textDisplayFontSize = isPracticeDrill ? 'text-3xl' : 'text-2xl';
+
   return (
     <div className="space-y-6 flex flex-col items-center w-full max-w-4xl mx-auto">
       <Card className="w-full">
         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
           <StatDisplay icon={Zap} value={wpm} label="WPM" />
           <StatDisplay icon={Target} value={`${accuracy}%`} label="Accuracy" />
-          <StatDisplay icon={Timer} value={timeLimit ? toBengaliNumber(new Date((totalTime - time) * 1000).toISOString().substr(14, 5)) : toBengaliNumber(new Date(time * 1000).toISOString().substr(14, 5))} label={timeLimit ? "বাকি" : "সময়"} />
+          <StatDisplay icon={Timer} value={maxTime > 0 ? toBengaliNumber(new Date(timeLeft * 1000).toISOString().substr(14, 5)) : toBengaliNumber(new Date(time * 1000).toISOString().substr(14, 5))} label={maxTime > 0 ? "বাকি" : "সময়"} />
           <StatDisplay icon={XCircle} value={totalErrors} label="ভুল শব্দ" />
         </CardContent>
       </Card>
 
-       <Card className="w-full p-6 text-2xl tracking-wider font-hind leading-relaxed relative select-none">
+       <Card className={cn("w-full p-6 tracking-wider font-hind leading-relaxed relative select-none", textDisplayFontSize)}>
         <p>
           {words.map((word, index) => (
             <React.Fragment key={index}>
@@ -799,7 +813,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
        <div className="w-full h-24 flex flex-col items-center justify-center">
         <div className={cn(
-          "text-2xl font-hind p-2 flex items-center justify-center min-h-[3rem] w-full",
+          "font-hind p-2 flex items-center justify-center min-h-[3rem] w-full",
+          textDisplayFontSize
         )}>
           {getPreviewContent()}
         </div>
@@ -809,8 +824,9 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
           value={currentInput}
           onChange={handleUserInputChange}
           className={cn(
-            "w-full text-center text-2xl font-hind p-6 border-t-0 rounded-t-none",
-             isError ? "border-red-500 focus-visible:ring-red-500" : "border-green-500 focus-visible:ring-green-500"
+            "w-full text-center font-hind p-6 border-t-0 rounded-t-none",
+             isError ? "border-red-500 focus-visible:ring-red-500" : "border-green-500 focus-visible:ring-green-500",
+             textDisplayFontSize
           )}
           disabled={isFinished}
           onPaste={(e) => e.preventDefault()}
@@ -832,4 +848,5 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     </div>
   );
 }
+
 
