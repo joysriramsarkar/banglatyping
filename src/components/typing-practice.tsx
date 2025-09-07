@@ -86,11 +86,23 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         
         const isHasanto = currentStep.display === '্';
 
+        // --- CONSOLE LOGS FOR DEBUGGING ---
+        console.log("--------------------");
+        console.log("Key pressed:", event.key, "| Code:", event.code);
+        console.log("Shift pressed?", event.shiftKey);
+        console.log("Current Step:", currentStep);
+        console.log("Is Hasanto step?", isHasanto);
+        
         const keyIsCorrect = isHasanto
             ? event.code === `Key${currentStep.key.toUpperCase()}`
             : event.key === currentStep.display;
             
         const shiftIsCorrect = (event.shiftKey === currentStep.shift);
+
+        console.log("Was key correct?", keyIsCorrect);
+        console.log("Was shift correct?", shiftIsCorrect);
+        console.log("--------------------");
+
 
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
@@ -588,6 +600,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
