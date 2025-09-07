@@ -3,7 +3,7 @@
 "use client";
 
 import { useParams, useSearchParams } from 'next/navigation';
-import TypingPractice, { VisualTypingDrill } from '@/components/typing-practice';
+import TypingPractice, { VisualTypingDrill, WordDrill } from '@/components/typing-practice';
 import { lessons } from '@/lib/lessons';
 import { useEffect, useState } from 'react';
 import type { Lesson } from '@/lib/types';
@@ -36,9 +36,6 @@ export default function PracticePage() {
         );
     }
     
-    // Determine if the lesson is a word drill based on its ID
-    const isWordDrill = lesson.id.includes('-word-drill');
-
     return (
         <div>
             <div className="text-center mb-8">
@@ -48,14 +45,12 @@ export default function PracticePage() {
             {lesson.text && (
                  <TypingPractice 
                     textToType={lesson.text} 
-                    lessonId={lesson.id} 
-                    isPracticeDrill={isWordDrill}
+                    lessonId={lesson.id}
                     accuracyGoal={accuracyGoal}
                 />
             )}
-            {lesson.drills && <VisualTypingDrill drills={lesson.drills} lessonId={lesson.id} accuracyGoal={accuracyGoal} />}
+            {lesson.drills && !lesson.isWordDrill && <VisualTypingDrill drills={lesson.drills} lessonId={lesson.id} accuracyGoal={accuracyGoal} />}
+            {lesson.drills && lesson.isWordDrill && <WordDrill drills={lesson.drills} lessonId={lesson.id} accuracyGoal={accuracyGoal} />}
         </div>
     );
 }
-
-    

@@ -77,6 +77,239 @@ const DrillProgress = ({ wpmHistory, timeLeft }: { wpmHistory: { time: number, w
     </Card>
 );
 
+export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
+    const router = useRouter();
+    const [drills, setDrills] = useState<Drill[]>(initialDrills);
+    const [drillState, setDrillState] = useState({
+        currentDrillIndex: 0,
+        currentCharIndex: 0,
+        userInput: '',
+        erredCharacters: new Map<string, number>(),
+    });
+
+    const [isFinished, setIsFinished] = useState(false);
+    const [wpm, setWpm] = useState(0);
+    const [accuracy, setAccuracy] = useState(100);
+    const [totalCharsTyped, setTotalCharsTyped] = useState(0);
+    const [totalErrors, setTotalErrors] = useState(0);
+    const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
+    
+    const maxTime = 360; // 6 minutes
+    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer, setTime } = useTimer();
+    const timeLeft = maxTime - time;
+
+    const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    const { currentDrillIndex, currentCharIndex, userInput, erredCharacters } = drillState;
+    const currentDrill = drills[currentDrillIndex];
+
+    const finishDrill = useCallback(() => {
+        if (isFinished) return;
+        pause();
+        if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        setIsFinished(true);
+        
+        const correctChars = totalCharsTyped - totalErrors;
+        const finalAccuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 100;
+        setAccuracy(Math.round(finalAccuracy));
+
+        const finalWpm = time > 0 ? ((totalCharsTyped / 5) / (time / 60)) : 0;
+        setWpm(Math.round(finalWpm));
+    }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
+
+     const startDrill = useCallback(() => {
+        start();
+        wpmIntervalRef.current = setInterval(() => {
+            setTime(currentTime => {
+                setTotalCharsTyped(currentTotalChars => {
+                   const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
+                   setWpmHistory(prev => [...prev, { time: currentTime, wpm: currentWpm }]);
+                   return currentTotalChars;
+                });
+                return currentTime;
+            });
+        }, 30000);
+    }, [start, setTime]);
+
+    useEffect(() => {
+        startDrill();
+        return () => {
+            if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        }
+    }, [startDrill]);
+
+    useEffect(() => {
+        if (!isActive || isFinished) return;
+
+        const currentWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
+        const correctChars = totalCharsTyped - totalErrors;
+        const currentAccuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 100;
+
+        if (time >= 240 && currentWpm >= 25 && currentAccuracy >= accuracyGoal) {
+            finishDrill();
+        }
+
+        if (time >= maxTime) {
+            finishDrill();
+        }
+    }, [time, isActive, isFinished, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
+    
+    const resetInactivityTimer = useCallback(() => {
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = setTimeout(() => {
+            if (isActive && !isPaused) {
+                pause();
+            }
+        }, 4000);
+    }, [isActive, isPaused, pause]);
+
+    const handleKeyPress = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (isFinished) return;
+        
+        if (!isActive) start();
+        else if (isPaused) resume();
+        
+        resetInactivityTimer();
+
+        const typedChar = event.key;
+        const expectedChar = currentDrill.prompt[currentCharIndex];
+
+        if (typedChar === ' ') {
+            event.preventDefault();
+             if(userInput.trim() === currentDrill.prompt) {
+                setTotalCharsTyped(prev => prev + 1); // for the space
+                let nextDrillIndex = currentDrillIndex + 1;
+                if(nextDrillIndex >= drills.length) nextDrillIndex = 0; // Loop
+                
+                setDrillState(prev => ({
+                    ...prev,
+                    currentDrillIndex: nextDrillIndex,
+                    currentCharIndex: 0,
+                    userInput: ''
+                }));
+             } else {
+                 setTotalErrors(prev => prev + 1);
+                 // maybe add some visual feedback for incorrect word
+             }
+        } else if (typedChar === 'Backspace') {
+             setDrillState(prev => ({ ...prev, userInput: prev.userInput.slice(0, -1), currentCharIndex: Math.max(0, prev.currentCharIndex - 1)}));
+        } else if (typedChar.length === 1) { // handle normal characters
+             if(typedChar === expectedChar) {
+                 setDrillState(prev => ({...prev, currentCharIndex: prev.currentCharIndex + 1, userInput: prev.userInput + typedChar}));
+                 setTotalCharsTyped(prev => prev + 1);
+             } else {
+                setTotalErrors(prev => prev + 1);
+                const newErredChars = new Map(erredCharacters);
+                newErredChars.set(expectedChar, (newErredChars.get(expectedChar) || 0) + 1);
+                setDrillState(prev => ({ ...prev, erredCharacters: newErredChars }));
+             }
+        }
+    }, [isFinished, isActive, isPaused, start, resume, resetInactivityTimer, currentDrill, currentCharIndex, userInput, currentDrillIndex, drills.length, erredCharacters]);
+
+    const resetDrill = useCallback(() => {
+        resetTimer();
+        setDrills(initialDrills);
+        setDrillState({
+            currentDrillIndex: 0,
+            currentCharIndex: 0,
+            userInput: '',
+            erredCharacters: new Map()
+        });
+        setIsFinished(false);
+        setWpm(0);
+        setAccuracy(100);
+        setTotalCharsTyped(0);
+        setTotalErrors(0);
+        setWpmHistory([]);
+        startDrill();
+    }, [initialDrills, resetTimer, startDrill]);
+
+    const startCustomDrill = () => {
+        const erredChars = Array.from(erredCharacters.keys());
+        if (erredChars.length > 0) {
+            const customDrills = generateDrillsFromLib(erredChars, 150);
+            setDrills(customDrills);
+            resetDrill();
+        }
+    };
+    
+    if (isFinished) {
+        const erredCharsArray: ErredCharacter[] = Array.from(erredCharacters.entries())
+            .map(([char, count]) => ({ char, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        return <TestResults 
+                    stats={{ wpm, accuracy, errors: totalErrors, timeElapsed: time, erredCharacters: erredCharsArray }} 
+                    onRestart={resetDrill} 
+                    lessonId={lessonId}
+                    isDrill={true}
+                    customDrill={startCustomDrill}
+                />;
+    }
+
+    const WordDisplay = ({ word, isCurrent, isTypedCorrectly }: { word: string; isCurrent: boolean; isTypedCorrectly: boolean | null }) => {
+        if (isCurrent) {
+            const correctPart = word.substring(0, currentCharIndex);
+            const incorrectPart = userInput.substring(currentCharIndex)
+            const remainingPart = word.substring(currentCharIndex);
+
+            return (
+                 <span className="text-3xl text-primary font-bold mr-4 relative">
+                    <span className="opacity-0">{word}</span> {/* For layout spacing */}
+                    <span className="absolute left-0 top-0">
+                        {correctPart.split('').map((char, i) => (
+                           <span key={i} className="text-green-500">{char}</span>
+                        ))}
+                        <span className="border-b-2 border-primary">{remainingPart[0]}</span>
+                        <span>{remainingPart.substring(1)}</span>
+                    </span>
+                </span>
+            )
+        }
+        return <span className="text-3xl text-muted-foreground mr-4">{word}</span>
+    }
+    
+    return (
+        <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-full mx-auto">
+             <div className="flex flex-col md:flex-row gap-8">
+                 <div className="w-full md:w-2/3 space-y-4">
+                      {/* Word Display */}
+                    <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px] flex-wrap">
+                       {drills.slice(currentDrillIndex, currentDrillIndex + 4).map((drill, index) => (
+                           <WordDisplay 
+                                key={`${drill.prompt}-${currentDrillIndex + index}`} 
+                                word={drill.prompt}
+                                isCurrent={index === 0}
+                                isTypedCorrectly={null}
+                           />
+                       ))}
+                       <Input 
+                        type="text"
+                        className="absolute w-0 h-0 p-0 m-0 border-0"
+                        onKeyDown={handleKeyPress}
+                        autoFocus
+                        onBlur={(e) => e.target.focus()}
+                       />
+                    </div>
+                     {/* Virtual Keyboard */}
+                    <SimplifiedKeyboard highlightKey={currentDrill?.steps[currentCharIndex]?.key} needsShift={!!currentDrill?.steps[currentCharIndex]?.shift} />
+                 </div>
+
+                 <div className="w-full md:w-1/3 space-y-4">
+                    <DrillProgress wpmHistory={wpmHistory} timeLeft={timeLeft} />
+                     <div className="flex justify-end gap-2 mt-4">
+                        <Button onClick={() => router.push('/dashboard/lessons')} variant="destructive">অনুশীলন বাতিল করুন</Button>
+                    </div>
+                </div>
+             </div>
+        </div>
+    )
+}
+
 export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
     const [drills, setDrills] = useState<Drill[]>(initialDrills);
@@ -585,28 +818,35 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         setTextToType(repeatedText);
         setWords(repeatedText.split(' ').filter(w => w));
     }
-  }, [initialText, isPracticeDrill]);
+  }, [initialText, isPracticeDrill, textToType]);
 
 
   const calculateStats = useCallback(() => {
-    const charsTyped = typedWords.slice(0, currentWordIndex).join(" ").length;
-    const grossWpm = (charsTyped / 5) / (time / 60);
-    if(time > 0) {
-        setWpm(Math.round(grossWpm > 0 ? grossWpm : 0));
-    }
-
+    // Correct characters typed so far
     let correctChars = 0;
-    typedWords.slice(0, currentWordIndex).forEach((word, index) => {
-        if (word === words[index]) {
-            correctChars += words[index].length + 1; // +1 for space
+    typedWords.slice(0, currentWordIndex).forEach((typedWord, index) => {
+        const expectedWord = words[index];
+        for (let i = 0; i < Math.min(typedWord.length, expectedWord.length); i++) {
+            if (typedWord[i] === expectedWord[i]) {
+                correctChars++;
+            }
         }
     });
 
-    if (charsTyped > 0) {
-        setAccuracy(Math.round((correctChars / charsTyped) * 100));
-    } else {
-        setAccuracy(100);
-    }
+    // Add spaces as correct characters
+    correctChars += currentWordIndex > 0 ? currentWordIndex -1 : 0;
+    
+    // Total characters typed so far
+    const grossChars = typedWords.slice(0, currentWordIndex).join(" ").length;
+
+    // Accuracy
+    const currentAccuracy = grossChars > 0 ? (correctChars / grossChars) * 100 : 100;
+    setAccuracy(Math.round(currentAccuracy));
+    
+    // WPM
+    const grossWpm = time > 0 ? (grossChars / 5) / (time / 60) : 0;
+    setWpm(Math.round(grossWpm > 0 ? grossWpm : 0));
+
   }, [time, typedWords, words, currentWordIndex]);
   
   const resetInactivityTimer = useCallback(() => {
@@ -779,7 +1019,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     return <TestResults stats={{ wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
   }
 
-  const textDisplayFontSize = isPracticeDrill ? 'text-3xl' : 'text-2xl';
+  const textDisplayFontSize = 'text-3xl';
 
   return (
     <div className="space-y-6 flex flex-col items-center w-full max-w-4xl mx-auto">
@@ -848,5 +1088,3 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     </div>
   );
 }
-
-

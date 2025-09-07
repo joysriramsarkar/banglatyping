@@ -9,6 +9,7 @@ export interface Lesson {
   text?: string;
   drills?: Drill[];
   row?: 'home-row' | 'top-row' | 'bottom-row' | 'kar-row';
+  isWordDrill?: boolean;
 }
 
 export interface ErredCharacter {
