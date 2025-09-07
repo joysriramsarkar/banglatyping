@@ -288,21 +288,21 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
 const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
     top: [
-        {key: 'q', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'w', bn: 'য', bnShift: 'য়'}, {key: 'e', bn: 'ড', bnShift: 'ঢ'}, {key: 'r', bn: 'প', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
-        {key: 'y', bn: 'চ', bnShift: 'ছ'}, {key: 'u', bn: 'হ', bnShift: 'ঞ'}, {key: 'i', bn: 'গ', bnShift: 'ঘ'}, {key: 'o', bn: 'দ', bnShift: 'ধ'}, {key: 'p', bn: 'জ', bnShift: 'ঝ'},
-        {key: '[', bn: 'ক', bnShift: 'খ'}, {key: ']', bn: 'ব', bnShift: 'ভ'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'}
+        {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
+        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'},
+        {key: '[', bn: '[', bnShift: '{'}, {key: ']', bn: ']', bnShift: '}'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'}
     ],
     home: [
-        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'ি', bnShift: 'ই'}, {key: 'd', bn: 'ু', bnShift: 'উ'},
-        {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'}, {key: 'h', bn: '্'}, 
+        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'},
+        {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'}, {key: 'h', bn: '্', bnShift: 'হ'}, 
         {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
-        {key: ';', bn: 'স', bnShift: 'শ'}, {key: "'", bn: 'ে', bnShift: 'এ'}
+        {key: ';', bn: ';', bnShift: ':'}, {key: "'", bn: "'", bnShift: '"'}
     ],
     bottom: [
-        {key: 'z', bn: '্য'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
+        {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
         {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
         {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ','}, 
-        {key: '.', bn: '।', bnShift: '.'}, {key: '/', bn: 'র', bnShift: 'ড়'},
+        {key: '.', bn: '।', bnShift: '.'}, {key: '/', bn: '/', bnShift: '?'},
     ],
     space: [{key: ' ', bn: ''}],
 };
