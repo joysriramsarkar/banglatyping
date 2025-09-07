@@ -92,14 +92,12 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
     
     const maxTime = 360; // 6 minutes
-    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer, setTime } = useTimer();
+    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer } = useTimer();
     const timeLeft = maxTime - time;
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const nextLessonButtonRef = useRef<HTMLButtonElement | null>(null);
-    const restartButtonRef = useRef<HTMLButtonElement | null>(null);
 
     const { currentDrillIndex, currentStepIndex, status, erredCharacters } = drillState;
     
@@ -125,23 +123,20 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-             setTime(currentTime => {
-                 setTotalCharsTyped(currentTotalChars => {
-                    const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
-                    setWpmHistory(prev => [...prev, { time: currentTime, wpm: currentWpm }]);
-                    return currentTotalChars;
-                 });
-                 return currentTime;
+             setWpmHistory(prevHistory => {
+                 const newTime = prevHistory.length > 0 ? prevHistory[prevHistory.length - 1].time + 30 : 30;
+                 const currentWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
+                 return [...prevHistory, { time: newTime, wpm: currentWpm }];
              });
         }, 30000); 
-    }, [start, setTime]);
+    }, [start, time, totalCharsTyped]);
 
     useEffect(() => {
-        startDrill();
+        start();
         return () => {
             if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
         }
-    }, [startDrill]);
+    }, [start]);
 
 
     useEffect(() => {
@@ -160,30 +155,35 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         }
     }, [time, isActive, isFinished, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
 
-
-     const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        if (isSessionOver || !currentDrill || !currentDrillStep || isFinished) return;
-        
-        if (isPaused) resume();
-        
+    const resetInactivityTimer = useCallback(() => {
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         inactivityTimerRef.current = setTimeout(() => {
-            if(isActive && !isPaused) pause();
+            if (isActive && !isPaused) {
+                pause();
+            }
         }, 4000);
+    }, [isActive, isPaused, pause]);
+
+
+     const handleKeyPress = useCallback((event: KeyboardEvent) => {
+        if (isFinished) return;
+        
+        if (!isActive) start();
+        if (isPaused) resume();
+        
+        resetInactivityTimer();
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
         if (modifierKeys.includes(event.key)) return;
         
         if (event.key === 'Enter') {
            if(isSessionOver) {
-                if (nextLessonButtonRef.current) {
-                    nextLessonButtonRef.current.click();
-                } else if(restartButtonRef.current) {
-                    restartButtonRef.current.click();
-                }
+                // This logic is for test results page, can be handled there
            }
            return;
         }
+
+        if (!currentDrill || !currentDrillStep) return;
 
         event.preventDefault();
 
@@ -242,7 +242,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                 if (isLastStepInDrill) {
                     const nextDrillIndex = prev.currentDrillIndex + 1;
                     if (nextDrillIndex >= drills.length) {
-                       setDrills(currentDrills => [...currentDrills, ...initialDrills]);
+                       setDrills(currentDrills => [...currentDrills, ...generateDrillsFromLib(initialDrills.map(d => d.prompt).filter(p => p !== ' '), 100)]);
                     }
                     return {
                         ...prev,
@@ -261,7 +261,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         } else {
             handleIncorrect();
         }
-    }, [isSessionOver, isFinished, drills, initialDrills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume]);
+    }, [isSessionOver, isFinished, drills, initialDrills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, start, resetInactivityTimer]);
 
 
     useEffect(() => {
@@ -273,24 +273,6 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         };
     }, [handleKeyPress]);
 
-    let nextLesson: Lesson | null = null;
-    if (lessonId) {
-        const currentLessonIndexInAllLessons = lessons.findIndex(l => l.id === lessonId);
-        if (currentLessonIndexInAllLessons !== -1 && currentLessonIndexInAllLessons < lessons.length - 1) {
-            const currentLesson = lessons[currentLessonIndexInAllLessons];
-            let foundNextInRow = false;
-            for(let i = currentLessonIndexInAllLessons + 1; i < lessons.length; i++) {
-                if(lessons[i].row === currentLesson.row) {
-                    nextLesson = lessons[i];
-                    foundNextInRow = true;
-                    break;
-                }
-            }
-             if (!foundNextInRow) {
-                 nextLesson = lessons.find(l => lessons.indexOf(l) > currentLessonIndexInAllLessons && l.row !== currentLesson.row) || null;
-            }
-        }
-    }
     
     const resetDrill = useCallback(() => {
         setDrills(initialDrills);
@@ -307,8 +289,8 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         setTotalErrors(0);
         setWpmHistory([]);
         resetTimer();
-        startDrill();
-    }, [initialDrills, resetTimer, startDrill]);
+        start();
+    }, [initialDrills, resetTimer, start]);
 
     const startCustomDrill = () => {
         const erredChars = Array.from(erredCharacters.keys());
@@ -347,7 +329,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, isCompleted: boolean, key: string | number) => {
         let boxClass = "bg-secondary";
         if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
-        if (isCompleted) boxClass = "bg-secondary text-secondary";
+        if (isCompleted) boxClass = "bg-secondary text-secondary-foreground";
         
         if(drillData.prompt === ' '){
             return (
@@ -593,6 +575,14 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
   }, [time, typedWords, words]);
   
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+    inactivityTimerRef.current = setTimeout(() => {
+        if(isActive && !isPaused) {
+            pause();
+        }
+    }, 4000);
+  }, [isActive, isPaused, pause]);
 
   const resetTest = useCallback((isNewTest = true) => {
     if (customOnRestart) {
@@ -640,15 +630,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         resume();
     }
     
-    if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-    }
-
-    inactivityTimerRef.current = setTimeout(() => {
-        if(isActive && !isPaused) {
-            pause();
-        }
-    }, 4000);
+    resetInactivityTimer();
     
     if (currentWordIndex === words.length - 1 && value.normalize('NFC') === words[currentWordIndex].normalize('NFC')) {
       const newTypedWords = [...typedWords, value.trim()];
@@ -832,3 +814,4 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 }
 
     
+
