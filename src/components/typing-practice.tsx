@@ -56,7 +56,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const currentDrill = !isCompleted ? drills[currentDrillIndex] : null;
     const currentStep = currentDrill?.steps[currentStepIndex];
 
-    const handleKeyPress = useCallback((event: KeyboardEvent) => {
+     const handleKeyPress = useCallback((event: KeyboardEvent) => {
         if (isCompleted || !currentDrill || !currentStep) return;
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
@@ -69,17 +69,16 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
-        
+
         const shiftIsCorrect = currentStep.shift === event.shiftKey;
-        
-        // Check if either the English key or the Bengali character matches
         const pressedKey = event.key;
-        const expectedEnglishKey = currentStep.key;
+        
+        // Find the corresponding Bengali character for the pressed English key
+        const keyMapping = keyMap.find(k => k.key.toLowerCase() === pressedKey.toLowerCase());
         const expectedBengaliChar = currentStep.display;
 
-        // Space key has event.key as " " but event.code as "Space"
-        const keyIsCorrect = (pressedKey.toLowerCase() === expectedEnglishKey.toLowerCase()) || 
-                             (pressedKey === expectedBengaliChar);
+        // Only accept Bengali characters as correct input.
+        const keyIsCorrect = pressedKey === expectedBengaliChar;
 
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
@@ -572,4 +571,5 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
