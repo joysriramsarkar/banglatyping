@@ -49,9 +49,9 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         const ssoKey = keyMap.find(k => k.bn === 'ষ');
         if (kKey && hasantKey && ssoKey) {
             steps.push(
-                { key: kKey.key, shift: false, display: kKey.bn },
-                { key: hasantKey.key, shift: false, display: hasantKey.bn },
-                { key: ssoKey.key, shift: false, display: ssoKey.bn }
+                { key: kKey.key, shift: false, display: 'ক' },
+                { key: hasantKey.key, shift: false, display: '্' },
+                { key: ssoKey.key, shift: false, display: 'ষ' }
             );
         }
     } else if (char === 'জ্ঞ') {
@@ -59,9 +59,9 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         const njoKey = keyMap.find(k => k.bnShift === 'ঞ');
         if (jKey && hasantKey && njoKey) {
             steps.push(
-                { key: jKey.key, shift: false, display: jKey.bn },
-                { key: hasantKey.key, shift: false, display: hasantKey.bn },
-                { key: njoKey.key, shift: true, display: njoKey.bnShift! }
+                { key: jKey.key, shift: false, display: 'জ' },
+                { key: hasantKey.key, shift: false, display: '্' },
+                { key: njoKey.key, shift: true, display: 'ঞ' }
             );
         }
     } else {
@@ -133,9 +133,6 @@ const vowelSigns: { sign: string; key: string; shift: boolean; needsHasont: bool
 
 const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Drill[] => {
     const drills: Drill[] = [];
-    const conMapping = keyMap.find(k => k.bn === consonant.bn || k.bnShift === consonant.bn);
-
-    if (!conMapping) return [];
     
     let spaceCounter = 0;
 
@@ -149,25 +146,30 @@ const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Dri
                 steps: [{ key: ' ', shift: false, display: ' ' }]
             });
             spaceCounter = 0;
+            continue;
         }
 
         const steps: SingleDrill[] = [];
-        const conStep = getStepsForChar(consonant.bn);
-        if (conStep.length === 0) continue;
-        steps.push(...conStep);
+        const conSteps = getStepsForChar(consonant.bn);
+        if (conSteps.length === 0) continue;
+        steps.push(...conSteps);
         
         if (sign.needsHasont) {
-             steps.push({ key: hasantKey.key, shift: hasantKey.bnShift === hasantKey.bn, display: hasantKey.bn });
+             const hasantStep = getStepsForChar('্');
+             if(hasantStep.length > 0) steps.push(hasantStep[0]);
         }
         
-        const signMapping = keyMap.find(k => k.bn === sign.sign || k.bnShift === sign.sign);
-        if (signMapping) {
-            steps.push({ key: signMapping.key, shift: signMapping.bnShift === sign.sign, display: sign.sign });
+        const signSteps = getStepsForChar(sign.sign);
+        if (signSteps.length > 0) {
+            steps.push(signSteps[0]);
         } else {
             continue;
         }
 
-        const prompt = (consonant.bn + (sign.needsHasont ? hasantKey.bn : '') + sign.sign).normalize('NFC');
+        let prompt = consonant.bn;
+        if(sign.needsHasont) prompt += '্';
+        prompt += sign.sign;
+
         drills.push({ prompt, steps });
         spaceCounter++;
     }

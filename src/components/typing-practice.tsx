@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -196,7 +197,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                             
                             return (
                                 <div key={drillData.prompt + index + currentDrillIndex} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drillData.prompt}
+                                   {drillData.prompt.normalize('NFC')}
                                 </div>
                             )
                         })}
@@ -567,3 +568,4 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
