@@ -17,6 +17,7 @@ export interface TypingStats {
 }
 
 export interface SingleDrill {
+    display: string;
     key: string;
     shift: boolean;
 }

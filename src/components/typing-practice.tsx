@@ -57,10 +57,19 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const currentStep = currentDrill?.steps[currentStepIndex];
 
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        if (isCompleted || !currentDrill || !currentStep) return;
+        console.log(`Key pressed: ${event.key}`, { shift: event.shiftKey });
+        if (isCompleted || !currentDrill || !currentStep) {
+            console.log("Exiting: Drill completed or no current step.");
+            return;
+        };
+
+        console.log("Current expected step:", currentStep);
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
-        if (modifierKeys.includes(event.key)) return;
+        if (modifierKeys.includes(event.key)) {
+             console.log("Modifier key pressed. Ignoring.");
+            return;
+        }
         
         if (event.key === 'Enter') {
            if(isCompleted) {
@@ -80,11 +89,15 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
 
-        const keyData = keyMap.find(k => k.bn === event.key || (k.bnShift && k.bnShift === event.key));
-        const keyIsCorrect = (event.key === ' ' && currentStep.key === ' ') || (keyData && keyData.key.toLowerCase() === currentStep.key.toLowerCase());
+        const keyData = keyMap.find(k => k.bn === event.key || (k.bnShift === event.key && event.shiftKey));
+        
+        const keyIsCorrect = event.key === currentStep.display;
         const shiftIsCorrect = (event.shiftKey === currentStep.shift);
 
+        console.log(`Comparison: keyIsCorrect=${keyIsCorrect}, shiftIsCorrect=${shiftIsCorrect}`);
+
         if (keyIsCorrect && shiftIsCorrect) {
+            console.log("Correct key press!");
             setDrillState(prev => {
                 const isLastStepInDrill = prev.currentStepIndex >= currentDrill.steps.length - 1;
                 
@@ -103,6 +116,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 }
             });
         } else {
+            console.log("Incorrect key press!");
             setDrillState(prev => ({ ...prev, status: 'incorrect' }));
             statusTimeoutRef.current = setTimeout(() => {
                 setDrillState(prev => ({ ...prev, status: 'pending' }));
@@ -172,7 +186,22 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     }
 
     const getVisibleDrills = () => {
-        return drills.slice(currentDrillIndex, currentDrillIndex + 10);
+        const visible = [];
+        let count = 0;
+        let drillIdx = currentDrillIndex;
+        while(count < 10 && drillIdx < drills.length) {
+            if (visible.length > 0 && visible.length % 4 === 0) {
+                 visible.push({
+                    prompt: ' ',
+                    steps: [{ key: ' ', shift: false, display: ' ' }],
+                    isSpace: true,
+                });
+            }
+            visible.push(drills[drillIdx]);
+            drillIdx++;
+            count++;
+        }
+        return visible;
     }
 
     return (
@@ -182,7 +211,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     {/* Prompt Display */}
                     <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px] flex-wrap">
                         {getVisibleDrills().map((drillData, index) => {
-                            const isCurrent = index === 0;
+                            const isCurrent = index === (getVisibleDrills().findIndex(d => d.prompt === drills[currentDrillIndex].prompt));
+
                              if(drillData.prompt === ' '){
                                 return (
                                     <div key={`space-${index}-${currentDrillIndex}`} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2 border-dashed", isCurrent && "ring-2 ring-primary")}>
@@ -240,7 +270,7 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
     ],
     bottom: [
         {key: 'z', bn: '্র', bnShift: '্য'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: '<'}, {key: '.', bn: '.', bnShift: '।'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: '<'}, {key: '.', bn: '।', bnShift: '.'},
         {key: '/', bn: 'র', bnShift: 'ড়'}
     ],
     space: [{key: ' ', bn: ''}],
@@ -569,6 +599,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
