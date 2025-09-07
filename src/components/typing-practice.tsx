@@ -7,15 +7,17 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTimer } from "@/hooks/use-timer";
-import { Zap, Target, Timer, XCircle, Pause, Play, Home, CheckCircle, ArrowRight } from "lucide-react";
+import { Zap, Target, Timer, XCircle, Pause, Play, Home, CheckCircle, ArrowRight, BrainCircuit, BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TestResults from "./test-results";
-import { lessons, practiceParagraphs } from "@/lib/lessons";
+import { lessons, practiceParagraphs, generateDrills as generateDrillsFromLib } from "@/lib/lessons";
 import { Input } from "./ui/input";
 import { useRouter } from 'next/navigation';
-import type { Drill, Lesson, SingleDrill } from "@/lib/types";
+import type { Drill, Lesson, SingleDrill, ErredCharacter } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+
 
 interface TypingPracticeProps {
   textToType: string;
@@ -37,35 +39,123 @@ const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType, va
   </div>
 );
 
-export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lessonId?: string }) => {
+const DrillProgress = ({ wpmHistory, timeLeft }: { wpmHistory: { time: number, wpm: number }[], timeLeft: number }) => (
+    <Card className="h-full">
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+                <BarChart2 className="h-5 w-5" />
+                আপনার প্রগতি
+            </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <div className="text-center">
+                <p className="text-sm text-muted-foreground">সময় বাকি</p>
+                <p className="text-4xl font-bold font-mono">{new Date(timeLeft * 1000).toISOString().substr(14, 5)}</p>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={wpmHistory} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="time" unit="s" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis domain={[0, 60]} allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip
+                        contentStyle={{
+                            background: "hsl(var(--background))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "var(--radius)",
+                        }}
+                        labelFormatter={(label) => `${label} সেকেন্ডে`}
+                    />
+                    <Bar dataKey="wpm" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="গতি (WPM)">
+                         <LabelList dataKey="wpm" position="top" fontSize={12} />
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
+        </CardContent>
+    </Card>
+);
+
+export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
+    const [drills, setDrills] = useState<Drill[]>(initialDrills);
     const [drillState, setDrillState] = useState({
         currentDrillIndex: 0,
         currentStepIndex: 0,
         status: 'pending' as 'pending' | 'correct' | 'incorrect',
+        erredCharacters: new Map<string, number>(),
     });
+    
+    const [isFinished, setIsFinished] = useState(false);
+    const [wpm, setWpm] = useState(0);
+    const [accuracy, setAccuracy] = useState(100);
+    const [totalCharsTyped, setTotalCharsTyped] = useState(0);
+    const [totalErrors, setTotalErrors] = useState(0);
+    const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
+    
+    const maxTime = 360; // 6 minutes
+    const { time, isActive, start, pause, resume } = useTimer();
+    const timeLeft = maxTime - time;
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const nextLessonButtonRef = useRef<HTMLButtonElement | null>(null);
     const restartButtonRef = useRef<HTMLButtonElement | null>(null);
 
-    const { currentDrillIndex, currentStepIndex, status } = drillState;
+    const { currentDrillIndex, currentStepIndex, status, erredCharacters } = drillState;
     
-    const isCompleted = currentDrillIndex >= drills.length;
-    const totalDrills = drills.length;
-    const progress = totalDrills > 0 ? (currentDrillIndex / totalDrills) * 100 : 0;
-    const currentDrill = !isCompleted ? drills[currentDrillIndex] : null;
+    const isSessionOver = currentDrillIndex >= drills.length;
+    const currentDrill = !isSessionOver ? drills[currentDrillIndex] : null;
     const currentDrillStep = currentDrill?.steps[currentStepIndex];
 
+    const finishDrill = useCallback(() => {
+        if(isFinished) return;
+        pause();
+        if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+        setIsFinished(true);
+
+        const correctChars = totalCharsTyped - totalErrors;
+        const finalAccuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 100;
+        setAccuracy(Math.round(finalAccuracy));
+
+        const finalWpm = time > 0 ? ((totalCharsTyped / 5) / (time / 60)) : 0;
+        setWpm(Math.round(finalWpm));
+
+    }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
+    
+    useEffect(() => {
+        start();
+        wpmIntervalRef.current = setInterval(() => {
+            const currentWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
+            const correctChars = totalCharsTyped - totalErrors;
+            const currentAccuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 100;
+            
+            setWpmHistory(prev => [...prev, { time, wpm: currentWpm }]);
+
+            if (time >= 240 && currentWpm >= 25 && currentAccuracy >= accuracyGoal) {
+                finishDrill();
+            }
+
+            if (time >= maxTime) {
+                finishDrill();
+            }
+
+        }, 30000); // Update every 30 seconds
+
+        return () => {
+            if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+        }
+
+    }, [start, time, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
+
+
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        if (isCompleted || !currentDrill || !currentDrillStep) return;
+        if (isSessionOver || !currentDrill || !currentDrillStep || isFinished) return;
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
         if (modifierKeys.includes(event.key)) return;
         
         if (event.key === 'Enter') {
-           if(isCompleted) {
-                if (nextLesson && nextLessonButtonRef.current) {
+           if(isSessionOver) {
+                if (nextLessonButtonRef.current) {
                     nextLessonButtonRef.current.click();
                 } else if(restartButtonRef.current) {
                     restartButtonRef.current.click();
@@ -83,25 +173,33 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
         const { key: expectedKey, shift: expectedShift } = currentDrillStep;
 
-        // Handle spacebar separately and more robustly
+        const handleIncorrect = () => {
+            setTotalErrors(prev => prev + 1);
+            const newErredChars = new Map(erredCharacters);
+            const char = currentDrill.prompt;
+            newErredChars.set(char, (newErredChars.get(char) || 0) + 1);
+            setDrillState(prev => ({ ...prev, status: 'incorrect', erredCharacters: newErredChars }));
+            statusTimeoutRef.current = setTimeout(() => {
+                setDrillState(prev => ({ ...prev, status: 'pending' }));
+            }, 500);
+        };
+        
+        // Handle spacebar separately
         if (expectedKey === ' ') {
             if (event.code === 'Space') {
-                 setDrillState(prev => {
-                    return {
-                        currentDrillIndex: prev.currentDrillIndex + 1,
-                        currentStepIndex: 0,
-                        status: 'correct',
-                    };
-                });
+                setDrillState(prev => ({
+                    ...prev,
+                    currentDrillIndex: prev.currentDrillIndex + 1,
+                    status: 'correct',
+                }));
+                 setTotalCharsTyped(prev => prev + 1);
             } else {
-                setDrillState(prev => ({ ...prev, status: 'incorrect' }));
-                statusTimeoutRef.current = setTimeout(() => {
-                    setDrillState(prev => ({ ...prev, status: 'pending' }));
-                }, 500);
+                handleIncorrect();
             }
             return;
         }
 
+        // Handle other keys
         let expectedCode = '';
         if (/[a-zA-Z]/.test(expectedKey)) {
           expectedCode = `Key${expectedKey.toUpperCase()}`;
@@ -121,16 +219,23 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 default: expectedCode = expectedKey;
             }
         }
-
+       
         const isCorrect = event.code === expectedCode && event.shiftKey === expectedShift;
         
         if (isCorrect) {
+            setTotalCharsTyped(prev => prev + 1);
             setDrillState(prev => {
                 const isLastStepInDrill = prev.currentStepIndex >= (drills[prev.currentDrillIndex].steps.length - 1);
                 
                 if (isLastStepInDrill) {
+                    const nextDrillIndex = prev.currentDrillIndex + 1;
+                    if (nextDrillIndex >= drills.length) {
+                       // Loop drills
+                       setDrills([...drills, ...initialDrills]);
+                    }
                     return {
-                        currentDrillIndex: prev.currentDrillIndex + 1,
+                        ...prev,
+                        currentDrillIndex: nextDrillIndex,
                         currentStepIndex: 0,
                         status: 'correct',
                     };
@@ -143,12 +248,9 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 }
             });
         } else {
-            setDrillState(prev => ({ ...prev, status: 'incorrect' }));
-            statusTimeoutRef.current = setTimeout(() => {
-                setDrillState(prev => ({ ...prev, status: 'pending' }));
-            }, 500);
+            handleIncorrect();
         }
-    }, [isCompleted, drills, drillState, currentDrill, currentDrillStep]);
+    }, [isSessionOver, isFinished, drills, initialDrills, drillState, currentDrill, currentDrillStep, erredCharacters]);
 
 
     useEffect(() => {
@@ -166,7 +268,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         const currentLessonIndexInAllLessons = lessons.findIndex(l => l.id === lessonId);
         if (currentLessonIndexInAllLessons !== -1 && currentLessonIndexInAllLessons < lessons.length - 1) {
             const currentLesson = lessons[currentLessonIndexInAllLessons];
-            // Find the next lesson in the same row
             let foundNextInRow = false;
             for(let i = currentLessonIndexInAllLessons + 1; i < lessons.length; i++) {
                 if(lessons[i].row === currentLesson.row) {
@@ -182,66 +283,72 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     }
     
     const resetDrill = useCallback(() => {
+        setDrills(initialDrills);
         setDrillState({
             currentDrillIndex: 0,
             currentStepIndex: 0,
             status: 'pending',
+            erredCharacters: new Map()
         });
-    }, []);
+        setIsFinished(false);
+        setWpm(0);
+        setAccuracy(100);
+        setTotalCharsTyped(0);
+        setTotalErrors(0);
+        setWpmHistory([]);
+        start(); // Restart the timer
+    }, [initialDrills, start]);
+
+    const startCustomDrill = () => {
+        const erredChars = Array.from(erredCharacters.keys());
+        if (erredChars.length > 0) {
+            const customDrills = generateDrillsFromLib(erredChars, 150);
+            setDrills(customDrills);
+            resetDrill();
+        }
+    };
 
 
-    if (isCompleted) {
-        return (
-            <Card className="text-center p-8 max-w-lg mx-auto">
-                <CardHeader>
-                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                    <CardTitle className="text-2xl">অনুশীলন সম্পন্ন!</CardTitle>
-                    <CardDescription>খুব ভালো করেছেন!</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                    <Button ref={restartButtonRef} onClick={resetDrill}>আবার চেষ্টা করুন</Button>
-                    {nextLesson && (
-                        <Button ref={nextLessonButtonRef} onClick={() => router.push(`/practice/${nextLesson?.id}`)}>
-                            পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                    )}
-                    <Button onClick={() => router.push('/dashboard/lessons')} variant="outline">পাঠক্রমে ফিরে যান</Button>
-                </CardContent>
-            </Card>
-        )
+    if (isFinished) {
+        const erredCharsArray: ErredCharacter[] = Array.from(erredCharacters.entries())
+            .map(([char, count]) => ({ char, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        return <TestResults 
+                    stats={{ wpm, accuracy, errors: totalErrors, timeElapsed: time, erredCharacters: erredCharsArray }} 
+                    onRestart={resetDrill} 
+                    lessonId={lessonId}
+                    isDrill={true}
+                    customDrill={startCustomDrill}
+                />;
     }
 
     const getVisibleDrills = () => {
         const visible: Drill[] = [];
-        let count = 0;
-        let drillIdx = currentDrillIndex;
         const startIndex = Math.floor(currentDrillIndex / 10) * 10;
-
-
         for(let i = startIndex; i < startIndex + 10 && i < drills.length; i++) {
             visible.push(drills[i]);
         }
-
         return visible;
     };
-
 
     const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, isCompleted: boolean, key: string | number) => {
         let boxClass = "bg-secondary";
         if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
-        if (isCompleted) boxClass = "bg-green-100/80 border-green-500";
+        if (isCompleted) boxClass = "bg-green-100/80 text-green-600";
         
         if(drillData.prompt === ' '){
             return (
                 <div key={key} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2", boxClass, isCurrent && "ring-2 ring-primary" )}>
-                     {isCompleted ? <CheckCircle className="h-6 w-6 text-green-600" /> : <span className="text-muted-foreground italic">স্পেস</span>}
+                     {isCompleted ? <CheckCircle className="h-6 w-6" /> : <span className="text-muted-foreground italic">স্পেস</span>}
                 </div>
             )
         }
         
         return (
             <div key={key} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-               {isCompleted ? <CheckCircle className="h-6 w-6 text-green-600" /> : drillData.prompt}
+               {isCompleted ? <CheckCircle className="h-6 w-6" /> : drillData.prompt}
             </div>
         )
     }
@@ -250,14 +357,14 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const promptsWithSpacers: (Drill | {isSpacer: true})[] = [];
     visibleDrills.forEach((drill, index) => {
         promptsWithSpacers.push(drill);
-         const originalIndex = drills.indexOf(drill);
+        const originalIndex = drills.indexOf(drill);
         if (drill.prompt === ' ' && (originalIndex + 1) % 5 === 0 && index < visibleDrills.length - 1) {
            promptsWithSpacers.push({ isSpacer: true });
         }
     });
 
     return (
-        <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-5xl mx-auto">
+        <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-2/3 space-y-4">
                     {/* Prompt Display */}
@@ -269,7 +376,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                             const originalIndex = drills.indexOf(item);
                             const isCurrent = currentDrillIndex === originalIndex;
                             const isCompleted = originalIndex < currentDrillIndex;
-                            return renderDrillPrompt(item, isCurrent, isCompleted, `${item.prompt}-${index}`);
+                            return renderDrillPrompt(item, isCurrent, isCompleted, `${item.prompt}-${originalIndex}`);
                         })}
                     </div>
                      
@@ -278,19 +385,9 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>অগ্রগতি</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="flex items-center gap-4">
-                                <div className="text-3xl font-bold text-primary">{toBengaliNumber(Math.round(progress))}%</div>
-                                <Progress value={progress} className="w-full" />
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <DrillProgress wpmHistory={wpmHistory} timeLeft={timeLeft} />
                      <div className="flex justify-end gap-2 mt-4">
-                        <Button variant="outline" onClick={() => router.push('/dashboard/lessons')}>বাতিল</Button>
+                        <Button onClick={() => router.push('/dashboard/lessons')} variant="destructive">অনুশীলন বাতিল করুন</Button>
                     </div>
                 </div>
             </div>
@@ -300,12 +397,15 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
 type KeyLayoutData = {
     key: string;
-    bn: string;
+    bn?: string;
     bnShift?: string;
     bnExtra?: string;
     bnShiftExtra?: string;
+    bnExtra2?: string;
+    bnShiftExtra2?: string;
     width?: string;
     align?: 'left' | 'right';
+    special?: 'shift';
 };
 
 const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
@@ -338,7 +438,7 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: "'", bn: "'", bnShift: '"'},
     ],
     bottom: [
-        {key: 'ShiftLeft', bn: 'Shift', width: 'w-28', align: 'left'},
+        {key: 'ShiftLeft', bn: 'Shift', width: 'w-24', align: 'left', special: 'shift'},
         {key: 'z', bn: '্য', bnShift: 'ং'},
         {key: 'x', bn: 'ত', bnShift: 'থ'},
         {key: 'c', bn: 'চ', bnShift: 'ছ'},
@@ -349,7 +449,7 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: ',', bn: ',', bnShift: '<'},
         {key: '.', bn: '।', bnShift: '>'},
         {key: '/', bn: '/', bnShift: '?'},
-        {key: 'ShiftRight', bn: 'Shift', width: 'flex-grow', align: 'right'},
+        {key: 'ShiftRight', bn: 'Shift', width: 'flex-grow', align: 'right', special: 'shift'},
     ],
     space: [
         {key: ' ', bn: 'Space', width: 'w-96'},
@@ -357,19 +457,19 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
 };
 
 const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighlighted: boolean, needsShift: boolean }) => {
-    const { key, bn, bnShift, bnExtra, bnShiftExtra, width, align } = data;
+    const { key, bn, bnShift, bnExtra, bnShiftExtra, bnExtra2, bnShiftExtra2, width, align, special } = data;
 
-    const isShiftKey = key.toLowerCase().includes('shift');
+    const isShiftKey = special === 'shift';
 
     const baseKeyClasses = cn(
         "relative flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind transition-colors",
         width || 'w-16',
-        (isHighlighted || (isShiftKey && needsShift)) && 'bg-primary/20 border-primary text-primary',
+        isShiftKey ? (needsShift && 'bg-primary/20 border-primary text-primary') : (isHighlighted && 'bg-primary/20 border-primary text-primary'),
         align === 'left' && 'mr-auto',
         align === 'right' && 'ml-auto',
     );
     
-    if (key.includes('Shift') || key === ' ' ) {
+    if (special === 'shift' || key === ' ') {
         return (
             <div className={baseKeyClasses}>
                 <span className="text-sm font-bold">{bn}</span>
@@ -377,16 +477,30 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
         )
     }
 
-    if (bnExtra || bnShiftExtra) {
+    const hasFourChars = bn && bnShift && bnExtra && bnShiftExtra;
+
+    if (hasFourChars) {
        return (
             <div className={cn(baseKeyClasses, "grid grid-cols-2 grid-rows-2 p-1 text-center")}>
-                 <span className="text-sm text-muted-foreground">{bnShiftExtra}</span>
-                 <span className="text-sm text-muted-foreground">{bnShift}</span>
-                 <span className="text-lg font-bold">{bnExtra}</span>
-                 <span className="text-lg font-bold">{bn}</span>
+                 <span className="text-sm text-muted-foreground self-start justify-self-start">{bnShiftExtra}</span>
+                 <span className="text-sm text-muted-foreground self-start justify-self-end">{bnExtra}</span>
+                 <span className="text-lg font-bold self-end justify-self-start">{bnShift}</span>
+                 <span className="text-lg font-bold self-end justify-self-end">{bn}</span>
             </div>
         )
     }
+    
+    const hasThreeChars = bn && bnShift && bnExtra;
+    if (hasThreeChars) {
+        return (
+             <div className={cn(baseKeyClasses, "grid grid-cols-2 grid-rows-2 p-1 text-center")}>
+                 <span className="text-sm text-muted-foreground col-span-2 justify-self-center self-start">{bnExtra}</span>
+                 <span className="text-lg font-bold self-end justify-self-start">{bnShift}</span>
+                 <span className="text-lg font-bold self-end justify-self-end">{bn}</span>
+            </div>
+         )
+    }
+
 
     return (
         <div className={baseKeyClasses}>
@@ -415,8 +529,8 @@ const SimplifiedKeyboard = ({ highlightKey, needsShift }: { highlightKey: string
                     if (highlightKey) {
                         if (highlightKey === ' ') {
                            isHighlighted = keyData.key === ' ';
-                        } else if (keyData.key.toLowerCase().includes('shift')) {
-                           isHighlighted = false; // shift state is handled separately by `needsShift`
+                        } else if (keyData.special === 'shift') {
+                           isHighlighted = false;
                         }
                         else {
                            isHighlighted = keyData.key.toLowerCase() === highlightKey.toLowerCase();
@@ -707,27 +821,5 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     </div>
   );
 }
-    
 
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

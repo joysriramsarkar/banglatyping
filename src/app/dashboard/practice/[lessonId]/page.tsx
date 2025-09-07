@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import TypingPractice, { VisualTypingDrill } from '@/components/typing-practice';
 import { lessons } from '@/lib/lessons';
 import { useEffect, useState } from 'react';
@@ -9,15 +9,20 @@ import type { Lesson } from '@/lib/types';
 
 export default function PracticePage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const { lessonId } = params;
     const [lesson, setLesson] = useState<Lesson | null>(null);
+    const [accuracyGoal, setAccuracyGoal] = useState<number | undefined>(undefined);
 
     useEffect(() => {
         if (lessonId) {
             const foundLesson = lessons.find(l => l.id === lessonId);
             setLesson(foundLesson || null);
         }
-    }, [lessonId]);
+        if (searchParams.has('accuracy')) {
+            setAccuracyGoal(parseInt(searchParams.get('accuracy') as string));
+        }
+    }, [lessonId, searchParams]);
 
     if (!lesson) {
         return (
@@ -35,7 +40,9 @@ export default function PracticePage() {
                 <p className="text-muted-foreground">{lesson.level} স্তরের পাঠ</p>
             </div>
             {lesson.text && <TypingPractice textToType={lesson.text} lessonId={lesson.id} />}
-            {lesson.drills && <VisualTypingDrill drills={lesson.drills} lessonId={lesson.id} />}
+            {lesson.drills && <VisualTypingDrill drills={lesson.drills} lessonId={lesson.id} accuracyGoal={accuracyGoal} />}
         </div>
     );
 }
+
+    

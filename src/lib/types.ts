@@ -1,4 +1,5 @@
 
+
 export type KeyboardLayout = "Avro Phonetic" | "Bijoy Classic" | "BanglaWord";
 
 export interface Lesson {
@@ -10,11 +11,17 @@ export interface Lesson {
   row?: 'home-row' | 'top-row' | 'bottom-row' | 'kar-row';
 }
 
+export interface ErredCharacter {
+    char: string;
+    count: number;
+}
+
 export interface TypingStats {
   wpm: number;
   accuracy: number;
   errors: number;
   timeElapsed: number;
+  erredCharacters?: ErredCharacter[];
 }
 
 export interface SingleDrill {
@@ -41,6 +48,7 @@ export interface TestSummary {
   timeElapsed: number;
   lessonId: string;
   timestamp: any; // Firestore ServerTimestamp
+  erredCharacters: ErredCharacter[];
 }
 
 export interface UserTypingStats {
@@ -50,3 +58,5 @@ export interface UserTypingStats {
   testsTaken: number;
   highestWpm: number;
 }
+
+    
