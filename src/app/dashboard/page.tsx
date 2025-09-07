@@ -69,6 +69,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchStats = async () => {
       if (user) {
+        setLoadingStats(true);
         try {
           const statsRef = collection(db, `users/${user.uid}/stats`);
           const q = query(statsRef, orderBy("timestamp", "desc"), limit(50));
@@ -86,21 +87,25 @@ export default function DashboardPage() {
             const lessonIds = new Set(tests.map(t => t.lessonId).filter(Boolean));
 
             const newStats: UserTypingStats = {
-              averageWpm: Math.round(totalWpm / tests.length),
-              averageAccuracy: Math.round(totalAccuracy / tests.length),
-              lessonsCompleted: lessonIds.size,
-              testsTaken: tests.length,
-              highestWpm: Math.max(...tests.map(t => t.wpm)),
+              averageWpm: Math.round(totalWpm / tests.length) || 0,
+              averageAccuracy: Math.round(totalAccuracy / tests.length) || 0,
+              lessonsCompleted: lessonIds.size || 0,
+              testsTaken: tests.length || 0,
+              highestWpm: Math.max(...tests.map(t => t.wpm)) || 0,
             };
             setStats(newStats);
+          } else {
+            setStats(null); // No stats found
           }
         } catch (error) {
           console.error("Error fetching stats:", error);
+          setStats(null);
         } finally {
           setLoadingStats(false);
         }
       } else {
         setLoadingStats(false);
+        setStats(null);
       }
     };
 
@@ -133,7 +138,7 @@ export default function DashboardPage() {
               <p className="text-lg font-semibold">হোম রো বেসিক</p>
               <p className="text-sm text-muted-foreground">শিক্ষানবিশ স্তরের পাঠ</p>
               <Button asChild>
-                <Link href="/dashboard/practice/home-row-1-1-left-hand-chars">অনুশীলন শুরু করুন <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/dashboard/lessons/home-row">অনুশীলন শুরু করুন <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
           </CardContent>

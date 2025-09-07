@@ -132,11 +132,11 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     }, [start, time, totalCharsTyped]);
 
     useEffect(() => {
-        start();
+        startDrill();
         return () => {
             if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
         }
-    }, [start]);
+    }, [startDrill]);
 
 
     useEffect(() => {
@@ -240,28 +240,28 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                 const isLastStepInDrill = prev.currentStepIndex >= (drills[prev.currentDrillIndex].steps.length - 1);
                 
                 if (isLastStepInDrill) {
-                    const nextDrillIndex = prev.currentDrillIndex + 1;
+                    let nextDrillIndex = prev.currentDrillIndex + 1;
                     if (nextDrillIndex >= drills.length) {
-                       setDrills(currentDrills => [...currentDrills, ...generateDrillsFromLib(initialDrills.map(d => d.prompt).filter(p => p !== ' '), 100)]);
+                       nextDrillIndex = 0; // Loop back to the beginning
                     }
                     return {
                         ...prev,
                         currentDrillIndex: nextDrillIndex,
                         currentStepIndex: 0,
-                        status: 'correct',
+                        status: 'pending',
                     };
                 } else {
                     return {
                         ...prev,
                         currentStepIndex: prev.currentStepIndex + 1,
-                        status: 'correct',
+                        status: 'pending',
                     };
                 }
             });
         } else {
             handleIncorrect();
         }
-    }, [isSessionOver, isFinished, drills, initialDrills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, start, resetInactivityTimer]);
+    }, [isSessionOver, isFinished, drills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, start, resetInactivityTimer]);
 
 
     useEffect(() => {
@@ -329,7 +329,6 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, isCompleted: boolean, key: string | number) => {
         let boxClass = "bg-secondary";
         if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
-        if (isCompleted) boxClass = "bg-secondary text-secondary-foreground";
         
         if(drillData.prompt === ' '){
             return (
@@ -814,4 +813,5 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 }
 
     
+
 
