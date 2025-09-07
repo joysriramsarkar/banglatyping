@@ -1,3 +1,4 @@
+
 import {
   Accordion,
   AccordionContent,
@@ -43,7 +44,7 @@ const LessonListItem = ({ lesson }: { lesson: any }) => (
         </div>
         </div>
         <Button asChild>
-        <Link href={`/practice/${lesson.id}`}>
+        <Link href={`/dashboard/practice/${lesson.id}`}>
             শুরু করুন
         </Link>
         </Button>

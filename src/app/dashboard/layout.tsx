@@ -106,7 +106,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/dashboard", icon: Home, label: "ড্যাশবোর্ড" },
     { href: "/dashboard/lessons", icon: BookOpen, label: "পাঠ" },
-    { href: "/test", icon: Timer, label: "টাইপিং টেস্ট" },
+    { href: "/dashboard/test", icon: Timer, label: "টাইপিং টেস্ট" },
     { href: "/game", icon: Gamepad2, label: "টাইপিং গেম" },
     { href: "/dashboard/profile", icon: User, label: "প্রোফাইল" },
   ]
@@ -124,7 +124,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       href={item.href}
-                      isActive={pathname === item.href}
+                      isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
                       asChild
                     >
                       <a href={item.href}>

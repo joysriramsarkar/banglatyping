@@ -17,7 +17,7 @@ const LessonListItem = ({ lesson }: { lesson: Lesson }) => (
             </div>
         </div>
         <Button asChild>
-            <Link href={`/practice/${lesson.id}`}>
+            <Link href={`/dashboard/practice/${lesson.id}`}>
                 শুরু করুন
             </Link>
         </Button>

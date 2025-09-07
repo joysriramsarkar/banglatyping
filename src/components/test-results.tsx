@@ -82,7 +82,7 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
     };
 
     saveResults();
-  }, [user, wpm, accuracy, errors, timeElapsed, lessonId, toast]);
+  }, [user, wpm, accuracy, errors, timeElapsed, lessonId, toast, isSaving]);
 
 
   useEffect(() => {
@@ -155,7 +155,7 @@ export default function TestResults({ stats, onRestart, lessonId }: { stats: Typ
               পাঠক্রমে ফিরে যান
             </Button>
             {nextLesson && (
-                 <Button ref={nextLessonButtonRef} onClick={() => router.push(`/practice/${nextLesson?.id}`)} className="w-full">
+                 <Button ref={nextLessonButtonRef} onClick={() => router.push(`/dashboard/practice/${nextLesson?.id}`)} className="w-full">
                     পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
             )}

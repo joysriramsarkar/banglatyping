@@ -85,7 +85,7 @@ export default function DashboardPage() {
             const totalAccuracy = tests.reduce((acc, t) => acc + t.accuracy, 0);
             const lessonIds = new Set(tests.map(t => t.lessonId).filter(Boolean));
 
-            const newStats: UserTyping_stats = {
+            const newStats: UserTypingStats = {
               averageWpm: Math.round(totalWpm / tests.length),
               averageAccuracy: Math.round(totalAccuracy / tests.length),
               lessonsCompleted: lessonIds.size,
@@ -133,7 +133,7 @@ export default function DashboardPage() {
               <p className="text-lg font-semibold">হোম রো বেসিক</p>
               <p className="text-sm text-muted-foreground">শিক্ষানবিশ স্তরের পাঠ</p>
               <Button asChild>
-                <Link href="/practice/home-row-1-1-left-hand-chars">অনুশীলন শুরু করুন <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/dashboard/practice/home-row-1-1-left-hand-chars">অনুশীলন শুরু করুন <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
           </CardContent>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
                     <ul className="space-y-2 pl-4">
                       {levelData.lessons.map(lesson => (
                         <li key={lesson} className="text-sm text-muted-foreground hover:text-foreground">
-                           <Link href={`/practice/${lesson.replace(/\s+/g, '-').toLowerCase()}`}>{lesson}</Link>
+                           <Link href={`/dashboard/practice/${lesson.replace(/\s+/g, '-').toLowerCase()}`}>{lesson}</Link>
                         </li>
                       ))}
                     </ul>
