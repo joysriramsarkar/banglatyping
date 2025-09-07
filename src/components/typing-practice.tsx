@@ -92,7 +92,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
     
     const maxTime = 360; // 6 minutes
-    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer } = useTimer();
+    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer, setTime } = useTimer();
     const timeLeft = maxTime - time;
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -120,20 +120,17 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         setWpm(Math.round(finalWpm));
     }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
     
-    const startDrill = useCallback(() => {
+     const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-            setWpmHistory(prevHistory => {
-                const newTime = prevHistory.length > 0 ? prevHistory[prevHistory.length - 1].time + 30 : 30;
-                 // We need to read the latest state from inside the interval
-                setTime(currentTime => {
-                    setTotalCharsTyped(currentTotalChars => {
-                        const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
-                        return [...prevHistory, { time: newTime, wpm: currentWpm }];
-                    });
-                    return currentTime;
+            // We need to read the latest state from inside the interval
+            setTime(currentTime => {
+                setTotalCharsTyped(currentTotalChars => {
+                    const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
+                    setWpmHistory(prev => [...prev, { time: currentTime, wpm: currentWpm }]);
+                    return currentTotalChars;
                 });
-                return prevHistory;
+                return currentTime;
             });
         }, 30000);
     }, [start, setTime]);
@@ -142,6 +139,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         startDrill();
         return () => {
             if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         }
     }, [startDrill]);
 
@@ -175,8 +173,11 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
         if (isFinished) return;
         
-        if (!isActive) start();
-        if (isPaused) resume();
+        if (!isActive) {
+            start();
+        } else if (isPaused) {
+            resume();
+        }
         
         resetInactivityTimer();
 
@@ -190,27 +191,35 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
            return;
         }
 
-        if (!currentDrill || !currentDrillStep) return;
-
         event.preventDefault();
 
         if (statusTimeoutRef.current) {
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
-
-        const { key: expectedKey, shift: expectedShift } = currentDrillStep;
-
+        
         const handleIncorrect = () => {
             setTotalErrors(prev => prev + 1);
-            const newErredChars = new Map(erredCharacters);
-            const char = currentDrill.prompt;
-            newErredChars.set(char, (newErredChars.get(char) || 0) + 1);
-            setDrillState(prev => ({ ...prev, status: 'incorrect', erredCharacters: newErredChars }));
+            if(currentDrill) {
+                const newErredChars = new Map(erredCharacters);
+                const char = currentDrill.prompt;
+                newErredChars.set(char, (newErredChars.get(char) || 0) + 1);
+                setDrillState(prev => ({ ...prev, status: 'incorrect', erredCharacters: newErredChars }));
+            } else {
+                 setDrillState(prev => ({ ...prev, status: 'incorrect' }));
+            }
+           
             statusTimeoutRef.current = setTimeout(() => {
                 setDrillState(prev => ({ ...prev, status: 'pending' }));
             }, 500);
         };
+        
+        if (!currentDrill || !currentDrillStep) {
+            handleIncorrect();
+            return;
+        }
+
+        const { key: expectedKey, shift: expectedShift } = currentDrillStep;
         
         let isCorrect = false;
 
@@ -276,12 +285,12 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         return () => {
             window.removeEventListener('keydown', handleKeyPress);
             if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
-            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         };
     }, [handleKeyPress]);
 
     
     const resetDrill = useCallback(() => {
+        resetTimer();
         setDrills(initialDrills);
         setDrillState({
             currentDrillIndex: 0,
@@ -295,9 +304,8 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         setTotalCharsTyped(0);
         setTotalErrors(0);
         setWpmHistory([]);
-        resetTimer();
-        start();
-    }, [initialDrills, resetTimer, start]);
+        startDrill();
+    }, [initialDrills, resetTimer, startDrill]);
 
     const startCustomDrill = () => {
         const erredChars = Array.from(erredCharacters.keys());
@@ -820,6 +828,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 }
 
     
+
 
 
 
