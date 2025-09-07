@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -93,7 +92,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
     
     const maxTime = 360; // 6 minutes
-    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer, setTime } = useTimer();
+    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer } = useTimer();
     const timeLeft = maxTime - time;
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -106,7 +105,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const currentDrill = !isSessionOver ? drills[currentDrillIndex] : null;
     const currentDrillStep = currentDrill?.steps[currentStepIndex];
 
-    const finishDrill = useCallback(() => {
+     const finishDrill = useCallback(() => {
         if (isFinished) return;
         pause();
         if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
@@ -124,16 +123,13 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
      const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-            setTime(currentTime => {
-                setTotalCharsTyped(currentTotalChars => {
-                    const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
-                    setWpmHistory(prev => [...prev, { time: currentTime, wpm: currentWpm }]);
-                    return currentTotalChars;
-                });
-                return currentTime;
+            setTotalCharsTyped(currentTotalChars => {
+                const currentWpm = time > 0 ? Math.round(((currentTotalChars / 5) / (time / 60))) : 0;
+                setWpmHistory(prev => [...prev, { time, wpm: currentWpm }]);
+                return currentTotalChars;
             });
         }, 30000);
-    }, [start, setTime]);
+    }, [start, time]);
 
     useEffect(() => {
         startDrill();
@@ -558,6 +554,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const [typedWords, setTypedWords] = useState<string[]>([]);
   
   const [totalErrors, setTotalErrors] = useState(0);
+  const [totalChars, setTotalChars] = useState(0);
+  const [correctChars, setCorrectChars] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(100);
   const [isFinished, setIsFinished] = useState(false);
@@ -578,16 +576,12 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
   const calculateStats = useCallback(() => {
     if (time > 0) {
-      const typedCharsCount = typedWords.join(' ').length;
-      const grossWpm = (typedCharsCount / 5) / (time / 60);
+      const grossWpm = (totalChars / 5) / (time / 60);
       setWpm(Math.round(grossWpm > 0 ? grossWpm : 0));
     }
-    
-    const correctWords = typedWords.filter((word, index) => word.normalize('NFC') === words[index]?.normalize('NFC'));
-    const newAccuracy = typedWords.length > 0 ? (correctWords.length / typedWords.length) * 100 : 100;
+    const newAccuracy = totalChars > 0 ? (correctChars / totalChars) * 100 : 100;
     setAccuracy(Math.round(newAccuracy > 0 ? newAccuracy : 0));
-
-  }, [time, typedWords, words]);
+  }, [time, totalChars, correctChars]);
   
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
@@ -608,6 +602,8 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     setWpm(0);
     setAccuracy(100);
     setTotalErrors(0);
+    setTotalChars(0);
+    setCorrectChars(0);
     setIsFinished(false);
     if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
@@ -646,15 +642,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
     resetInactivityTimer();
     
-    if (currentWordIndex === words.length - 1 && value.normalize('NFC') === words[currentWordIndex].normalize('NFC')) {
-      const newTypedWords = [...typedWords, value.trim()];
-      setTypedWords(newTypedWords);
-      setCurrentInput(value);
-      setTimeout(() => finishSession(), 50);
-      return;
-    }
-
-
     if (value.endsWith(' ')) {
         if(currentInput.trim() === '') {
             setCurrentInput('');
@@ -664,9 +651,15 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         const typedWord = currentInput.trim().normalize('NFC');
         const newTypedWords = [...typedWords, typedWord];
         setTypedWords(newTypedWords);
+        
+        const expectedWord = words[currentWordIndex].normalize('NFC');
+        setTotalChars(prev => prev + expectedWord.length + 1); // +1 for space
 
-        if(typedWord !== words[currentWordIndex].normalize('NFC')) {
+        if(typedWord !== expectedWord) {
             setTotalErrors(prev => prev + 1);
+            setCorrectChars(prev => prev); // No change
+        } else {
+            setCorrectChars(prev => prev + expectedWord.length + 1);
         }
 
         setCurrentWordIndex(prev => prev + 1);
@@ -686,7 +679,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   }, []);
 
   useEffect(() => {
-    const isTestFinished = currentWordIndex === words.length && words.length > 0 && !timeLimit;
+    const isTestFinished = currentWordIndex === words.length && words.length > 0;
     if (isActive && !isPaused) {
       calculateStats();
       
@@ -826,10 +819,3 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     </div>
   );
 }
-
-    
-
-
-
-
-

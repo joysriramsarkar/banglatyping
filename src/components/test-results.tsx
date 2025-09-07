@@ -45,7 +45,7 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
   const { toast } = useToast();
   const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
   const restartButtonRef = useRef<HTMLButtonElement>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const hasSavedResult = useRef(false);
 
   const canGetCertificate = wpm >= 40 && accuracy >= 95 && !isDrill;
   
@@ -59,8 +59,8 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
 
   useEffect(() => {
     const saveResults = async () => {
-      if (user && !isSaving && !isDrill) {
-        setIsSaving(true);
+      if (user && !isDrill && !hasSavedResult.current) {
+        hasSavedResult.current = true;
         try {
           const statsCollectionRef = collection(db, `users/${user.uid}/stats`);
           const resultData: TestSummary = {
@@ -77,14 +77,13 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
         } catch (error) {
           console.error("Error saving results: ", error);
           toast({ variant: "destructive", title: "ত্রুটি", description: "ফলাফল সংরক্ষণ করা যায়নি।" });
-        } finally {
-          setIsSaving(false);
+          hasSavedResult.current = false;
         }
       }
     };
 
     saveResults();
-  }, [user, wpm, accuracy, errors, timeElapsed, lessonId, toast, isSaving, isDrill, erredCharacters]);
+  }, [user, wpm, accuracy, errors, timeElapsed, lessonId, toast, isDrill, erredCharacters]);
 
 
   useEffect(() => {
@@ -127,8 +126,8 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
           </div>
 
           <div className="space-y-2 text-base">
-            <StatItem icon={Target} label="সঠিক শব্দ" value={toBengaliNumber(Math.round(wpm * (timeElapsed/60) * (accuracy/100) ) )} />
-            <StatItem icon={XCircle} label="ভুল" value={toBengaliNumber(errors)} />
+            <StatItem icon={Target} label="সঠিক অক্ষর" value={toBengaliNumber(Math.round(wpm * 5 * (timeElapsed/60) * (accuracy/100) ) )} />
+            <StatItem icon={XCircle} label="ভুল শব্দ" value={toBengaliNumber(errors)} />
             <StatItem icon={TimerIcon} label="সময়" value={toBengaliNumber(timeElapsed)} unit="সেকেন্ড" />
           </div>
           
@@ -197,5 +196,3 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
     </Card>
   );
 }
-
-    
