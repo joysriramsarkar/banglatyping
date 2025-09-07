@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export const useTimer = (initialTime = 0) => {
   const [time, setTime] = useState(initialTime);
   const [isActive, setIsActive] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
   const countRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleStart = useCallback(() => {
@@ -17,28 +17,28 @@ export const useTimer = (initialTime = 0) => {
     }, 1000);
   }, []);
 
-  const handlePause = () => {
+  const handlePause = useCallback(() => {
     if (countRef.current) {
       clearInterval(countRef.current);
     }
     setIsPaused(true);
-  };
+  }, []);
 
-  const handleResume = () => {
+  const handleResume = useCallback(() => {
     setIsPaused(false);
     countRef.current = setInterval(() => {
       setTime((prevTime) => prevTime + 1);
     }, 1000);
-  };
+  }, []);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     if (countRef.current) {
       clearInterval(countRef.current);
     }
     setIsActive(false);
-    setIsPaused(false);
+    setIsPaused(true);
     setTime(0);
-  };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -56,8 +56,6 @@ export const useTimer = (initialTime = 0) => {
     pause: handlePause,
     resume: handleResume,
     reset: handleReset,
-    setTime, // Expose setTime for interval callback
+    setTime, 
   };
 };
-
-    

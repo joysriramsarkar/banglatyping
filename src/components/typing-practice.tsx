@@ -92,11 +92,12 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
     
     const maxTime = 360; // 6 minutes
-    const { time, isActive, start, pause, resume, reset: resetTimer, setTime } = useTimer();
+    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer, setTime } = useTimer();
     const timeLeft = maxTime - time;
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
     const nextLessonButtonRef = useRef<HTMLButtonElement | null>(null);
     const restartButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -110,6 +111,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         if(isFinished) return;
         pause();
         if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         setIsFinished(true);
 
         const correctChars = totalCharsTyped - totalErrors;
@@ -120,12 +122,9 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         setWpm(Math.round(finalWpm));
     }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
     
-    // Effect for starting the timer and the WPM calculation interval
     const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-             // This runs on an interval, not directly in the render, so it doesn't need to be a dependency
-             // It will get the latest `time` and `totalCharsTyped` from the closure
              setTime(currentTime => {
                  setTotalCharsTyped(currentTotalChars => {
                     const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
@@ -134,8 +133,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                  });
                  return currentTime;
              });
-        }, 30000); // Update every 30 seconds
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, 30000); 
     }, [start, setTime]);
 
     useEffect(() => {
@@ -146,7 +144,6 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     }, [startDrill]);
 
 
-    // Effect for checking win/loss conditions based on time
     useEffect(() => {
         if (!isActive || isFinished) return;
 
@@ -166,6 +163,13 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
 
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
         if (isSessionOver || !currentDrill || !currentDrillStep || isFinished) return;
+        
+        if (isPaused) resume();
+        
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = setTimeout(() => {
+            if(isActive && !isPaused) pause();
+        }, 4000);
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
         if (modifierKeys.includes(event.key)) return;
@@ -201,44 +205,34 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
             }, 500);
         };
         
-        // Handle spacebar separately
+        let isCorrect = false;
+
         if (expectedKey === ' ') {
             if (event.code === 'Space') {
-                setDrillState(prev => ({
-                    ...prev,
-                    currentDrillIndex: prev.currentDrillIndex + 1,
-                    status: 'correct',
-                }));
-                 setTotalCharsTyped(prev => prev + 1);
-            } else {
-                handleIncorrect();
+                isCorrect = true;
             }
-            return;
-        }
-
-        // Handle other keys
-        let expectedCode = '';
-        // This logic is complex because of different keyboard layouts and event.code values
-        if (expectedKey.match(/^[a-z]$/)) {
-          expectedCode = `Key${expectedKey.toUpperCase()}`;
-        } else if (expectedKey.match(/^[0-9]$/)) {
-             expectedCode = `Digit${expectedKey}`;
         } else {
-             switch(expectedKey) {
-                case '[': expectedCode = 'BracketLeft'; break;
-                case ']': expectedCode = 'BracketRight'; break;
-                case '\\': expectedCode = 'Backslash'; break;
-                case ';': expectedCode = 'Semicolon'; break;
-                case "'": expectedCode = 'Quote'; break;
-                case ',': expectedCode = 'Comma'; break;
-                case '.': expectedCode = 'Period'; break;
-                case '/': expectedCode = 'Slash'; break;
-                case '-': expectedCode = 'Minus'; break;
-                default: expectedCode = expectedKey; // Fallback for special keys
+             let expectedCode = '';
+             if (expectedKey.match(/^[a-z]$/)) {
+                expectedCode = `Key${expectedKey.toUpperCase()}`;
+             } else if (expectedKey.match(/^[0-9]$/)) {
+                 expectedCode = `Digit${expectedKey}`;
+             } else {
+                 switch(expectedKey) {
+                    case '[': expectedCode = 'BracketLeft'; break;
+                    case ']': expectedCode = 'BracketRight'; break;
+                    case '\\': expectedCode = 'Backslash'; break;
+                    case ';': expectedCode = 'Semicolon'; break;
+                    case "'": expectedCode = 'Quote'; break;
+                    case ',': expectedCode = 'Comma'; break;
+                    case '.': expectedCode = 'Period'; break;
+                    case '/': expectedCode = 'Slash'; break;
+                    case '-': expectedCode = 'Minus'; break;
+                    default: expectedCode = expectedKey;
+                }
             }
+             isCorrect = event.code === expectedCode && event.shiftKey === expectedShift;
         }
-       
-        const isCorrect = event.code === expectedCode && event.shiftKey === expectedShift;
         
         if (isCorrect) {
             setTotalCharsTyped(prev => prev + 1);
@@ -248,8 +242,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                 if (isLastStepInDrill) {
                     const nextDrillIndex = prev.currentDrillIndex + 1;
                     if (nextDrillIndex >= drills.length) {
-                       // Loop drills
-                       setDrills([...drills, ...initialDrills]);
+                       setDrills(currentDrills => [...currentDrills, ...initialDrills]);
                     }
                     return {
                         ...prev,
@@ -268,16 +261,15 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         } else {
             handleIncorrect();
         }
-    }, [isSessionOver, isFinished, drills, initialDrills, drillState, currentDrill, currentDrillStep, erredCharacters]);
+    }, [isSessionOver, isFinished, drills, initialDrills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume]);
 
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyPress);
         return () => {
             window.removeEventListener('keydown', handleKeyPress);
-            if (statusTimeoutRef.current) {
-                clearTimeout(statusTimeoutRef.current);
-            }
+            if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         };
     }, [handleKeyPress]);
 
@@ -315,8 +307,8 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         setTotalErrors(0);
         setWpmHistory([]);
         resetTimer();
-        start();
-    }, [initialDrills, resetTimer, start]);
+        startDrill();
+    }, [initialDrills, resetTimer, startDrill]);
 
     const startCustomDrill = () => {
         const erredChars = Array.from(erredCharacters.keys());
@@ -355,19 +347,19 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, isCompleted: boolean, key: string | number) => {
         let boxClass = "bg-secondary";
         if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
-        if (isCompleted) boxClass = "bg-green-100/80 text-green-600";
+        if (isCompleted) boxClass = "bg-secondary text-secondary";
         
         if(drillData.prompt === ' '){
             return (
                 <div key={key} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2", boxClass, isCurrent && "ring-2 ring-primary" )}>
-                     {isCompleted ? <CheckCircle className="h-6 w-6" /> : <span className="text-muted-foreground italic">স্পেস</span>}
+                     {isCompleted ? <CheckCircle className="h-6 w-6 text-muted-foreground" /> : <span className="text-muted-foreground italic">স্পেস</span>}
                 </div>
             )
         }
         
         return (
             <div key={key} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-               {isCompleted ? <CheckCircle className="h-6 w-6" /> : drillData.prompt}
+               {isCompleted ? <CheckCircle className="h-6 w-6 text-muted-foreground" /> : drillData.prompt}
             </div>
         )
     }
@@ -383,7 +375,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     });
 
     return (
-        <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-7xl mx-auto">
+        <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-full mx-auto">
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-2/3 space-y-4">
                     {/* Prompt Display */}

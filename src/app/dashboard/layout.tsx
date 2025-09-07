@@ -31,6 +31,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth"
 import AuthGuard from "@/components/auth-guard"
 import { Skeleton } from "@/components/ui/skeleton"
 import React, { Suspense } from "react"
+import { cn } from "@/lib/utils"
 
 function SidebarFooterContent() {
   const router = useRouter();
@@ -102,6 +103,8 @@ function PageSkeleton() {
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isProfilePage = pathname === '/dashboard/profile';
+  const isPracticePage = pathname.includes('/dashboard/practice');
+
 
   const navItems = [
     { href: "/dashboard", icon: Home, label: "ড্যাশবোর্ড" },
@@ -114,7 +117,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   return (
       <div className="flex min-h-screen w-full flex-col bg-muted/40">
         <SidebarProvider>
-          <Sidebar>
+          <Sidebar className={cn(isPracticePage && "md:hidden")}>
             <SidebarHeader>
               <Logo />
             </SidebarHeader>
@@ -141,13 +144,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </SidebarFooter>
           </Sidebar>
           <SidebarInset>
-            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+            <header className={cn("sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6", isPracticePage && "hidden md:flex")}>
                 <SidebarTrigger className="md:hidden"/>
                 <div>
                     {/* Potentially add breadcrumbs or page title here */}
                 </div>
             </header>
-            <main className="p-4 sm:px-6 sm:py-0">
+            <main className={cn("p-4 sm:px-6 sm:py-0", isPracticePage && "p-0 sm:p-0")}>
               <Suspense fallback={<PageSkeleton />}>
                 {isProfilePage ? <AuthGuard>{children}</AuthGuard> : children}
               </Suspense>
