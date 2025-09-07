@@ -96,10 +96,11 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             });
             return;
         }
-        
-        
+
         let expectedCode = '';
-        if (/[a-zA-Z]/.test(expectedKey)) {
+        if (expectedKey === ' ') {
+            expectedCode = 'Space';
+        } else if (/[a-zA-Z]/.test(expectedKey)) {
           expectedCode = `Key${expectedKey.toUpperCase()}`;
         } else {
             switch(expectedKey) {
@@ -118,12 +119,12 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         if (/[0-9]/.test(expectedKey)) {
              expectedCode = `Digit${expectedKey}`;
         }
-        
-        const isCorrect = event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift;
+
+        const isCorrect = event.code === expectedCode && event.shiftKey === expectedShift;
         
         if (isCorrect) {
             setDrillState(prev => {
-                const isLastStepInDrill = prev.currentStepIndex >= (currentDrill.steps.length - 1);
+                const isLastStepInDrill = prev.currentStepIndex >= (drills[prev.currentDrillIndex].steps.length - 1);
                 
                 if (isLastStepInDrill) {
                     return {
@@ -226,7 +227,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             count++;
         }
         return visible;
-    }
+    };
 
 
     const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, key: string | number) => {
@@ -273,7 +274,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     </div>
                      
                     {/* Virtual Keyboard */}
-                    <VirtualKeyboard highlightKey={currentDrillStep?.key} needsShift={!!currentDrillStep?.shift} />
+                    <SimplifiedKeyboard highlightKey={currentDrillStep?.key} needsShift={!!currentDrillStep?.shift} />
                     
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">
@@ -307,25 +308,9 @@ type KeyLayoutData = {
     align?: 'left' | 'right';
 };
 
-const keyboardLayout: Record<string, KeyLayoutData[]> = {
+
+const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
     top: [
-        {key: '`', bn: '~', bnShift: '`'},
-        {key: '1', bn: '!', bnShift: '১'},
-        {key: '2', bn: '@', bnShift: '২'},
-        {key: '3', bn: '#', bnShift: '৩'},
-        {key: '4', bn: '$', bnShift: '৪'},
-        {key: '5', bn: '%', bnShift: '৫'},
-        {key: '6', bn: '^', bnShift: '৬'},
-        {key: '7', bn: '৭', bnShift: '&'},
-        {key: '8', bn: '*', bnShift: '৮'},
-        {key: '9', bn: '(', bnShift: '৯'},
-        {key: '0', bn: ')', bnShift: '০'},
-        {key: '-', bn: '_', bnShift: '-'},
-        {key: '=', bn: '+', bnShift: '='},
-        {key: 'Backspace', bn: 'Backspace', width: 'flex-grow', align: 'right'},
-    ],
-    home: [
-        {key: 'Tab', bn: 'Tab', width: 'w-16', align: 'left'},
         {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'},
         {key: 'w', bn: 'ঙ', bnShift: 'ঃ'},
         {key: 'e', bn: 'ে', bnShift: 'ৈ', bnExtra: 'এ', bnShiftExtra: 'ঐ'},
@@ -340,8 +325,7 @@ const keyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: ']', bn: 'ব', bnShift: 'ভ'},
         {key: '\\', bn: 'ৃ', bnShift: 'ঞ', bnExtra: 'ঋ'},
     ],
-    middle: [
-        {key: 'CapsLock', bn: 'Caps Lock', width: 'w-20', align: 'left'},
+    home: [
         {key: 'a', bn: 'া', bnShift: 'অ', bnExtra: 'আ'},
         {key: 's', bn: 'স', bnShift: 'শ'},
         {key: 'd', bn: 'ড', bnShift: 'ঢ'},
@@ -351,9 +335,8 @@ const keyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: 'j', bn: 'জ', bnShift: 'ঝ'},
         {key: 'k', bn: 'ক', bnShift: 'খ'},
         {key: 'l', bn: 'ল', bnShift: 'ষ'},
-        {key: ';', bn: 'ে', bnShift: 'এ'},
-        {key: "'", bn: 'ো', bnShift: 'ও'},
-        {key: 'Enter', bn: 'Enter', width: 'flex-grow', align: 'right'},
+        {key: ';', bn: 'ে', bnShift: 'এ' },
+        {key: "'", bn: 'ো', bnShift: 'ও' },
     ],
     bottom: [
         {key: 'ShiftLeft', bn: 'Shift', width: 'w-28', align: 'left'},
@@ -370,26 +353,32 @@ const keyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: 'ShiftRight', bn: 'Shift', width: 'flex-grow', align: 'right'},
     ],
     space: [
-        {key: 'ControlLeft', bn: 'Ctrl', width: 'w-20', align: 'left'},
-        {key: 'AltLeft', bn: 'Alt', width: 'w-20', align: 'left'},
-        {key: ' ', bn: 'Space', width: 'w-96'},
-        {key: 'AltRight', bn: 'Alt', width: 'w-20', align: 'right'},
-        {key: 'ControlRight', bn: 'Ctrl', width: 'w-20', align: 'right'},
+        {key: ' ', bn: 'Space', width: 'w-full'},
     ]
 };
 
 const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighlighted: boolean, needsShift: boolean }) => {
     const { key, bn, bnShift, bnExtra, bnShiftExtra, width, align } = data;
 
+    const isShiftKey = key.toLowerCase().includes('shift');
+
     const baseKeyClasses = cn(
         "relative flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind transition-colors",
         width || 'w-16',
-        isHighlighted && 'bg-primary/20 border-primary text-primary',
+        (isHighlighted || (isShiftKey && needsShift)) && 'bg-primary/20 border-primary text-primary',
         align === 'left' && 'mr-auto',
         align === 'right' && 'ml-auto',
     );
     
     const hasMultipleChars = bnExtra || bnShiftExtra;
+
+    if (key.includes('Shift') || key.includes('Backspace') || key === 'Enter' || key === ' ' || key === 'Tab' || key === 'CapsLock' || key.includes('Control') || key.includes('Alt')) {
+        return (
+            <div className={baseKeyClasses}>
+                <span className="text-sm font-bold">{bn}</span>
+            </div>
+        )
+    }
 
     if (hasMultipleChars) {
         const bnExtraExists = !!bnExtra;
@@ -414,8 +403,8 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
              return (
                 <div className={baseKeyClasses}>
                     <div className="absolute top-0 left-0 w-full h-full grid grid-cols-2 grid-rows-2 text-xs p-1">
-                         <span className="col-span-1 flex items-center justify-center text-muted-foreground">{bnShiftExtra || bnExtra}</span>
-                         <span className="col-span-1 flex items-center justify-center text-muted-foreground">{bnShift}</span>
+                         <span className="col-span-1 flex items-center justify-center text-muted-foreground">{bnShiftExtra || bnShift}</span>
+                         <span className="col-span-1 flex items-center justify-center text-muted-foreground">{bnShiftExtra ? bnShift: bnExtra}</span>
                          <span className="col-span-2 flex items-center justify-center font-bold text-lg">{bn}</span>
                     </div>
                 </div>
@@ -442,18 +431,21 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
     );
 }
 
-
-const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | undefined, needsShift: boolean }) => (
+const SimplifiedKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | undefined, needsShift: boolean }) => (
     <div className="p-2 sm:p-4 bg-background rounded-lg shadow-inner space-y-1.5">
-        {Object.values(keyboardLayout).map((row, rowIndex) => (
+        {Object.values(simplifiedKeyboardLayout).map((row, rowIndex) => (
             <div key={rowIndex} className="flex justify-center gap-1.5">
                 {row.map(keyData => {
-                    const isHighlighted = highlightKey && highlightKey.toLowerCase() === keyData.key.toLowerCase();
+                    const isHighlighted = highlightKey && (
+                        keyData.key.toLowerCase() === highlightKey.toLowerCase() ||
+                        (highlightKey === 'Shift' && keyData.key.toLowerCase().includes('shift'))
+                    );
                     let finalNeedsShift = needsShift;
-                    if(isHighlighted && (keyData.key === 'ShiftLeft' || keyData.key === 'ShiftRight')) {
+
+                    if (isHighlighted && (keyData.key === 'ShiftLeft' || keyData.key === 'ShiftRight')) {
                        finalNeedsShift = true;
                     }
-
+                    
                     return <Key key={keyData.key} data={keyData} isHighlighted={isHighlighted} needsShift={finalNeedsShift} />;
                 })}
             </div>
@@ -736,6 +728,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
