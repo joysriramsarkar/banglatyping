@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const useTimer = (initialTime = 0) => {
   const [time, setTime] = useState(initialTime);
@@ -8,13 +9,13 @@ export const useTimer = (initialTime = 0) => {
   const [isPaused, setIsPaused] = useState(false);
   const countRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleStart = () => {
+  const handleStart = useCallback(() => {
     setIsActive(true);
     setIsPaused(false);
     countRef.current = setInterval(() => {
       setTime((prevTime) => prevTime + 1);
     }, 1000);
-  };
+  }, []);
 
   const handlePause = () => {
     if (countRef.current) {
