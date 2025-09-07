@@ -92,7 +92,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
     
     const maxTime = 360; // 6 minutes
-    const { time, isActive, start, pause, resume, reset: resetTimer } = useTimer();
+    const { time, isActive, start, pause, resume, reset: resetTimer, setTime } = useTimer();
     const timeLeft = maxTime - time;
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -121,7 +121,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
     
     // Effect for starting the timer and the WPM calculation interval
-    useEffect(() => {
+    const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
              // This runs on an interval, not directly in the render, so it doesn't need to be a dependency
@@ -135,12 +135,16 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                  return currentTime;
              });
         }, 30000); // Update every 30 seconds
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [start, setTime]);
 
+    useEffect(() => {
+        startDrill();
         return () => {
             if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [startDrill]);
+
 
     // Effect for checking win/loss conditions based on time
     useEffect(() => {
