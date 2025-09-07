@@ -3,42 +3,42 @@ import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
 
 export const keyMap: {key: string; bn: string; bnShift?: string; row: 'top'|'home'|'bottom'|'other'; hand: 'left'|'right'}[] = [
     // Top Row
-    {key: 'q', bn: 'ঙ', bnShift: 'ঃ', row: 'top', hand: 'left'}, 
+    {key: 'q', bn: 'ঙ', bnShift: 'ং', row: 'top', hand: 'left'}, 
     {key: 'w', bn: 'য', bnShift: 'য়', row: 'top', hand: 'left'}, 
     {key: 'e', bn: 'ড', bnShift: 'ঢ', row: 'top', hand: 'left'}, 
     {key: 'r', bn: 'প', bnShift: 'ড়', row: 'top', hand: 'left'}, 
     {key: 't', bn: 'ট', bnShift: 'ঠ', row: 'top', hand: 'left'}, 
     {key: 'y', bn: 'চ', bnShift: 'ছ', row: 'top', hand: 'right'}, 
-    {key: 'u', bn: 'হ', bnShift: 'ঞ', row: 'top', hand: 'right'}, 
-    {key: 'i', bn: 'গ', bnShift: 'ঘ', row: 'top', hand: 'right'}, 
-    {key: 'o', bn: 'দ', bnShift: 'ধ', row: 'top', hand: 'right'}, 
-    {key: 'p', bn: 'জ', bnShift: 'ঝ', row: 'top', hand: 'right'},
+    {key: 'u', bn: 'জ', bnShift: 'ঝ', row: 'top', hand: 'right'}, 
+    {key: 'i', bn: 'হ', bnShift: 'ঞ', row: 'top', hand: 'right'}, 
+    {key: 'o', bn: 'গ', bnShift: 'ঘ', row: 'top', hand: 'right'}, 
+    {key: 'p', bn: 'র', bnShift: 'ঢ়', row: 'top', hand: 'right'},
     {key: '[', bn: 'ক', bnShift: 'খ', row: 'top', hand: 'right'},
     {key: ']', bn: 'ব', bnShift: 'ভ', row: 'top', hand: 'right'},
-    {key: '\\', bn: '্', bnShift: '্‌', row: 'top', hand: 'right'},
+    {key: '\\', bn: 'ৃ', bnShift: 'ঋ', row: 'top', hand: 'right'},
     // Home Row
     {key: 'a', bn: 'া', bnShift: 'অ', row: 'home', hand: 'left'}, 
     {key: 's', bn: 'ি', bnShift: 'ই', row: 'home', hand: 'left'}, 
     {key: 'd', bn: 'ু', bnShift: 'উ', row: 'home', hand: 'left'},
-    {key: 'f', bn: 'ং', bnShift: 'ঃ', row: 'home', hand: 'left'},
-    {key: 'g', bn: 'গ', bnShift: 'ঘ', row: 'home', hand: 'left'}, 
-    {key: 'h', bn: 'হ', bnShift: 'ঐ', row: 'home', hand: 'right'}, 
-    {key: 'j', bn: 'জ', bnShift: 'ঝ', row: 'home', hand: 'right'}, 
-    {key: 'k', bn: 'ক', bnShift: 'খ', row: 'home', hand: 'right'}, 
-    {key: 'l', bn: 'ল', bnShift: 'ষ', row: 'home', hand: 'right'},
-    {key: ';', bn: 'স', bnShift: 'শ', row: 'home', hand: 'right'},
-    {key: "'", bn: 'ে', bnShift: 'এ', row: 'home', hand: 'right'},
+    {key: 'f', bn: 'দ', bnShift: 'ধ', row: 'home', hand: 'left'},
+    {key: 'g', bn: 'ল', bnShift: 'খ', row: 'home', hand: 'left'}, 
+    {key: 'h', bn: '্', bnShift: 'ঃ', row: 'home', hand: 'right'}, 
+    {key: 'j', bn: 'স', bnShift: 'শ', row: 'home', hand: 'right'}, 
+    {key: 'k', bn: 'ত', bnShift: 'থ', row: 'home', hand: 'right'}, 
+    {key: 'l', bn: 'ন', bnShift: 'ণ', row: 'home', hand: 'right'},
+    {key: ';', bn: 'ে', bnShift: 'এ', row: 'home', hand: 'right'},
+    {key: "'", bn: 'ো', bnShift: 'ও', row: 'home', hand: 'right'},
     // Bottom Row
-    {key: 'z', bn: '্য', bnShift: '‍্র্য', row: 'bottom', hand: 'left'}, 
-    {key: 'x', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left'}, 
-    {key: 'c', bn: 'চ', bnShift: 'ছ', row: 'bottom', hand: 'left'}, 
-    {key: 'v', bn: 'দ', bnShift: 'ধ', row: 'bottom', hand: 'left'}, 
-    {key: 'b', bn: 'ব', bnShift: 'ভ', row: 'bottom', hand: 'left'},
-    {key: 'n', bn: 'ন', bnShift: 'ণ', row: 'bottom', hand: 'right'}, 
-    {key: 'm', bn: 'ম', bnShift: 'ও', row: 'bottom', hand: 'right'}, 
-    {key: ',', bn: ',', bnShift: 'ঈ', row: 'bottom', hand: 'right'}, 
+    {key: 'z', bn: '্য', bnShift: '্র্য', row: 'bottom', hand: 'left'},
+    {key: 'x', bn: 'ী', bnShift: 'ঈ', row: 'bottom', hand: 'left'}, 
+    {key: 'c', bn: 'ূ', bnShift: 'ঊ', row: 'bottom', hand: 'left'}, 
+    {key: 'v', bn: 'ৈ', bnShift: 'ঐ', row: 'bottom', hand: 'left'}, 
+    {key: 'b', bn: 'ৌ', bnShift: 'ঔ', row: 'bottom', hand: 'left'},
+    {key: 'n', bn: 'ম', bnShift: 'শ', row: 'bottom', hand: 'right'}, 
+    {key: 'm', bn: 'ষ', bnShift: '?', row: 'bottom', hand: 'right'}, 
+    {key: ',', bn: ',', bnShift: 'ৎ', row: 'bottom', hand: 'right'}, 
     {key: '.', bn: '।', bnShift: '.', row: 'bottom', hand: 'right'},
-    {key: '/', bn: 'র', bnShift: 'ঋ', row: 'bottom', hand: 'right'},
+    {key: '/', bn: 'ও', bnShift: 'ঁ', row: 'bottom', hand: 'right'},
 ];
 
 const hasantKey = keyMap.find(k => k.bn === '্');
@@ -48,33 +48,54 @@ if (!hasantKey) {
 
 const getStepsForChar = (char: string): SingleDrill[] => {
     const steps: SingleDrill[] = [];
-
     const findKey = (bengaliChar: string) => keyMap.find(k => k.bn === bengaliChar || k.bnShift === bengaliChar);
+
+    const directMapping = findKey(char);
+    if (directMapping) {
+         steps.push({
+            key: directMapping.key,
+            shift: directMapping.bnShift === char,
+            display: char
+        });
+        return steps;
+    }
 
     if (char === 'ক্ষ') {
         const kKey = findKey('ক');
         const ssoKey = findKey('ষ');
         if (kKey && hasantKey && ssoKey) {
-            steps.push({ key: kKey.key, shift: kKey.bnShift === 'ক', display: 'ক' });
+            steps.push({ key: kKey.key, shift: !!kKey.bnShift && kKey.bnShift === 'ক', display: 'ক' });
             steps.push({ key: hasantKey.key, shift: false, display: '্' });
-            steps.push({ key: ssoKey.key, shift: ssoKey.bnShift === 'ষ', display: 'ষ' });
+            steps.push({ key: ssoKey.key, shift: !!ssoKey.bnShift && ssoKey.bnShift === 'ষ', display: 'ষ' });
         }
     } else if (char === 'জ্ঞ') {
         const jKey = findKey('জ');
         const njoKey = findKey('ঞ');
         if (jKey && hasantKey && njoKey) {
-            steps.push({ key: jKey.key, shift: jKey.bnShift === 'জ', display: 'জ' });
+            steps.push({ key: jKey.key, shift: !!jKey.bnShift && jKey.bnShift === 'জ', display: 'জ' });
             steps.push({ key: hasantKey.key, shift: false, display: '্' });
-            steps.push({ key: njoKey.key, shift: njoKey.bnShift === 'ঞ', display: 'ঞ' });
+            steps.push({ key: njoKey.key, shift: !!njoKey.bnShift && njoKey.bnShift === 'ঞ', display: 'ঞ' });
+        }
+    } else if (char.endsWith('্য')) {
+        const baseChar = char.slice(0, -1);
+        const baseKey = findKey(baseChar);
+        const jaFolaKey = findKey('্য');
+        if (baseKey && hasantKey && jaFolaKey) {
+            steps.push({ key: baseKey.key, shift: !!baseKey.bnShift && baseKey.bnShift === baseChar, display: baseChar });
+            steps.push({ key: hasantKey.key, shift: false, display: '্' });
+            steps.push({ key: jaFolaKey.key, shift: false, display: '্য' });
         }
     } else {
-        const mapping = findKey(char);
-        if (mapping) {
-            steps.push({
-                key: mapping.key,
-                shift: mapping.bnShift === char,
-                display: char
-            });
+        const lastChar = char.slice(-1);
+        const kar = vowelSigns.find(v => v.sign === lastChar);
+        if (kar) {
+            const baseChar = char.slice(0, -1);
+            const baseKey = findKey(baseChar);
+            const karKey = findKey(kar.sign);
+            if(baseKey && karKey) {
+                steps.push({ key: baseKey.key, shift: !!baseKey.bnShift && baseKey.bnShift === baseChar, display: baseChar });
+                steps.push({ key: karKey.key, shift: !!karKey.bnShift && karKey.bnShift === kar.sign, display: kar.sign });
+            }
         }
     }
     return steps;
@@ -130,7 +151,6 @@ const vowelSigns: { sign: string; name: string }[] = [
     { sign: 'ৈ', name: 'oi-kar' },
     { sign: 'ো', name: 'o-kar' },
     { sign: 'ৌ', name: 'ou-kar' },
-    { sign: '্য', name: 'ja-fola' }
 ];
 
 
@@ -144,8 +164,9 @@ const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: 
     
     if (sign.sign === '্য') {
         const jaFolaKey = findKey('্য');
-        if (jaFolaKey) {
-            steps.push({ key: jaFolaKey.key, shift: !!jaFolaKey.bnShift, display: '্য' });
+        if (jaFolaKey && hasantKey) {
+            steps.push({ key: hasantKey.key, shift: false, display: '্' });
+            steps.push({ key: jaFolaKey.key, shift: false, display: '্য' });
         } else {
             return null;
         }
@@ -158,7 +179,7 @@ const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: 
         }
     }
     
-    const prompt = (consonant.bn + sign.sign).normalize('NFC');
+    const prompt = (consonant.bn + (sign.sign === '্য' ? '্' + 'য' : sign.sign)).normalize('NFC');
     return { prompt, steps };
 };
 
@@ -170,7 +191,12 @@ const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Dri
     const combinations = vowelSigns.flatMap(sign => Array(15).fill(sign));
     combinations.sort(() => Math.random() - 0.5);
 
-    for (const sign of combinations) {
+    // Add ja-fola to the mix
+    const allSigns = [...combinations, ...Array(15).fill({ sign: '্য', name: 'ja-fola' })];
+    allSigns.sort(() => Math.random() - 0.5);
+
+
+    for (const sign of allSigns) {
         if (spaceCounter === 4) {
             drills.push({
                 prompt: ' ',
@@ -523,3 +549,4 @@ export const rowCategories: RowDrillCategory[] = [
     
 
     
+
