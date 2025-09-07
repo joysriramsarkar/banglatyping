@@ -27,6 +27,7 @@ interface TypingPracticeProps {
 }
 
 const toBengaliNumber = (num: number | string) => {
+    if (typeof num === 'undefined' || num === null) return '০';
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
 };
@@ -50,7 +51,7 @@ const DrillProgress = ({ wpmHistory, timeLeft }: { wpmHistory: { time: number, w
         <CardContent className="space-y-4">
             <div className="text-center">
                 <p className="text-sm text-muted-foreground">সময় বাকি</p>
-                <p className="text-4xl font-bold font-mono">{new Date(timeLeft * 1000).toISOString().substr(14, 5)}</p>
+                <p className="text-4xl font-bold font-mono">{toBengaliNumber(new Date(timeLeft * 1000).toISOString().substr(14, 5))}</p>
             </div>
             <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={wpmHistory} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
@@ -63,10 +64,10 @@ const DrillProgress = ({ wpmHistory, timeLeft }: { wpmHistory: { time: number, w
                             border: "1px solid hsl(var(--border))",
                             borderRadius: "var(--radius)",
                         }}
-                        labelFormatter={(label) => `${label} সেকেন্ডে`}
+                        labelFormatter={(label) => `${toBengaliNumber(label)} সেকেন্ডে`}
                     />
                     <Bar dataKey="wpm" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="গতি (WPM)">
-                         <LabelList dataKey="wpm" position="top" fontSize={12} />
+                         <LabelList dataKey="wpm" position="top" fontSize={12} formatter={(value: number) => toBengaliNumber(value)} />
                     </Bar>
                 </BarChart>
             </ResponsiveContainer>
@@ -123,7 +124,6 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
      const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-            // We need to read the latest state from inside the interval
             setTime(currentTime => {
                 setTotalCharsTyped(currentTotalChars => {
                     const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
@@ -767,7 +767,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
           <StatDisplay icon={Zap} value={wpm} label="WPM" />
           <StatDisplay icon={Target} value={`${accuracy}%`} label="Accuracy" />
-          <StatDisplay icon={Timer} value={timeLimit ? new Date((totalTime - time) * 1000).toISOString().substr(14, 5) : new Date(time * 1000).toISOString().substr(14, 5)} label={timeLimit ? "বাকি" : "সময়"} />
+          <StatDisplay icon={Timer} value={timeLimit ? toBengaliNumber(new Date((totalTime - time) * 1000).toISOString().substr(14, 5)) : toBengaliNumber(new Date(time * 1000).toISOString().substr(14, 5))} label={timeLimit ? "বাকি" : "সময়"} />
           <StatDisplay icon={XCircle} value={totalErrors} label="ভুল শব্দ" />
         </CardContent>
       </Card>
@@ -828,6 +828,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 }
 
     
+
 
 
 

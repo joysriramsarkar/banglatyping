@@ -1,8 +1,14 @@
+
 "use client";
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
+
+const toBengaliNumber = (num: number | string) => {
+    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+    return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
+};
 
 export default function Home() {
   const router = useRouter();
@@ -50,7 +56,7 @@ export default function Home() {
       </main>
       
       <footer className="p-4 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} বাংলা টাইপিং মাস্টার। সর্বস্বত্ব সংরক্ষিত।
+        © {toBengaliNumber(new Date().getFullYear())} বাংলা টাইপিং মাস্টার। সর্বস্বত্ব সংরক্ষিত।
       </footer>
     </div>
   );
