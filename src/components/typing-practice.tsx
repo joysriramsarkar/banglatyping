@@ -85,31 +85,41 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         }
         
         const { key: expectedKey, shift: expectedShift } = currentDrillStep;
-        
-        let isCorrect = false;
 
-        if (expectedKey === ' ' && event.code === 'Space') {
-            isCorrect = true;
-        } else {
-            let expectedCode = `Key${expectedKey.toUpperCase()}`;
-            if (expectedKey.length > 1 && !expectedKey.startsWith('Digit')) {
-               switch(expectedKey) {
-                   case '[': expectedCode = 'BracketLeft'; break;
-                   case ']': expectedCode = 'BracketRight'; break;
-                   case '\\': expectedCode = 'Backslash'; break;
-                   case ';': expectedCode = 'Semicolon'; break;
-                   case "'": expectedCode = 'Quote'; break;
-                   case ',': expectedCode = 'Comma'; break;
-                   case '.': expectedCode = 'Period'; break;
-                   case '/': expectedCode = 'Slash'; break;
-                   default: expectedCode = expectedKey;
-               }
-            } else if (/[0-9]/.test(expectedKey)) {
-                 expectedCode = `Digit${expectedKey}`;
-            }
-            
-            isCorrect = (event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift);
+        if(expectedKey === ' ' && event.code === 'Space'){
+            setDrillState(prev => {
+                 return {
+                        currentDrillIndex: prev.currentDrillIndex + 1,
+                        currentStepIndex: 0,
+                        status: 'correct',
+                    };
+            });
+            return;
         }
+        
+        
+        let expectedCode = '';
+        if (/[a-zA-Z]/.test(expectedKey)) {
+          expectedCode = `Key${expectedKey.toUpperCase()}`;
+        } else {
+            switch(expectedKey) {
+                case '[': expectedCode = 'BracketLeft'; break;
+                case ']': expectedCode = 'BracketRight'; break;
+                case '\\': expectedCode = 'Backslash'; break;
+                case ';': expectedCode = 'Semicolon'; break;
+                case "'": expectedCode = 'Quote'; break;
+                case ',': expectedCode = 'Comma'; break;
+                case '.': expectedCode = 'Period'; break;
+                case '/': expectedCode = 'Slash'; break;
+                default: expectedCode = expectedKey; // Fallback for other keys
+            }
+        }
+        
+        if (/[0-9]/.test(expectedKey)) {
+             expectedCode = `Digit${expectedKey}`;
+        }
+        
+        const isCorrect = event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift;
         
         if (isCorrect) {
             setDrillState(prev => {
@@ -287,73 +297,166 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     )
 }
 
-const keyboardLayout: Record<string, {key: string; bn: string, bnShift?: string, bnExtra?: string, bnShiftExtra?: string}[]> = {
-    top: [
-        {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ', bnExtra: 'এ', bnShiftExtra: 'ঐ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
-        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ', bnExtra: 'উ', bnShiftExtra: 'ঊ'}, {key: 'i', bn: 'ি', bnShift: 'ী', bnExtra: 'ই', bnShiftExtra: 'ঈ'}, {key: 'o', bn: 'ো', bnShift: 'ৌ', bnExtra: 'ও', bnShiftExtra: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'},
-        {key: '[', bn: 'ড', bnShift: 'ঢ'}, {key: ']', bn: 'ব', bnShift: 'ভ'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ', bnExtra: 'ঋ'}
-    ],
-    home: [
-        {key: 'a', bn: 'া', bnShift: 'অ', bnExtra: 'আ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'},
-        {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'}, {key: 'h', bn: '্', bnShift: 'হ'}, 
-        {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
-        {key: ';', bn: 'ে', bnShift: 'এ'}, {key: "'", bn: 'ো', bnShift: 'ও'}
-    ],
-    bottom: [
-        {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
-        {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৎ', bnShift: ','}, 
-        {key: '.', bn: '।', bnShift: '.'}, {key: '/', bn: 'ও', bnShift: 'ঁ'},
-    ],
-    space: [{key: ' ', bn: ''}],
+type KeyLayoutData = {
+    key: string;
+    bn: string;
+    bnShift?: string;
+    bnExtra?: string;
+    bnShiftExtra?: string;
+    width?: string;
+    align?: 'left' | 'right';
 };
 
-const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | undefined, needsShift: boolean }) => (
-    <div className="p-4 bg-background rounded-lg shadow-inner space-y-2">
-        {Object.values(keyboardLayout).map((row, rowIndex) => (
-             row.length > 1 ? (
-                <div key={rowIndex} className="flex justify-center gap-1.5">
-                    {row.map(keyData => {
-                        const isHighlighted = highlightKey && highlightKey.toLowerCase() === keyData.key.toLowerCase();
-                        return (
-                            <div
-                                key={keyData.key}
-                                className={cn(
-                                    "relative flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-16",
-                                    isHighlighted && 'bg-primary/20 border-primary text-primary'
-                                )}
-                            >
-                                <span className="absolute top-1 left-1 text-xs text-muted-foreground">{keyData.bnExtra}</span>
-                                <span className="absolute top-1 right-1 text-xs text-muted-foreground">{keyData.bnShiftExtra}</span>
-                                <span className={cn(
-                                    "text-sm",
-                                    (isHighlighted && needsShift) && "font-bold text-lg text-primary"
-                                )}>
-                                    {keyData.bnShift}
-                                </span>
-                                <span className={cn(
-                                    "text-lg font-bold",
-                                    (isHighlighted && !needsShift) && "text-primary text-2xl"
-                                )}>
-                                    {keyData.bn}
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-            ) : (
-                 <div key={rowIndex} className="flex justify-center gap-1.5">
-                    {highlightKey?.toLowerCase() === ' ' ? (
-                         <div className="flex items-center justify-center h-16 rounded-md bg-primary/20 border-primary text-primary border border-b-4 font-hind w-64">
-                            <span className="text-lg font-bold">Space</span>
-                        </div>
-                    ) : (
-                         <div className="flex items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-64">
-                            <span className="text-lg font-bold"></span>
-                        </div>
-                    )}
+const keyboardLayout: Record<string, KeyLayoutData[]> = {
+    top: [
+        {key: '`', bn: '~', bnShift: '`'},
+        {key: '1', bn: '!', bnShift: '১'},
+        {key: '2', bn: '@', bnShift: '২'},
+        {key: '3', bn: '#', bnShift: '৩'},
+        {key: '4', bn: '$', bnShift: '৪'},
+        {key: '5', bn: '%', bnShift: '৫'},
+        {key: '6', bn: '^', bnShift: '৬'},
+        {key: '7', bn: '৭', bnShift: '&'},
+        {key: '8', bn: '*', bnShift: '৮'},
+        {key: '9', bn: '(', bnShift: '৯'},
+        {key: '0', bn: ')', bnShift: '০'},
+        {key: '-', bn: '_', bnShift: '-'},
+        {key: '=', bn: '+', bnShift: '='},
+        {key: 'Backspace', bn: 'Backspace', width: 'flex-grow', align: 'right'},
+    ],
+    home: [
+        {key: 'Tab', bn: 'Tab', width: 'w-16', align: 'left'},
+        {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'},
+        {key: 'w', bn: 'ঙ', bnShift: 'ঃ'},
+        {key: 'e', bn: 'ে', bnShift: 'ৈ', bnExtra: 'এ', bnShiftExtra: 'ঐ'},
+        {key: 'r', bn: 'র', bnShift: 'ড়'},
+        {key: 't', bn: 'ট', bnShift: 'ঠ'},
+        {key: 'y', bn: 'য', bnShift: 'য়'},
+        {key: 'u', bn: 'ু', bnShift: 'ূ', bnExtra: 'উ', bnShiftExtra: 'ঊ'},
+        {key: 'i', bn: 'ি', bnShift: 'ী', bnExtra: 'ই', bnShiftExtra: 'ঈ'},
+        {key: 'o', bn: 'ো', bnShift: 'ৌ', bnExtra: 'ও', bnShiftExtra: 'ঔ'},
+        {key: 'p', bn: 'প', bnShift: 'ঢ়'},
+        {key: '[', bn: 'ড', bnShift: 'ঢ'},
+        {key: ']', bn: 'ব', bnShift: 'ভ'},
+        {key: '\\', bn: 'ৃ', bnShift: 'ঞ', bnExtra: 'ঋ'},
+    ],
+    middle: [
+        {key: 'CapsLock', bn: 'Caps Lock', width: 'w-20', align: 'left'},
+        {key: 'a', bn: 'া', bnShift: 'অ', bnExtra: 'আ'},
+        {key: 's', bn: 'স', bnShift: 'শ'},
+        {key: 'd', bn: 'ড', bnShift: 'ঢ'},
+        {key: 'f', bn: 'ফ', bnShift: 'ৎ'},
+        {key: 'g', bn: 'গ', bnShift: 'ঘ'},
+        {key: 'h', bn: '্', bnShift: 'হ'},
+        {key: 'j', bn: 'জ', bnShift: 'ঝ'},
+        {key: 'k', bn: 'ক', bnShift: 'খ'},
+        {key: 'l', bn: 'ল', bnShift: 'ষ'},
+        {key: ';', bn: 'ে', bnShift: 'এ'},
+        {key: "'", bn: 'ো', bnShift: 'ও'},
+        {key: 'Enter', bn: 'Enter', width: 'flex-grow', align: 'right'},
+    ],
+    bottom: [
+        {key: 'ShiftLeft', bn: 'Shift', width: 'w-28', align: 'left'},
+        {key: 'z', bn: '্য', bnShift: 'ং'},
+        {key: 'x', bn: 'ত', bnShift: 'থ'},
+        {key: 'c', bn: 'চ', bnShift: 'ছ'},
+        {key: 'v', bn: 'দ', bnShift: 'ধ'},
+        {key: 'b', bn: 'ব', bnShift: 'ভ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'},
+        {key: 'm', bn: 'ম', bnShift: 'ম'},
+        {key: ',', bn: ',', bnShift: ':'},
+        {key: '.', bn: '।', bnShift: '.'},
+        {key: '/', bn: "'", bnShift: '"'},
+        {key: 'ShiftRight', bn: 'Shift', width: 'flex-grow', align: 'right'},
+    ],
+    space: [
+        {key: 'ControlLeft', bn: 'Ctrl', width: 'w-20', align: 'left'},
+        {key: 'AltLeft', bn: 'Alt', width: 'w-20', align: 'left'},
+        {key: ' ', bn: 'Space', width: 'w-96'},
+        {key: 'AltRight', bn: 'Alt', width: 'w-20', align: 'right'},
+        {key: 'ControlRight', bn: 'Ctrl', width: 'w-20', align: 'right'},
+    ]
+};
+
+const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighlighted: boolean, needsShift: boolean }) => {
+    const { key, bn, bnShift, bnExtra, bnShiftExtra, width, align } = data;
+
+    const baseKeyClasses = cn(
+        "relative flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind transition-colors",
+        width || 'w-16',
+        isHighlighted && 'bg-primary/20 border-primary text-primary',
+        align === 'left' && 'mr-auto',
+        align === 'right' && 'ml-auto',
+    );
+    
+    const hasMultipleChars = bnExtra || bnShiftExtra;
+
+    if (hasMultipleChars) {
+        const bnExtraExists = !!bnExtra;
+        const bnShiftExtraExists = !!bnShiftExtra;
+        const bnShiftExists = !!bnShift;
+        const hasFour = bnExtraExists && bnShiftExtraExists && bnShiftExists;
+        const hasThree = !hasFour && [bnExtraExists, bnShiftExtraExists, bnShiftExists].filter(Boolean).length === 2;
+
+        if (hasFour) {
+            return (
+                <div className={baseKeyClasses}>
+                    <div className="absolute top-0 left-0 w-full h-full grid grid-cols-2 grid-rows-2 text-xs p-1">
+                        <span className="flex items-center justify-center text-muted-foreground">{bnShiftExtra}</span>
+                        <span className="flex items-center justify-center text-muted-foreground">{bnShift}</span>
+                        <span className="flex items-center justify-center text-muted-foreground">{bnExtra}</span>
+                        <span className="flex items-center justify-center font-bold text-lg">{bn}</span>
+                    </div>
                 </div>
             )
+        }
+        if (hasThree) {
+             return (
+                <div className={baseKeyClasses}>
+                    <div className="absolute top-0 left-0 w-full h-full grid grid-cols-2 grid-rows-2 text-xs p-1">
+                         <span className="col-span-1 flex items-center justify-center text-muted-foreground">{bnShiftExtra || bnExtra}</span>
+                         <span className="col-span-1 flex items-center justify-center text-muted-foreground">{bnShift}</span>
+                         <span className="col-span-2 flex items-center justify-center font-bold text-lg">{bn}</span>
+                    </div>
+                </div>
+            )
+        }
+    }
+
+
+    return (
+        <div className={baseKeyClasses}>
+            <span className={cn(
+                "text-sm text-muted-foreground",
+                (isHighlighted && needsShift) && "font-bold text-lg text-primary"
+            )}>
+                {bnShift}
+            </span>
+            <span className={cn(
+                "text-lg font-bold",
+                (isHighlighted && !needsShift) && "text-primary text-2xl"
+            )}>
+                {bn}
+            </span>
+        </div>
+    );
+}
+
+
+const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | undefined, needsShift: boolean }) => (
+    <div className="p-2 sm:p-4 bg-background rounded-lg shadow-inner space-y-1.5">
+        {Object.values(keyboardLayout).map((row, rowIndex) => (
+            <div key={rowIndex} className="flex justify-center gap-1.5">
+                {row.map(keyData => {
+                    const isHighlighted = highlightKey && highlightKey.toLowerCase() === keyData.key.toLowerCase();
+                    let finalNeedsShift = needsShift;
+                    if(isHighlighted && (keyData.key === 'ShiftLeft' || keyData.key === 'ShiftRight')) {
+                       finalNeedsShift = true;
+                    }
+
+                    return <Key key={keyData.key} data={keyData} isHighlighted={isHighlighted} needsShift={finalNeedsShift} />;
+                })}
+            </div>
         ))}
     </div>
 );
@@ -633,6 +736,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
