@@ -83,7 +83,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
-
+        
         const { key: expectedKey, shift: expectedShift } = currentDrillStep;
         
         let expectedCode = `Key${expectedKey.toUpperCase()}`;
@@ -103,7 +103,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         } else if (/[0-9]/.test(expectedKey)) {
              expectedCode = `Digit${expectedKey}`;
         }
-        
+
         const isCorrect = event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift;
 
         if (isCorrect) {
@@ -284,20 +284,20 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
 const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
     top: [
-        {key: 'q', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'w', bn: 'য', bnShift: 'য়'}, {key: 'e', bn: 'ড', bnShift: 'ঢ'}, {key: 'r', bn: 'প', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
-        {key: 'y', bn: 'চ', bnShift: 'ছ'}, {key: 'u', bn: 'জ', bnShift: 'ঝ'}, {key: 'i', bn: 'হ', bnShift: 'ঞ'}, {key: 'o', bn: 'গ', bnShift: 'ঘ'}, {key: 'p', bn: 'র', bnShift: 'ঢ়'},
-        {key: '[', bn: 'ক', bnShift: 'খ'}, {key: ']', bn: 'ব', bnShift: 'ভ'}, {key: '\\', bn: 'ৃ', bnShift: 'ঋ'}
+        {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
+        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'},
+        {key: '[', bn: 'ড', bnShift: 'ঢ'}, {key: ']', bn: 'ব', bnShift: 'ভ'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'}
     ],
     home: [
-        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'ি', bnShift: 'ই'}, {key: 'd', bn: 'ু', bnShift: 'উ'},
-        {key: 'f', bn: 'দ', bnShift: 'ধ'}, {key: 'g', bn: 'ল', bnShift: 'খ'}, {key: 'h', bn: '্', bnShift: 'ঃ'}, 
-        {key: 'j', bn: 'স', bnShift: 'শ'}, {key: 'k', bn: 'ত', bnShift: 'থ'}, {key: 'l', bn: 'ন', bnShift: 'ণ'},
+        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'},
+        {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'}, {key: 'h', bn: '্', bnShift: 'হ'}, 
+        {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
         {key: ';', bn: 'ে', bnShift: 'এ'}, {key: "'", bn: 'ো', bnShift: 'ও'}
     ],
     bottom: [
-        {key: 'z', bn: '্য', bnShift: '্র্য'}, {key: 'x', bn: 'ী', bnShift: 'ঈ'}, {key: 'c', bn: 'ূ', bnShift: 'ঊ'}, 
-        {key: 'v', bn: 'ৈ', bnShift: 'ঐ'}, {key: 'b', bn: 'ৌ', bnShift: 'ঔ'},
-        {key: 'n', bn: 'ম', bnShift: 'শ'}, {key: 'm', bn: 'ষ', bnShift: '?'}, {key: ',', bn: ',', bnShift: 'ৎ'}, 
+        {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
+        {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম', bnShift: 'ম'}, {key: ',', bn: ',', bnShift: 'ৎ'}, 
         {key: '.', bn: '।', bnShift: '.'}, {key: '/', bn: 'ও', bnShift: 'ঁ'},
     ],
     space: [{key: ' ', bn: ''}],
@@ -626,6 +626,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 

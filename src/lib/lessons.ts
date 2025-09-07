@@ -4,39 +4,39 @@ import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
 
 export const keyMap: {key: string; bn: string; bnShift?: string; row: 'top'|'home'|'bottom'|'other'; hand: 'left'|'right'}[] = [
     // Top Row
-    {key: 'q', bn: 'ঙ', bnShift: 'ং', row: 'top', hand: 'left'}, 
-    {key: 'w', bn: 'য', bnShift: 'য়', row: 'top', hand: 'left'}, 
-    {key: 'e', bn: 'ড', bnShift: 'ঢ', row: 'top', hand: 'left'}, 
-    {key: 'r', bn: 'প', bnShift: 'ড়', row: 'top', hand: 'left'}, 
+    {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ', row: 'top', hand: 'left'}, 
+    {key: 'w', bn: 'ঙ', bnShift: 'ঃ', row: 'top', hand: 'left'}, 
+    {key: 'e', bn: 'ে', bnShift: 'ৈ', row: 'top', hand: 'left'}, 
+    {key: 'r', bn: 'র', bnShift: 'ড়', row: 'top', hand: 'left'}, 
     {key: 't', bn: 'ট', bnShift: 'ঠ', row: 'top', hand: 'left'}, 
-    {key: 'y', bn: 'চ', bnShift: 'ছ', row: 'top', hand: 'right'}, 
-    {key: 'u', bn: 'জ', bnShift: 'ঝ', row: 'top', hand: 'right'}, 
-    {key: 'i', bn: 'হ', bnShift: 'ঞ', row: 'top', hand: 'right'}, 
-    {key: 'o', bn: 'গ', bnShift: 'ঘ', row: 'top', hand: 'right'}, 
-    {key: 'p', bn: 'র', bnShift: 'ঢ়', row: 'top', hand: 'right'},
-    {key: '[', bn: 'ক', bnShift: 'খ', row: 'top', hand: 'right'},
+    {key: 'y', bn: 'য', bnShift: 'য়', row: 'top', hand: 'right'}, 
+    {key: 'u', bn: 'ু', bnShift: 'ূ', row: 'top', hand: 'right'}, 
+    {key: 'i', bn: 'ি', bnShift: 'ী', row: 'top', hand: 'right'}, 
+    {key: 'o', bn: 'ো', bnShift: 'ৌ', row: 'top', hand: 'right'}, 
+    {key: 'p', bn: 'প', bnShift: 'ঢ়', row: 'top', hand: 'right'},
+    {key: '[', bn: 'ড', bnShift: 'ঢ', row: 'top', hand: 'right'},
     {key: ']', bn: 'ব', bnShift: 'ভ', row: 'top', hand: 'right'},
-    {key: '\\', bn: 'ৃ', bnShift: 'ঋ', row: 'top', hand: 'right'},
+    {key: '\\', bn: 'ৃ', bnShift: 'ঞ', row: 'top', hand: 'right'},
     // Home Row
     {key: 'a', bn: 'া', bnShift: 'অ', row: 'home', hand: 'left'}, 
-    {key: 's', bn: 'ি', bnShift: 'ই', row: 'home', hand: 'left'}, 
-    {key: 'd', bn: 'ু', bnShift: 'উ', row: 'home', hand: 'left'},
-    {key: 'f', bn: 'দ', bnShift: 'ধ', row: 'home', hand: 'left'},
-    {key: 'g', bn: 'ল', bnShift: 'খ', row: 'home', hand: 'left'}, 
-    {key: 'h', bn: '্', bnShift: 'ঃ', row: 'home', hand: 'right'}, 
-    {key: 'j', bn: 'স', bnShift: 'শ', row: 'home', hand: 'right'}, 
-    {key: 'k', bn: 'ত', bnShift: 'থ', row: 'home', hand: 'right'}, 
-    {key: 'l', bn: 'ন', bnShift: 'ণ', row: 'home', hand: 'right'},
+    {key: 's', bn: 'স', bnShift: 'শ', row: 'home', hand: 'left'}, 
+    {key: 'd', bn: 'ড', bnShift: 'ঢ', row: 'home', hand: 'left'},
+    {key: 'f', bn: 'ফ', bnShift: 'ৎ', row: 'home', hand: 'left'},
+    {key: 'g', bn: 'গ', bnShift: 'ঘ', row: 'home', hand: 'left'}, 
+    {key: 'h', bn: '্', bnShift: 'হ', row: 'home', hand: 'right'}, 
+    {key: 'j', bn: 'জ', bnShift: 'ঝ', row: 'home', hand: 'right'}, 
+    {key: 'k', bn: 'ক', bnShift: 'খ', row: 'home', hand: 'right'}, 
+    {key: 'l', bn: 'ল', bnShift: 'ষ', row: 'home', hand: 'right'},
     {key: ';', bn: 'ে', bnShift: 'এ', row: 'home', hand: 'right'},
     {key: "'", bn: 'ো', bnShift: 'ও', row: 'home', hand: 'right'},
     // Bottom Row
-    {key: 'z', bn: '্য', bnShift: '্র্য', row: 'bottom', hand: 'left'},
-    {key: 'x', bn: 'ী', bnShift: 'ঈ', row: 'bottom', hand: 'left'}, 
-    {key: 'c', bn: 'ূ', bnShift: 'ঊ', row: 'bottom', hand: 'left'}, 
-    {key: 'v', bn: 'ৈ', bnShift: 'ঐ', row: 'bottom', hand: 'left'}, 
-    {key: 'b', bn: 'ৌ', bnShift: 'ঔ', row: 'bottom', hand: 'left'},
-    {key: 'n', bn: 'ম', bnShift: 'শ', row: 'bottom', hand: 'right'}, 
-    {key: 'm', bn: 'ষ', bnShift: '?', row: 'bottom', hand: 'right'}, 
+    {key: 'z', bn: '্য', bnShift: 'ং', row: 'bottom', hand: 'left'},
+    {key: 'x', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left'}, 
+    {key: 'c', bn: 'চ', bnShift: 'ছ', row: 'bottom', hand: 'left'}, 
+    {key: 'v', bn: 'দ', bnShift: 'ধ', row: 'bottom', hand: 'left'}, 
+    {key: 'b', bn: 'ব', bnShift: 'ভ', row: 'bottom', hand: 'left'},
+    {key: 'n', bn: 'ন', bnShift: 'ণ', row: 'bottom', hand: 'right'}, 
+    {key: 'm', bn: 'ম', bnShift: 'ম', row: 'bottom', hand: 'right'}, 
     {key: ',', bn: ',', bnShift: 'ৎ', row: 'bottom', hand: 'right'}, 
     {key: '.', bn: '।', bnShift: '.', row: 'bottom', hand: 'right'},
     {key: '/', bn: 'ও', bnShift: 'ঁ', row: 'bottom', hand: 'right'},
@@ -52,6 +52,7 @@ const getStepsForChar = (char: string): SingleDrill[] => {
     const steps: SingleDrill[] = [];
     const findKey = (bengaliChar: string) => keyMap.find(k => k.bn === bengaliChar || k.bnShift === bengaliChar);
 
+    // direct mapping for all chars, including যুক্তাক্ষর like ক্ষ
     const directMapping = findKey(char);
     if (directMapping) {
          steps.push({
@@ -62,15 +63,8 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         return steps;
     }
 
-    if (char === 'ক্ষ') {
-        const kKey = findKey('ক');
-        const ssoKey = findKey('ষ');
-        if (kKey && hasantKey && ssoKey) {
-            steps.push({ key: kKey.key, shift: !!kKey.bnShift && kKey.bnShift === 'ক', display: 'ক' });
-            steps.push({ key: hasantKey.key, shift: false, display: '্' });
-            steps.push({ key: ssoKey.key, shift: !!ssoKey.bnShift && ssoKey.bnShift === 'ষ', display: 'ষ' });
-        }
-    } else if (char === 'জ্ঞ') {
+    // fallback for complex যুক্তাক্ষর not in keymap
+    if (char === 'জ্ঞ') {
         const jKey = findKey('জ');
         const njoKey = findKey('ঞ');
         if (jKey && hasantKey && njoKey) {
@@ -79,6 +73,7 @@ const getStepsForChar = (char: string): SingleDrill[] => {
             steps.push({ key: njoKey.key, shift: !!njoKey.bnShift && njoKey.bnShift === 'ঞ', display: 'ঞ' });
         }
     } else {
+        // Fallback for compound characters with vowel signs
         const lastChar = char.slice(-1);
         const kar = vowelSigns.find(v => v.sign === lastChar);
         if (kar) {
@@ -92,16 +87,17 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         }
     }
     
-    // For ja-fola
-    if(char.endsWith('্য')) {
+    // Fallback for ja-fola (if not directly mapped e.g. on 'z')
+    const jaFolaKey = keyMap.find(k => k.bn === '্য');
+    if(char.endsWith('্য') && !jaFolaKey) {
         const baseChar = char.slice(0, -1);
         const baseKey = findKey(baseChar);
-        const jaFolaKey = findKey('্য');
-        if(baseKey && hasantKey && jaFolaKey) {
+        const yaKey = findKey('য');
+        if(baseKey && hasantKey && yaKey) {
             steps.length = 0; // Clear previous steps if any
             steps.push({ key: baseKey.key, shift: !!baseKey.bnShift && baseKey.bnShift === baseChar, display: baseChar });
             steps.push({ key: hasantKey.key, shift: false, display: '্'});
-            steps.push({ key: 'w', shift: true, display: '্য'}); // Shift + w for য, then converted to ্য
+            steps.push({ key: 'y', shift: false, display: 'য'});
         }
     }
 
@@ -171,13 +167,12 @@ const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: 
     steps.push({ key: conKey.key, shift: !!conKey.bnShift && conKey.bnShift === consonant.bn, display: consonant.bn });
     
     if (sign.sign === '্য') {
-        const jaKey = findKey('য'); // we need 'য' (Shift+W)
-        if (jaKey && hasantKey) {
-            steps.push({ key: hasantKey.key, shift: false, display: '্' });
-            steps.push({ key: jaKey.key, shift: true, display: 'য' }); // The logic should handle conversion to ্য
-        } else {
-            return null;
-        }
+         const jaFolaKey = findKey('্য');
+         if(jaFolaKey){
+             steps.push({ key: jaFolaKey.key, shift: false, display: '্য'});
+         } else {
+             return null;
+         }
     } else {
         const signKey = findKey(sign.sign);
         if (signKey) {
@@ -188,21 +183,8 @@ const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: 
     }
     
     let prompt = consonant.bn;
-    if (sign.sign === '্য') {
-        prompt += '্য';
-    } else {
-        prompt += sign.sign;
-    }
+    prompt += sign.sign;
     prompt = prompt.normalize('NFC');
-
-    // Ensure prompt doesn't look like "ক্ য" but "ক্য"
-    if (sign.sign === '্য') {
-        const tempPrompt = (consonant.bn + '্' + 'য').normalize('NFC');
-        if (tempPrompt.length < prompt.length) {
-            prompt = tempPrompt;
-        }
-    }
-
 
     return { prompt, steps };
 };
@@ -439,7 +421,7 @@ export const lessons: Lesson[] = [
     id: "char-practice-2",
     title: "ব্যাপক কার-চিহ্ন অনুশীলন",
     level: "Beginner",
-    text: "কা কি কী কু কূ কৃ কে কৈ কো কৌ ক্য। খা খি খী খু খূ খৃ খে খৈ খো খৌ খ্য। গা গি গী গু গূ গৃ গে গৈ গো গৌ গ্য। ঘা ঘি ঘী ঘু ঘূ ঘৃ ঘে ঘৈ ঘো ঘৌ ঘ্য। চা চি চী চু চূ বৃ চে চৈ চো চৌ চ্য। জা জি জী জু জূ জৃ জে জৈ জো জৌ জ্য। টা টি টী টু টূ টৃ টে টৈ টো টৌ ট্য। দা দি দী দু দূ দৃ দে দৈ দো দৌ দ্য। না নি নী নু নূ নৃ নে নৈ নো নৌ ন্য। পা পি পী পু পূ পৃ পে পৈ পো পৌ প্য। বা বি বী বু বূ বৃ বে বৈ বো বৌ ব্য। মা মি মী মু মূ মৃ মে মৈ মো মৌ ম্য। রা রি রী রু রূ রৃ রে রাই রো রৌ র্য। লা লি লী লু লূ বৃ লে লৈ লো লৌ ল্য। সা সি সী সু সূ সৃ সে সৈ সো সৌ স্য। ক্ষা ক্ষি ক্ষী ক্ষু ক্ষূ ক্ষৃ ক্ষে ক্ষৈ ক্ষো ক্ষৌ ক্ষ্য।",
+    text: "কা কি কী কু কূ কৃ কে কৈ কো কৌ ক্য। খা খি খী খু খূ খৃ খে খৈ খো খৌ খ্য। গা গি গী গু গূ গৃ গে গৈ গো গৌ গ্য। ঘা ঘি ঘী ঘু ঘূ ঘৃ ঘে ঘৈ ঘো ঘৌ ঘ্য। চা চি চী চু চূ বৃ চে চৈ চো চৌ চ্য। জা জি জী জু জূ জৃ জে জৈ জো জৌ জ্য। টা টি টী টু টূ টৃ টে টৈ টো টৌ ট্য। দা দি দী দু দূ দৃ দে দৈ দো দৌ দ্য। না নি নী নু নূ নৃ নে নৈ নো নৌ ন্য। পা পি পী পু পূ পৃ পে পৈ পো পৌ প্য। বা বি বী বু বূ বৃ বে বৈ বো বৌ ব্য। মা মি মী মু মূ মৃ মে মৈ মো মৌ ম্য। রা রি রী রু রূ রৃ রে রাই রো রৌ র্য। লা লি লী লু লূ বৃ লে লৈ লো লৌ ল্য। সা সি সী সু সূ সৃ সে সৈ সো সৌ স্য। ক্ষা ক্ষি ক্ষী ক্ষু ক্ষূ ক্ষৃ ক্ষে ক্ষৈ ক্ষো খৌ ক্ষ্য।",
   },
   {
     id: "sahaj-path-1",
@@ -570,3 +552,4 @@ export const rowCategories: RowDrillCategory[] = [
     
 
     
+
