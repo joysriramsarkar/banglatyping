@@ -45,8 +45,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     });
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
-    const restartButtonRef = useRef<HTMLButtonElement>(null);
+    const nextLessonButtonRef = useRef<HTMLButtonElement | null>(null);
+    const restartButtonRef = useRef<HTMLButtonElement | null>(null);
 
     const { currentDrillIndex, currentStepIndex, status } = drillState;
     
@@ -84,27 +84,32 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
         
-        const { key: expectedKey, shift: expectedShift, display: expectedDisplay } = currentDrillStep;
+        const { key: expectedKey, shift: expectedShift } = currentDrillStep;
         
-        let expectedCode = `Key${expectedKey.toUpperCase()}`;
-        if (expectedKey.length > 1 && !expectedKey.startsWith('Digit')) {
-           switch(expectedKey) {
-               case '[': expectedCode = 'BracketLeft'; break;
-               case ']': expectedCode = 'BracketRight'; break;
-               case '\\': expectedCode = 'Backslash'; break;
-               case ';': expectedCode = 'Semicolon'; break;
-               case "'": expectedCode = 'Quote'; break;
-               case ',': expectedCode = 'Comma'; break;
-               case '.': expectedCode = 'Period'; break;
-               case '/': expectedCode = 'Slash'; break;
-               case ' ': expectedCode = 'Space'; break;
-               default: expectedCode = expectedKey;
-           }
-        } else if (/[0-9]/.test(expectedKey)) {
-             expectedCode = `Digit${expectedKey}`;
+        let isCorrect = false;
+
+        if (expectedKey === ' ' && event.code === 'Space') {
+            isCorrect = true;
+        } else {
+            let expectedCode = `Key${expectedKey.toUpperCase()}`;
+            if (expectedKey.length > 1 && !expectedKey.startsWith('Digit')) {
+               switch(expectedKey) {
+                   case '[': expectedCode = 'BracketLeft'; break;
+                   case ']': expectedCode = 'BracketRight'; break;
+                   case '\\': expectedCode = 'Backslash'; break;
+                   case ';': expectedCode = 'Semicolon'; break;
+                   case "'": expectedCode = 'Quote'; break;
+                   case ',': expectedCode = 'Comma'; break;
+                   case '.': expectedCode = 'Period'; break;
+                   case '/': expectedCode = 'Slash'; break;
+                   default: expectedCode = expectedKey;
+               }
+            } else if (/[0-9]/.test(expectedKey)) {
+                 expectedCode = `Digit${expectedKey}`;
+            }
+            
+            isCorrect = (event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift);
         }
-        
-        const isCorrect = (event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift);
         
         if (isCorrect) {
             setDrillState(prev => {
@@ -282,7 +287,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     )
 }
 
-const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string, bnExtra?: string, bnShiftExtra?: string}[]> = {
+const keyboardLayout: Record<string, {key: string; bn: string, bnShift?: string, bnExtra?: string, bnShiftExtra?: string}[]> = {
     top: [
         {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ', bnExtra: 'এ', bnShiftExtra: 'ঐ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
         {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ', bnExtra: 'উ', bnShiftExtra: 'ঊ'}, {key: 'i', bn: 'ি', bnShift: 'ী', bnExtra: 'ই', bnShiftExtra: 'ঈ'}, {key: 'o', bn: 'ো', bnShift: 'ৌ', bnExtra: 'ও', bnShiftExtra: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'},
@@ -628,6 +633,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
