@@ -86,14 +86,21 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         
         const { key: expectedKey, shift: expectedShift } = currentDrillStep;
 
-        if (expectedKey === ' ' && event.code === 'Space') {
-            setDrillState(prev => {
-                return {
-                    currentDrillIndex: prev.currentDrillIndex + 1,
-                    currentStepIndex: 0,
-                    status: 'correct',
-                };
-            });
+        if (expectedKey === ' ') {
+            if (event.code === 'Space') {
+                 setDrillState(prev => {
+                    return {
+                        currentDrillIndex: prev.currentDrillIndex + 1,
+                        currentStepIndex: 0,
+                        status: 'correct',
+                    };
+                });
+            } else {
+                setDrillState(prev => ({ ...prev, status: 'incorrect' }));
+                statusTimeoutRef.current = setTimeout(() => {
+                    setDrillState(prev => ({ ...prev, status: 'pending' }));
+                }, 500);
+            }
             return;
         }
 
@@ -115,6 +122,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 case ',': expectedCode = 'Comma'; break;
                 case '.': expectedCode = 'Period'; break;
                 case '/': expectedCode = 'Slash'; break;
+                case '-': expectedCode = 'Minus'; break;
                 default: expectedCode = expectedKey; // Fallback for other keys
             }
         }
@@ -216,38 +224,32 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         const visible: Drill[] = [];
         let count = 0;
         let drillIdx = currentDrillIndex;
+        const startIndex = Math.floor(currentDrillIndex / 10) * 10;
 
-        while(count < 10 && drillIdx < drills.length) {
-            visible.push(drills[drillIdx]);
-            
-            // If the current drill is a space, we add a visual spacer
-            if (drills[drillIdx].prompt === ' ') {
-                 if ( (visible.length-1) % 5 === 4) { // Add spacer after 4 prompts + 1 space
-                    // This is a visual element, doesn't affect logic
-                 }
-            }
-            drillIdx++;
-            count++;
+
+        for(let i = startIndex; i < startIndex + 10 && i < drills.length; i++) {
+            visible.push(drills[i]);
         }
+
         return visible;
     };
 
 
-    const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, key: string | number) => {
+    const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, isCompleted: boolean, key: string | number) => {
         if(drillData.prompt === ' '){
             return (
-                <div key={key} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2 border-dashed", isCurrent && "ring-2 ring-primary")}>
-                    <span className="text-muted-foreground italic">স্পেস</span>
+                <div key={key} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2", isCurrent && "ring-2 ring-primary", isCompleted ? 'border-green-500 bg-green-100' : 'border-dashed' )}>
+                     {isCompleted ? <CheckCircle className="h-6 w-6 text-green-600" /> : <span className="text-muted-foreground italic">স্পেস</span>}
                 </div>
             )
         }
         let boxClass = "bg-secondary";
-        if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
         if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
+        if (isCompleted) boxClass = "bg-green-100/80 border-green-500";
         
         return (
             <div key={key} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-               {drillData.prompt}
+               {isCompleted ? <CheckCircle className="h-6 w-6 text-green-600" /> : drillData.prompt}
             </div>
         )
     }
@@ -256,7 +258,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const promptsWithSpacers: (Drill | {isSpacer: true})[] = [];
     visibleDrills.forEach((drill, index) => {
         promptsWithSpacers.push(drill);
-        if (drill.prompt === ' ' && (index + 1) % 5 === 0) {
+         const originalIndex = drills.indexOf(drill);
+        if (drill.prompt === ' ' && (originalIndex + 1) % 5 === 0 && index < visibleDrills.length - 1) {
            promptsWithSpacers.push({ isSpacer: true });
         }
     });
@@ -271,8 +274,10 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                              if ('isSpacer' in item) {
                                 return <div key={`spacer-${index}`} className="w-full h-2"></div>
                             }
-                            const isCurrent = currentDrillIndex === drills.indexOf(item);
-                            return renderDrillPrompt(item, isCurrent, `${item.prompt}-${index}`);
+                            const originalIndex = drills.indexOf(item);
+                            const isCurrent = currentDrillIndex === originalIndex;
+                            const isCompleted = originalIndex < currentDrillIndex;
+                            return renderDrillPrompt(item, isCurrent, isCompleted, `${item.prompt}-${index}`);
                         })}
                     </div>
                      
@@ -384,11 +389,11 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
 
     if (hasMultipleChars) {
        return (
-            <div className={cn(baseKeyClasses, "p-1")}>
-                <div className="absolute top-1 left-1.5 text-xs text-muted-foreground">{bnShiftExtra || bnShift}</div>
-                <div className="absolute top-1 right-1.5 text-xs text-muted-foreground">{bnShift}</div>
-                <div className="absolute bottom-1 left-1.5 text-xs text-muted-foreground">{bnExtra}</div>
-                <div className="absolute bottom-1 right-1.5 text-lg font-bold">{bn}</div>
+            <div className={cn(baseKeyClasses, "grid grid-cols-2 grid-rows-2 p-1 text-center")}>
+                 <span className="text-sm text-muted-foreground">{bnShiftExtra}</span>
+                 <span className="text-sm text-muted-foreground">{bnShift}</span>
+                 <span className="text-lg font-bold">{bnExtra}</span>
+                 <span className="text-lg font-bold">{bn}</span>
             </div>
         )
     }
@@ -704,6 +709,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
