@@ -80,22 +80,21 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
 
-        const keyIsCorrect = event.key.normalize('NFC') === currentStep.display.normalize('NFC');
-        const shiftIsCorrect = event.shiftKey === currentStep.shift;
+        const keyData = keyMap.find(k => k.bn === event.key || (k.bnShift && k.bnShift === event.key));
+        const keyIsCorrect = (event.key === ' ' && currentStep.key === ' ') || (keyData && keyData.key.toLowerCase() === currentStep.key.toLowerCase());
+        const shiftIsCorrect = (event.shiftKey === currentStep.shift);
 
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
                 const isLastStepInDrill = prev.currentStepIndex >= currentDrill.steps.length - 1;
                 
                 if (isLastStepInDrill) {
-                    // Move to the next drill
                     return {
                         currentDrillIndex: prev.currentDrillIndex + 1,
                         currentStepIndex: 0,
                         status: 'correct',
                     };
                 } else {
-                    // Move to the next step within the same drill
                     return {
                         ...prev,
                         currentStepIndex: prev.currentStepIndex + 1,
@@ -230,17 +229,19 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
 const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
     top: [
-        {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'}, 
-        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'},
-        {key: '\\', bn: 'ৃ', bnShift: 'র্'}
+        {key: 'q', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'w', bn: 'য', bnShift: 'য়'}, {key: 'e', bn: 'ড', bnShift: 'ঢ'}, {key: 'r', bn: 'প', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
+        {key: 'y', bn: 'চ', bnShift: 'ছ'}, {key: 'u', bn: 'হ', bnShift: 'ঞ'}, {key: 'i', bn: 'গ', bnShift: 'ঘ'}, {key: 'o', bn: 'দ', bnShift: 'ধ'}, {key: 'p', bn: 'জ', bnShift: 'ঝ'},
+        {key: '[', bn: 'ক', bnShift: 'খ'}, {key: ']', bn: 'ব', bnShift: 'ভ'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'}
     ],
     home: [
-        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
-        {key: 'h', bn: '্', bnShift: 'হ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'}
+        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'ি', bnShift: 'ই'}, {key: 'd', bn: 'ু', bnShift: 'উ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
+        {key: 'h', bn: '্', bnShift: 'হ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
+        {key: ';', bn: 'স', bnShift: 'শ'}, {key: "'", bn: 'ে', bnShift: 'এ'}
     ],
     bottom: [
-        {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: '<'}, {key: '.', bn: '।', bnShift: 'ঞ'},
+        {key: 'z', bn: '্র', bnShift: '্য'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: '<'}, {key: '.', bn: '.', bnShift: '।'},
+        {key: '/', bn: 'র', bnShift: 'ড়'}
     ],
     space: [{key: ' ', bn: ''}],
 };
@@ -568,5 +569,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
