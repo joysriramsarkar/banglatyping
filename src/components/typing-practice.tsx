@@ -54,10 +54,10 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const totalDrills = drills.length;
     const progress = totalDrills > 0 ? (currentDrillIndex / totalDrills) * 100 : 0;
     const currentDrill = !isCompleted ? drills[currentDrillIndex] : null;
-    const currentStep = currentDrill?.steps[currentStepIndex];
+    const currentDrillStep = currentDrill?.steps[currentStepIndex];
 
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        if (isCompleted || !currentDrill || !currentStep) {
+        if (isCompleted || !currentDrill || !currentDrillStep) {
             return;
         };
 
@@ -84,7 +84,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
 
-        const { key: expectedKey, shift: expectedShift, display: expectedDisplay } = currentStep;
+        const { key: expectedKey, shift: expectedShift, display: expectedDisplay } = currentDrillStep;
         
         let expectedCode = `Key${expectedKey.toUpperCase()}`;
         if (expectedKey.length > 1 && !expectedKey.startsWith('Digit')) {
@@ -104,27 +104,11 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
              expectedCode = `Digit${expectedKey}`;
         }
         
-        const codeMatch = event.code === expectedCode;
+        const codeMatch = event.code.toUpperCase() === expectedCode.toUpperCase();
         const displayMatch = event.key === expectedDisplay;
         const keyMatch = event.key.toLowerCase() === expectedKey.toLowerCase();
         
         const isCorrect = (codeMatch || displayMatch || keyMatch) && event.shiftKey === expectedShift;
-        
-        console.log({
-            pressedKey: event.key,
-            pressedCode: event.code,
-            shiftPressed: event.shiftKey,
-            expected: currentStep,
-            expectedCode,
-            isCorrect,
-            matches: {
-                code: codeMatch,
-                display: displayMatch,
-                key: keyMatch,
-                shift: event.shiftKey === expectedShift,
-            }
-        });
-
 
         if (isCorrect) {
             setDrillState(prev => {
@@ -150,7 +134,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 setDrillState(prev => ({ ...prev, status: 'pending' }));
             }, 500);
         }
-    }, [isCompleted, drills, drillState, currentDrill, currentStep]);
+    }, [isCompleted, drills, drillState, currentDrill, currentDrillStep]);
 
 
     useEffect(() => {
@@ -278,7 +262,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     </div>
                      
                     {/* Virtual Keyboard */}
-                    <VirtualKeyboard highlightKey={currentStep?.key} needsShift={!!currentStep?.shift} />
+                    <VirtualKeyboard highlightKey={currentDrillStep?.key} needsShift={!!currentDrillStep?.shift} />
                     
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">
@@ -315,7 +299,7 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
         {key: ';', bn: 'স', bnShift: 'শ'}, {key: "'", bn: 'ে', bnShift: 'এ'}
     ],
     bottom: [
-        {key: 'z', bn: '্র', bnShift: '্য'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
+        {key: 'z', bn: '্য'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
         {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
         {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ','}, 
         {key: '.', bn: '।', bnShift: '.'}, {key: '/', bn: 'র', bnShift: 'ড়'},
@@ -646,6 +630,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
