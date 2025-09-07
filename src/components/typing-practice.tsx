@@ -57,17 +57,12 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     const currentStep = currentDrill?.steps[currentStepIndex];
 
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
-        console.log(`Key pressed: ${event.key}`, { shift: event.shiftKey });
         if (isCompleted || !currentDrill || !currentStep) {
-            console.log("Exiting: Drill completed or no current step.");
             return;
         };
 
-        console.log("Current expected step:", currentStep);
-
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
         if (modifierKeys.includes(event.key)) {
-             console.log("Modifier key pressed. Ignoring.");
             return;
         }
         
@@ -88,18 +83,16 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
-
-        const keyData = keyMap.find(k => k.bn === event.key || (k.bnShift === event.key && event.shiftKey));
         
-        const keyIsCorrect = event.key === currentStep.display;
+        const expectedKey = `Key${currentStep.key.toUpperCase()}`;
+        const spaceExpected = currentStep.key === ' ';
+        
+        const keyIsCorrect = (spaceExpected && event.code === 'Space') || event.code === expectedKey;
         const shiftIsCorrect = (event.shiftKey === currentStep.shift);
 
-        console.log(`Comparison: keyIsCorrect=${keyIsCorrect}, shiftIsCorrect=${shiftIsCorrect}`);
-
         if (keyIsCorrect && shiftIsCorrect) {
-            console.log("Correct key press!");
             setDrillState(prev => {
-                const isLastStepInDrill = prev.currentStepIndex >= currentDrill.steps.length - 1;
+                const isLastStepInDrill = prev.currentStepIndex >= (currentDrill.steps.length - 1);
                 
                 if (isLastStepInDrill) {
                     return {
@@ -116,7 +109,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 }
             });
         } else {
-            console.log("Incorrect key press!");
             setDrillState(prev => ({ ...prev, status: 'incorrect' }));
             statusTimeoutRef.current = setTimeout(() => {
                 setDrillState(prev => ({ ...prev, status: 'pending' }));
@@ -190,13 +182,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         let count = 0;
         let drillIdx = currentDrillIndex;
         while(count < 10 && drillIdx < drills.length) {
-            if (visible.length > 0 && visible.length % 4 === 0) {
-                 visible.push({
-                    prompt: ' ',
-                    steps: [{ key: ' ', shift: false, display: ' ' }],
-                    isSpace: true,
-                });
-            }
             visible.push(drills[drillIdx]);
             drillIdx++;
             count++;
@@ -211,7 +196,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                     {/* Prompt Display */}
                     <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px] flex-wrap">
                         {getVisibleDrills().map((drillData, index) => {
-                            const isCurrent = index === (getVisibleDrills().findIndex(d => d.prompt === drills[currentDrillIndex].prompt));
+                            const isCurrent = index === 0;
 
                              if(drillData.prompt === ' '){
                                 return (
@@ -226,7 +211,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                             
                             return (
                                 <div key={drillData.prompt + index + currentDrillIndex} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drillData.prompt.normalize('NFC')}
+                                   {drillData.prompt}
                                 </div>
                             )
                         })}
@@ -264,14 +249,14 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
         {key: '[', bn: 'ক', bnShift: 'খ'}, {key: ']', bn: 'ব', bnShift: 'ভ'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'}
     ],
     home: [
-        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'ি', bnShift: 'ই'}, {key: 'd', bn: 'ু', bnShift: 'উ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'},
-        {key: 'h', bn: '্', bnShift: 'হ'}, {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
+        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'ি', bnShift: 'ই'}, {key: 'd', bn: 'ু', bnShift: 'উ'}, {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: '্', bnShift: 'হ'},
+        {key: 'h', bn: 'ক', bnShift: 'খ'}, {key: 'j', bn: 'ত', bnShift: 'থ'}, {key: 'k', bn: 'ন', bnShift: 'ণ'}, {key: 'l', bn: 'ম'},
         {key: ';', bn: 'স', bnShift: 'শ'}, {key: "'", bn: 'ে', bnShift: 'এ'}
     ],
     bottom: [
-        {key: 'z', bn: '্র', bnShift: '্য'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: '<'}, {key: '.', bn: '।', bnShift: '.'},
-        {key: '/', bn: 'র', bnShift: 'ড়'}
+        {key: 'z', bn: '্র', bnShift: '্য'}, {key: 'x', bn: 'ব', bnShift: 'ভ'}, {key: 'c', bn: 'র', bnShift: 'ল'}, {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ও', bnShift: 'ঔ'},
+        {key: 'n', 'bn': 'ন', 'bnShift': 'ণ'}, {key: 'm', 'bn': 'ম'}, {key: ',', 'bn': '্', 'bnShift': 'ৎ'}, {key: '.', 'bn': '।', 'bnShift': '.'},
+        {key: '/', bn: '?', bnShift: '/'}
     ],
     space: [{key: ' ', bn: ''}],
 };
@@ -599,6 +584,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
