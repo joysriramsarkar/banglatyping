@@ -71,15 +71,10 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         }
 
         const shiftIsCorrect = currentStep.shift === event.shiftKey;
-        const pressedKey = event.key;
+
+        // Compare the pressed Bengali key with the expected Bengali character for the current step.
+        const keyIsCorrect = event.key.normalize('NFC') === currentStep.display.normalize('NFC');
         
-        // Find the corresponding Bengali character for the pressed English key
-        const keyMapping = keyMap.find(k => k.key.toLowerCase() === pressedKey.toLowerCase());
-        const expectedBengaliChar = currentStep.display;
-
-        // Only accept Bengali characters as correct input.
-        const keyIsCorrect = pressedKey === expectedBengaliChar;
-
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
                 const isLastStep = prev.currentStepIndex >= currentDrill.steps.length - 1;
@@ -571,5 +566,6 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
