@@ -58,20 +58,33 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
         if (isCompleted || !currentDrill || !currentStep) return;
 
-        const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Enter', 'Dead'];
+        const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
         if (modifierKeys.includes(event.key)) {
             return;
         }
+
+        if (event.key === 'Enter') {
+           if(isCompleted) {
+                if (nextLesson && nextLessonButtonRef.current) {
+                    nextLessonButtonRef.current.click();
+                } else if(restartButtonRef.current) {
+                    restartButtonRef.current.click();
+                }
+           }
+           return;
+        }
+
         event.preventDefault();
+
 
         if (statusTimeoutRef.current) {
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
 
-        const shiftIsCorrect = currentStep.shift === event.shiftKey;
         const keyIsCorrect = event.key.normalize('NFC') === currentStep.display.normalize('NFC');
-        
+        const shiftIsCorrect = event.shiftKey === currentStep.shift;
+
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
                 const isLastStep = prev.currentStepIndex >= currentDrill.steps.length - 1;
@@ -136,22 +149,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         });
     }, []);
 
-    useEffect(() => {
-        const handleEnterPress = (event: KeyboardEvent) => {
-            if (event.key === 'Enter' && isCompleted) {
-                if (nextLesson && nextLessonButtonRef.current) {
-                    nextLessonButtonRef.current.click();
-                } else if(restartButtonRef.current) {
-                    restartButtonRef.current.click();
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleEnterPress);
-        return () => {
-            window.removeEventListener('keydown', handleEnterPress);
-        };
-    }, [isCompleted, nextLesson]);
 
     if (isCompleted) {
         return (
