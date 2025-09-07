@@ -84,7 +84,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
         
-        const { key: expectedKey, shift: expectedShift } = currentDrillStep;
+        const { key: expectedKey, shift: expectedShift, display: expectedDisplay } = currentDrillStep;
         
         let expectedCode = `Key${expectedKey.toUpperCase()}`;
         if (expectedKey.length > 1 && !expectedKey.startsWith('Digit')) {
@@ -104,7 +104,7 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
              expectedCode = `Digit${expectedKey}`;
         }
         
-        const isCorrect = event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift;
+        const isCorrect = (event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift);
         
         if (isCorrect) {
             setDrillState(prev => {
@@ -297,7 +297,7 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string,
     bottom: [
         {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
         {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: 'ৎ'}, 
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: 'ৎ', bnShift: ','}, 
         {key: '.', bn: '।', bnShift: '.'}, {key: '/', bn: 'ও', bnShift: 'ঁ'},
     ],
     space: [{key: ' ', bn: ''}],
@@ -619,7 +619,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
           <Home className="h-5 w-5" />
         </Button>
         <Button onClick={isPaused ? resume : pause} variant="outline" size="icon" disabled={!isActive} title={isPaused ? "চালিয়ে যান" : "থামুন"}>
-          {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
+          {isPaused ? <Play className="h-5 w-w" /> : <Pause className="h-5 w-5" />}
         </Button>
       </div>
     </div>
@@ -628,6 +628,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
