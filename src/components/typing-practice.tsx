@@ -60,10 +60,8 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         if (isCompleted || !currentDrill || !currentStep) return;
 
         const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
-        if (modifierKeys.includes(event.key)) {
-            return;
-        }
-
+        if (modifierKeys.includes(event.key)) return;
+        
         if (event.key === 'Enter') {
            if(isCompleted) {
                 if (nextLesson && nextLessonButtonRef.current) {
@@ -77,7 +75,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
         event.preventDefault();
 
-
         if (statusTimeoutRef.current) {
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
@@ -88,14 +85,17 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
 
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
-                const isLastStep = prev.currentStepIndex >= currentDrill.steps.length - 1;
-                if (isLastStep) {
+                const isLastStepInDrill = prev.currentStepIndex >= currentDrill.steps.length - 1;
+                
+                if (isLastStepInDrill) {
+                    // Move to the next drill
                     return {
                         currentDrillIndex: prev.currentDrillIndex + 1,
                         currentStepIndex: 0,
                         status: 'correct',
                     };
                 } else {
+                    // Move to the next step within the same drill
                     return {
                         ...prev,
                         currentStepIndex: prev.currentStepIndex + 1,
@@ -568,4 +568,5 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
