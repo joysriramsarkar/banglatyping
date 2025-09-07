@@ -83,10 +83,11 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             clearTimeout(statusTimeoutRef.current);
             statusTimeoutRef.current = null;
         }
+
+        const expectedKey = currentStep.key;
+        const expectedShift = currentStep.shift;
         
-        const expectedKey = currentStep.key.toUpperCase();
-        let expectedCode = `Key${expectedKey}`;
-        // Handle non-alphanumeric keys
+        let expectedCode = `Key${expectedKey.toUpperCase()}`;
         if (expectedKey.length > 1) { // e.g. 'Space', 'Quote'
             expectedCode = expectedKey;
         } else if (/\d/.test(expectedKey)) { // e.g. 'Digit1'
@@ -105,7 +106,17 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         }
         
         const keyIsCorrect = event.code.toUpperCase() === expectedCode.toUpperCase();
-        const shiftIsCorrect = (event.shiftKey === currentStep.shift);
+        const shiftIsCorrect = event.shiftKey === expectedShift;
+        
+        console.log({
+            pressedKey: event.key,
+            pressedCode: event.code,
+            expectedDrill: currentDrill.prompt,
+            expectedStep: currentStep,
+            expectedCode,
+            keyMatch: keyIsCorrect,
+            shiftMatch: shiftIsCorrect,
+        });
 
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
@@ -627,6 +638,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
