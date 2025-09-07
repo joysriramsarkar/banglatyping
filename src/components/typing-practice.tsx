@@ -84,25 +84,28 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             statusTimeoutRef.current = null;
         }
         
-        const isHasanto = currentStep.display === '্';
-
-        // --- CONSOLE LOGS FOR DEBUGGING ---
-        console.log("--------------------");
-        console.log("Key pressed:", event.key, "| Code:", event.code);
-        console.log("Shift pressed?", event.shiftKey);
-        console.log("Current Step:", currentStep);
-        console.log("Is Hasanto step?", isHasanto);
+        const expectedKey = currentStep.key.toUpperCase();
+        let expectedCode = `Key${expectedKey}`;
+        // Handle non-alphanumeric keys
+        if (expectedKey.length > 1) { // e.g. 'Space', 'Quote'
+            expectedCode = expectedKey;
+        } else if (/\d/.test(expectedKey)) { // e.g. 'Digit1'
+            expectedCode = `Digit${expectedKey}`;
+        } else if (/[\[\]\\;',./]/.test(currentStep.key)) {
+           switch(currentStep.key) {
+               case '[': expectedCode = 'BracketLeft'; break;
+               case ']': expectedCode = 'BracketRight'; break;
+               case '\\': expectedCode = 'Backslash'; break;
+               case ';': expectedCode = 'Semicolon'; break;
+               case "'": expectedCode = 'Quote'; break;
+               case ',': expectedCode = 'Comma'; break;
+               case '.': expectedCode = 'Period'; break;
+               case '/': expectedCode = 'Slash'; break;
+           }
+        }
         
-        const keyIsCorrect = isHasanto
-            ? event.code === `Key${currentStep.key.toUpperCase()}`
-            : event.key === currentStep.display;
-            
+        const keyIsCorrect = event.code.toUpperCase() === expectedCode.toUpperCase();
         const shiftIsCorrect = (event.shiftKey === currentStep.shift);
-
-        console.log("Was key correct?", keyIsCorrect);
-        console.log("Was shift correct?", shiftIsCorrect);
-        console.log("--------------------");
-
 
         if (keyIsCorrect && shiftIsCorrect) {
             setDrillState(prev => {
@@ -192,16 +195,53 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     }
 
     const getVisibleDrills = () => {
-        const visible = [];
+        const visible: Drill[] = [];
         let count = 0;
         let drillIdx = currentDrillIndex;
+
         while(count < 10 && drillIdx < drills.length) {
             visible.push(drills[drillIdx]);
+            
+            // If the current drill is a space, we add a visual spacer
+            if (drills[drillIdx].prompt === ' ') {
+                 if ( (visible.length-1) % 5 === 4) { // Add spacer after 4 prompts + 1 space
+                    // This is a visual element, doesn't affect logic
+                 }
+            }
             drillIdx++;
             count++;
         }
         return visible;
     }
+
+
+    const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, key: string | number) => {
+        if(drillData.prompt === ' '){
+            return (
+                <div key={key} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2 border-dashed", isCurrent && "ring-2 ring-primary")}>
+                    <span className="text-muted-foreground italic">স্পেস</span>
+                </div>
+            )
+        }
+        let boxClass = "bg-secondary";
+        if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
+        if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
+        
+        return (
+            <div key={key} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
+               {drillData.prompt}
+            </div>
+        )
+    }
+
+    const visibleDrills = getVisibleDrills();
+    const promptsWithSpacers: (Drill | {isSpacer: true})[] = [];
+    visibleDrills.forEach((drill, index) => {
+        promptsWithSpacers.push(drill);
+        if (drill.prompt === ' ' && (index + 1) % 5 === 0) {
+           promptsWithSpacers.push({ isSpacer: true });
+        }
+    });
 
     return (
         <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-5xl mx-auto">
@@ -209,25 +249,12 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
                 <div className="w-full md:w-2/3 space-y-4">
                     {/* Prompt Display */}
                     <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px] flex-wrap">
-                        {getVisibleDrills().map((drillData, index) => {
-                            const isCurrent = index === 0;
-
-                             if(drillData.prompt === ' '){
-                                return (
-                                    <div key={`space-${index}-${currentDrillIndex}`} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2 border-dashed", isCurrent && "ring-2 ring-primary")}>
-                                        <span className="text-muted-foreground italic">স্পেস</span>
-                                    </div>
-                                )
+                        {promptsWithSpacers.map((item, index) => {
+                             if ('isSpacer' in item) {
+                                return <div key={`spacer-${index}`} className="w-full h-2"></div>
                             }
-                            let boxClass = "bg-secondary";
-                            if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
-                            if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
-                            
-                            return (
-                                <div key={drillData.prompt + index + currentDrillIndex} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-                                   {drillData.prompt}
-                                </div>
-                            )
+                            const isCurrent = currentDrillIndex === drills.indexOf(item);
+                            return renderDrillPrompt(item, isCurrent, `${item.prompt}-${index}`);
                         })}
                     </div>
                      
@@ -264,14 +291,14 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
     ],
     home: [
         {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'ি', bnShift: 'ই'}, {key: 'd', bn: 'ু', bnShift: 'উ'},
-        {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'}, {key: 'h', bn: '্', bnShift: 'হ'}, 
+        {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'}, {key: 'h', bn: '্'}, 
         {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
         {key: ';', bn: 'স', bnShift: 'শ'}, {key: "'", bn: 'ে', bnShift: 'এ'}
     ],
     bottom: [
         {key: 'z', bn: '্র', bnShift: '্য'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
         {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: '<'}, 
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ','}, 
         {key: '.', bn: '।', bnShift: '.'}, {key: '/', bn: 'র', bnShift: 'ড়'},
     ],
     space: [{key: ' ', bn: ''}],
@@ -600,6 +627,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
