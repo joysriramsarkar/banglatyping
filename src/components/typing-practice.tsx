@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import * as React from "react";
@@ -71,8 +70,6 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         }
 
         const shiftIsCorrect = currentStep.shift === event.shiftKey;
-
-        // Compare the pressed Bengali key with the expected Bengali character for the current step.
         const keyIsCorrect = event.key.normalize('NFC') === currentStep.display.normalize('NFC');
         
         if (keyIsCorrect && shiftIsCorrect) {
@@ -186,9 +183,16 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-2/3 space-y-4">
                     {/* Prompt Display */}
-                    <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px]">
+                    <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px] flex-wrap">
                         {getVisibleDrills().map((drillData, index) => {
                             const isCurrent = index === 0;
+                             if(drillData.prompt === ' '){
+                                return (
+                                    <div key={`space-${index}-${currentDrillIndex}`} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2 border-dashed", isCurrent && "ring-2 ring-primary")}>
+                                        <span className="text-muted-foreground italic">স্পেস</span>
+                                    </div>
+                                )
+                            }
                             let boxClass = "bg-secondary";
                             if (isCurrent && status === 'correct') boxClass = "bg-green-100 border-green-500";
                             if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
@@ -566,6 +570,3 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
-
-
-
