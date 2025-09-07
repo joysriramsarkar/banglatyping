@@ -82,8 +82,10 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
       }
     };
 
-    saveResults();
-  }, [user, wpm, accuracy, errors, timeElapsed, lessonId, toast, isDrill, erredCharacters]);
+    if (stats.timeElapsed > 0) {
+        saveResults();
+    }
+  }, [user, stats, lessonId, toast, isDrill]);
 
 
   useEffect(() => {
