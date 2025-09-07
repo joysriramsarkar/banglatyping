@@ -42,20 +42,43 @@ export const keyMap: {key: string; bn: string; bnShift?: string; row: 'top'|'hom
     {key: '/', bn: 'ও', bnShift: 'ঁ', row: 'bottom', hand: 'right'},
 ];
 
-
-const hasantKey = keyMap.find(k => k.bn === '্');
+const findKey = (bengaliChar: string) => keyMap.find(k => k.bn === bengaliChar || k.bnShift === bengaliChar);
+const hasantKey = findKey('্');
 if (!hasantKey) {
   throw new Error("Hasant key mapping not found!");
 }
 
+const standaloneVowels: Record<string, string> = {
+    'আ': 'া',
+    'ই': 'ি',
+    'ঈ': 'ী',
+    'উ': 'ু',
+    'ঊ': 'ূ',
+    'ঋ': 'ৃ',
+    'এ': 'ে',
+    'ঐ': 'ৈ',
+    'ও': 'ো',
+    'ঔ': 'ৌ',
+};
+
 const getStepsForChar = (char: string): SingleDrill[] => {
     const steps: SingleDrill[] = [];
-    const findKey = (bengaliChar: string) => keyMap.find(k => k.bn === bengaliChar || k.bnShift === bengaliChar);
 
-    // direct mapping for all chars, including যুক্তাক্ষর like ক্ষ
+    // Case 1: Is it a standalone vowel that can be formed with hasant?
+    if (char in standaloneVowels) {
+        const vowelSign = standaloneVowels[char];
+        const signKey = findKey(vowelSign);
+        if (signKey) {
+            steps.push({ key: hasantKey.key, shift: hasantKey.bnShift === '্', display: '্' });
+            steps.push({ key: signKey.key, shift: signKey.bnShift === vowelSign, display: vowelSign });
+            return steps;
+        }
+    }
+    
+    // Case 2: Is it a direct mapping? (consonant, vowel sign, or 'অ')
     const directMapping = findKey(char);
     if (directMapping) {
-         steps.push({
+        steps.push({
             key: directMapping.key,
             shift: directMapping.bnShift === char,
             display: char
@@ -63,46 +86,41 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         return steps;
     }
 
-    // fallback for complex যুক্তাক্ষর not in keymap
+    // Case 3: Is it a conjunct consonant? (যুক্তাক্ষর)
+    // This part can be expanded to handle complex conjuncts if needed.
+    // For example, 'জ্ঞ' = 'জ' + '্' + 'ঞ'
     if (char === 'জ্ঞ') {
         const jKey = findKey('জ');
         const njoKey = findKey('ঞ');
         if (jKey && hasantKey && njoKey) {
-            steps.push({ key: jKey.key, shift: !!jKey.bnShift && jKey.bnShift === 'জ', display: 'জ' });
-            steps.push({ key: hasantKey.key, shift: false, display: '্' });
-            steps.push({ key: njoKey.key, shift: !!njoKey.bnShift && njoKey.bnShift === 'ঞ', display: 'ঞ' });
-        }
-    } else {
-        // Fallback for compound characters with vowel signs
-        const lastChar = char.slice(-1);
-        const kar = vowelSigns.find(v => v.sign === lastChar);
-        if (kar) {
-            const baseChar = char.slice(0, -1);
-            const baseKey = findKey(baseChar);
-            const karKey = findKey(kar.sign);
-            if(baseKey && karKey) {
-                steps.push({ key: baseKey.key, shift: !!baseKey.bnShift && baseKey.bnShift === baseChar, display: baseChar });
-                steps.push({ key: karKey.key, shift: !!karKey.bnShift && karKey.bnShift === kar.sign, display: kar.sign });
-            }
+            steps.push({ key: jKey.key, shift: jKey.bnShift === 'জ', display: 'জ' });
+            steps.push({ key: hasantKey.key, shift: hasantKey.bnShift === '্', display: '্' });
+            steps.push({ key: njoKey.key, shift: njoKey.bnShift === 'ঞ', display: 'ঞ' });
+            return steps;
         }
     }
     
-    // Fallback for ja-fola (if not directly mapped e.g. on 'z')
-    const jaFolaKey = keyMap.find(k => k.bn === '্য');
-    if(char.endsWith('্য') && !jaFolaKey) {
+    // Case 4: Is it a consonant + vowel sign combination?
+    const lastChar = char.slice(-1);
+    const kar = vowelSigns[lastChar as keyof typeof standaloneVowels] ? lastChar : null;
+    if (kar) {
         const baseChar = char.slice(0, -1);
         const baseKey = findKey(baseChar);
-        const yaKey = findKey('য');
-        if(baseKey && hasantKey && yaKey) {
-            steps.length = 0; // Clear previous steps if any
-            steps.push({ key: baseKey.key, shift: !!baseKey.bnShift && baseKey.bnShift === baseChar, display: baseChar });
-            steps.push({ key: hasantKey.key, shift: false, display: '্'});
-            steps.push({ key: 'y', shift: false, display: 'য'});
+        const karKey = findKey(kar);
+        if (baseKey && karKey) {
+            // Check if base is a conjunct
+            const baseSteps = getStepsForChar(baseChar);
+            if (baseSteps.length > 0) {
+                 steps.push(...baseSteps);
+                 steps.push({ key: karKey.key, shift: karKey.bnShift === kar, display: kar });
+                 return steps;
+            }
         }
     }
 
-
-    return steps;
+    // Fallback for complex cases not handled
+    console.warn("Could not determine steps for character:", char);
+    return [];
 };
 
 const generateDrills = (chars: string[], count: number): Drill[] => {
@@ -160,7 +178,6 @@ const vowelSigns: { sign: string; name: string }[] = [
 
 const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: string; name: string }): Drill | null => {
     const steps: SingleDrill[] = [];
-    const findKey = (bengaliChar: string) => keyMap.find(k => k.bn === bengaliChar || k.bnShift === bengaliChar);
 
     const conKey = findKey(consonant.bn);
     if (!conKey) return null;
@@ -291,7 +308,7 @@ export const lessons: Lesson[] = [
     title: "২.১: টপ রো - বাম হাত (অক্ষর)",
     level: "Beginner",
     row: "top-row",
-    drills: generateDrills(['ঙ', 'য', 'ড', 'প', 'ট', 'ক্ষ'], 100)
+    drills: generateDrills(['ঙ', 'র', 'ট', 'ে', 'ক্ষ'], 100)
   },
   {
     id: "top-row-2-2-left-hand-words",
@@ -305,7 +322,7 @@ export const lessons: Lesson[] = [
     title: "২.৩: টপ রো - ডান হাত (অক্ষর)",
     level: "Beginner",
     row: "top-row",
-    drills: generateDrills(['চ', 'হ', 'গ', 'দ', 'জ', 'ক', 'ব', 'ৃ'], 100)
+    drills: generateDrills(['য', 'ু', 'ি', 'ো', 'প', 'ড', 'ব', 'ৃ'], 100)
   },
   {
     id: "top-row-2-4-right-hand-words",
@@ -319,14 +336,14 @@ export const lessons: Lesson[] = [
     title: "২.৫: টপ রো - শিফট কী (বাম হাত)",
     level: "Beginner",
     row: "top-row",
-    drills: generateDrills(['ঃ', 'য়', 'ঢ', 'ড়', 'ঠ'], 100)
+    drills: generateDrills(['ঁ', 'ঃ', 'ৈ', 'ড়', 'ঠ'], 100)
   },
   {
     id: "top-row-2-6-shift-right-hand",
     title: "২.৬: টপ রো - শিফট কী (ডান হাত)",
     level: "Beginner",
     row: "top-row",
-    drills: generateDrills(['ছ', 'ঞ', 'ঘ', 'ধ', 'ঝ', 'খ', 'ভ'], 100)
+    drills: generateDrills(['য়', 'ূ', 'ী', 'ৌ', 'ঢ়', 'ঢ', 'ভ', 'ঞ'], 100)
   },
   {
     id: "top-row-2-7-shift-words",
@@ -349,7 +366,7 @@ export const lessons: Lesson[] = [
     title: "৩.১: বটম রো - বাম হাত (অক্ষর)",
     level: "Beginner",
     row: "bottom-row",
-    drills: generateDrills(['্র', 'ত', 'চ', 'দ', 'ব'], 100)
+    drills: generateDrills(['্য', 'ত', 'চ', 'দ', 'ব'], 100)
   },
   {
     id: "bottom-row-3-2-left-hand-words",
@@ -363,7 +380,7 @@ export const lessons: Lesson[] = [
     title: "৩.৩: বটম রো - ডান হাত (অক্ষর)",
     level: "Beginner",
     row: "bottom-row",
-    drills: generateDrills(['ন', 'ম', '।', '.', ','], 100)
+    drills: generateDrills(['ন', 'ম', '।', '.'], 100)
   },
   {
     id: "bottom-row-3-4-right-hand-words",
@@ -377,14 +394,14 @@ export const lessons: Lesson[] = [
     title: "৩.৫: বটম রো - শিফট কী (বাম হাত)",
     level: "Beginner",
     row: "bottom-row",
-    drills: generateDrills(['্য', 'থ', 'ছ', 'ধ', 'ভ'], 100)
+    drills: generateDrills(['ং', 'থ', 'ছ', 'ধ', 'ভ'], 100)
   },
    {
     id: "bottom-row-3-6-shift-right-hand",
     title: "৩.৬: বটম রো - শিফট কী (ডান হাত)",
     level: "Beginner",
     row: "bottom-row",
-    drills: generateDrills(['ণ', 'ড়'], 100)
+    drills: generateDrills(['ণ', 'ম'], 100)
   },
   {
     id: "bottom-row-3-7-shift-words",
@@ -552,4 +569,5 @@ export const rowCategories: RowDrillCategory[] = [
     
 
     
+
 

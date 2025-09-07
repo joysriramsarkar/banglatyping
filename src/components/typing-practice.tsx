@@ -103,9 +103,9 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
         } else if (/[0-9]/.test(expectedKey)) {
              expectedCode = `Digit${expectedKey}`;
         }
-
+        
         const isCorrect = event.code.toUpperCase() === expectedCode.toUpperCase() && event.shiftKey === expectedShift;
-
+        
         if (isCorrect) {
             setDrillState(prev => {
                 const isLastStepInDrill = prev.currentStepIndex >= (currentDrill.steps.length - 1);
@@ -282,14 +282,14 @@ export const VisualTypingDrill = ({ drills, lessonId }: { drills: Drill[], lesso
     )
 }
 
-const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}[]> = {
+const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string, bnExtra?: string, bnShiftExtra?: string}[]> = {
     top: [
-        {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
-        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ'}, {key: 'i', bn: 'ি', bnShift: 'ী'}, {key: 'o', bn: 'ো', bnShift: 'ৌ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'},
-        {key: '[', bn: 'ড', bnShift: 'ঢ'}, {key: ']', bn: 'ব', bnShift: 'ভ'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ'}
+        {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ'}, {key: 'w', bn: 'ঙ', bnShift: 'ঃ'}, {key: 'e', bn: 'ে', bnShift: 'ৈ', bnExtra: 'এ', bnShiftExtra: 'ঐ'}, {key: 'r', bn: 'র', bnShift: 'ড়'}, {key: 't', bn: 'ট', bnShift: 'ঠ'},
+        {key: 'y', bn: 'য', bnShift: 'য়'}, {key: 'u', bn: 'ু', bnShift: 'ূ', bnExtra: 'উ', bnShiftExtra: 'ঊ'}, {key: 'i', bn: 'ি', bnShift: 'ী', bnExtra: 'ই', bnShiftExtra: 'ঈ'}, {key: 'o', bn: 'ো', bnShift: 'ৌ', bnExtra: 'ও', bnShiftExtra: 'ঔ'}, {key: 'p', bn: 'প', bnShift: 'ঢ়'},
+        {key: '[', bn: 'ড', bnShift: 'ঢ'}, {key: ']', bn: 'ব', bnShift: 'ভ'}, {key: '\\', bn: 'ৃ', bnShift: 'ঞ', bnExtra: 'ঋ'}
     ],
     home: [
-        {key: 'a', bn: 'া', bnShift: 'অ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'},
+        {key: 'a', bn: 'া', bnShift: 'অ', bnExtra: 'আ'}, {key: 's', bn: 'স', bnShift: 'শ'}, {key: 'd', bn: 'ড', bnShift: 'ঢ'},
         {key: 'f', bn: 'ফ', bnShift: 'ৎ'}, {key: 'g', bn: 'গ', bnShift: 'ঘ'}, {key: 'h', bn: '্', bnShift: 'হ'}, 
         {key: 'j', bn: 'জ', bnShift: 'ঝ'}, {key: 'k', bn: 'ক', bnShift: 'খ'}, {key: 'l', bn: 'ল', bnShift: 'ষ'},
         {key: ';', bn: 'ে', bnShift: 'এ'}, {key: "'", bn: 'ো', bnShift: 'ও'}
@@ -297,7 +297,7 @@ const keyboardLayout: Record<string, {key: string, bn: string, bnShift?: string}
     bottom: [
         {key: 'z', bn: '্য', bnShift: 'ং'}, {key: 'x', bn: 'ত', bnShift: 'থ'}, {key: 'c', bn: 'চ', bnShift: 'ছ'}, 
         {key: 'v', bn: 'দ', bnShift: 'ধ'}, {key: 'b', bn: 'ব', bnShift: 'ভ'},
-        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম', bnShift: 'ম'}, {key: ',', bn: ',', bnShift: 'ৎ'}, 
+        {key: 'n', bn: 'ন', bnShift: 'ণ'}, {key: 'm', bn: 'ম'}, {key: ',', bn: ',', bnShift: 'ৎ'}, 
         {key: '.', bn: '।', bnShift: '.'}, {key: '/', bn: 'ও', bnShift: 'ঁ'},
     ],
     space: [{key: ' ', bn: ''}],
@@ -314,10 +314,12 @@ const VirtualKeyboard = ({ highlightKey, needsShift }: { highlightKey: string | 
                             <div
                                 key={keyData.key}
                                 className={cn(
-                                    "flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-16",
+                                    "relative flex flex-col items-center justify-center h-16 rounded-md bg-secondary border border-b-4 font-hind w-16",
                                     isHighlighted && 'bg-primary/20 border-primary text-primary'
                                 )}
                             >
+                                <span className="absolute top-1 left-1 text-xs text-muted-foreground">{keyData.bnExtra}</span>
+                                <span className="absolute top-1 right-1 text-xs text-muted-foreground">{keyData.bnShiftExtra}</span>
                                 <span className={cn(
                                     "text-sm",
                                     (isHighlighted && needsShift) && "font-bold text-lg text-primary"
@@ -626,6 +628,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
     
 
     
+
 
 
 
