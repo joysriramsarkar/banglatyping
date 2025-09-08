@@ -58,8 +58,8 @@ const DrillProgress = ({ wpmHistory, timeLeft }: { wpmHistory: { time: number, w
             <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={wpmHistory} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="time" unit="s" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis domain={[0, 60]} allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
+                    <XAxis dataKey="time" unit="s" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(tick) => toBengaliNumber(tick)} />
+                    <YAxis domain={[0, 60]} allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(tick) => toBengaliNumber(tick)} />
                     <Tooltip
                         contentStyle={{
                             background: "hsl(var(--background))",
@@ -67,6 +67,7 @@ const DrillProgress = ({ wpmHistory, timeLeft }: { wpmHistory: { time: number, w
                             borderRadius: "var(--radius)",
                         }}
                         labelFormatter={(label) => `${toBengaliNumber(label)} সেকেন্ডে`}
+                        formatter={(value: number) => [toBengaliNumber(value), 'গতি (WPM)']}
                     />
                     <Bar dataKey="wpm" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="গতি (WPM)">
                          <LabelList dataKey="wpm" position="top" fontSize={12} formatter={(value: number) => toBengaliNumber(value)} />
@@ -85,6 +86,7 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
         currentCharIndex: 0,
         userInput: '',
         erredCharacters: new Map<string, number>(),
+        isError: false,
     });
 
     const [isFinished, setIsFinished] = useState(false);
@@ -95,14 +97,15 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
     const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
     
     const maxTime = 360; // 6 minutes
-    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer, setTime } = useTimer();
+    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer } = useTimer();
     const timeLeft = maxTime - time;
 
     const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const { currentDrillIndex, currentCharIndex, userInput, erredCharacters } = drillState;
+    const { currentDrillIndex, currentCharIndex, userInput, erredCharacters, isError } = drillState;
     const currentDrill = drills[currentDrillIndex];
+    const currentWord = currentDrill.prompt;
 
     const finishDrill = useCallback(() => {
         if (isFinished) return;
@@ -119,30 +122,29 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
         setWpm(Math.round(finalWpm));
     }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
 
-     const startDrill = useCallback(() => {
+    const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-            setTime(currentTime => {
-                setTotalCharsTyped(currentTotalChars => {
-                   const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
-                   setWpmHistory(prev => [...prev, { time: currentTime, wpm: currentWpm }]);
-                   return currentTotalChars;
-                });
-                return currentTime;
+            setWpmHistory(prevHistory => {
+                const latestTime = prevHistory.length > 0 ? prevHistory[prevHistory.length - 1].time : 0;
+                const newTime = latestTime + 30;
+                
+                const currentWpm = newTime > 0 ? Math.round(((totalCharsTyped / 5) / (newTime / 60))) : 0;
+                return [...prevHistory, { time: newTime, wpm: currentWpm }];
             });
         }, 30000);
-    }, [start, setTime]);
+    }, [start, totalCharsTyped]);
+
 
     useEffect(() => {
-        startDrill();
         return () => {
             if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
             if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         }
-    }, [startDrill]);
+    }, []);
 
     useEffect(() => {
-        if (!isActive || isFinished) return;
+        if (!isActive || isPaused || isFinished) return;
 
         const currentWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
         const correctChars = totalCharsTyped - totalErrors;
@@ -155,7 +157,7 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
         if (time >= maxTime) {
             finishDrill();
         }
-    }, [time, isActive, isFinished, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
+    }, [time, isActive, isPaused, isFinished, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
     
     const resetInactivityTimer = useCallback(() => {
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
@@ -169,17 +171,16 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
     const handleKeyPress = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
         if (isFinished) return;
         
-        if (!isActive) start();
+        if (!isActive) startDrill();
         else if (isPaused) resume();
         
         resetInactivityTimer();
 
         const typedChar = event.key;
-        const expectedChar = currentDrill.prompt[currentCharIndex];
-
+        
         if (typedChar === ' ') {
             event.preventDefault();
-             if(userInput.trim() === currentDrill.prompt) {
+             if(userInput.trim() === currentWord) {
                 setTotalCharsTyped(prev => prev + 1); // for the space
                 let nextDrillIndex = currentDrillIndex + 1;
                 if(nextDrillIndex >= drills.length) nextDrillIndex = 0; // Loop
@@ -188,26 +189,33 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                     ...prev,
                     currentDrillIndex: nextDrillIndex,
                     currentCharIndex: 0,
-                    userInput: ''
+                    userInput: '',
+                    isError: false,
                 }));
              } else {
                  setTotalErrors(prev => prev + 1);
-                 // maybe add some visual feedback for incorrect word
+                 setDrillState(prev => ({ ...prev, isError: true }));
              }
         } else if (typedChar === 'Backspace') {
-             setDrillState(prev => ({ ...prev, userInput: prev.userInput.slice(0, -1), currentCharIndex: Math.max(0, prev.currentCharIndex - 1)}));
+             setDrillState(prev => ({ ...prev, userInput: prev.userInput.slice(0, -1), currentCharIndex: Math.max(0, prev.currentCharIndex - 1), isError: false}));
         } else if (typedChar.length === 1) { // handle normal characters
-             if(typedChar === expectedChar) {
-                 setDrillState(prev => ({...prev, currentCharIndex: prev.currentCharIndex + 1, userInput: prev.userInput + typedChar}));
-                 setTotalCharsTyped(prev => prev + 1);
+             const newTotalChars = totalCharsTyped + 1;
+             setTotalCharsTyped(newTotalChars);
+             
+             const newUserInput = userInput + typedChar;
+             const expectedSubstring = currentWord.substring(0, newUserInput.length);
+             
+             if(newUserInput === expectedSubstring) {
+                 setDrillState(prev => ({...prev, currentCharIndex: prev.currentCharIndex + 1, userInput: newUserInput, isError: false}));
              } else {
                 setTotalErrors(prev => prev + 1);
+                const expectedChar = currentWord[currentCharIndex];
                 const newErredChars = new Map(erredCharacters);
                 newErredChars.set(expectedChar, (newErredChars.get(expectedChar) || 0) + 1);
-                setDrillState(prev => ({ ...prev, erredCharacters: newErredChars }));
+                setDrillState(prev => ({ ...prev, userInput: newUserInput, erredCharacters: newErredChars, isError: true }));
              }
         }
-    }, [isFinished, isActive, isPaused, start, resume, resetInactivityTimer, currentDrill, currentCharIndex, userInput, currentDrillIndex, drills.length, erredCharacters]);
+    }, [isFinished, isActive, isPaused, startDrill, resume, resetInactivityTimer, currentWord, currentCharIndex, userInput, currentDrillIndex, drills.length, erredCharacters, totalCharsTyped]);
 
     const resetDrill = useCallback(() => {
         resetTimer();
@@ -216,7 +224,8 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
             currentDrillIndex: 0,
             currentCharIndex: 0,
             userInput: '',
-            erredCharacters: new Map()
+            erredCharacters: new Map(),
+            isError: false,
         });
         setIsFinished(false);
         setWpm(0);
@@ -224,8 +233,7 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
         setTotalCharsTyped(0);
         setTotalErrors(0);
         setWpmHistory([]);
-        startDrill();
-    }, [initialDrills, resetTimer, startDrill]);
+    }, [initialDrills, resetTimer]);
 
     const startCustomDrill = () => {
         const erredChars = Array.from(erredCharacters.keys());
@@ -248,22 +256,20 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                     lessonId={lessonId}
                     isDrill={true}
                     customDrill={startCustomDrill}
+                    accuracyGoal={accuracyGoal}
                 />;
     }
 
-    const WordDisplay = ({ word, isCurrent, isTypedCorrectly }: { word: string; isCurrent: boolean; isTypedCorrectly: boolean | null }) => {
+    const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; isCurrent: boolean; userInput: string; isError: boolean }) => {
         if (isCurrent) {
-            const correctPart = word.substring(0, currentCharIndex);
-            const incorrectPart = userInput.substring(currentCharIndex)
-            const remainingPart = word.substring(currentCharIndex);
-
+            const correctPart = word.substring(0, userInput.length);
+            const remainingPart = word.substring(userInput.length);
+            
             return (
                  <span className="text-3xl text-primary font-bold mr-4 relative">
                     <span className="opacity-0">{word}</span> {/* For layout spacing */}
                     <span className="absolute left-0 top-0">
-                        {correctPart.split('').map((char, i) => (
-                           <span key={i} className="text-green-500">{char}</span>
-                        ))}
+                        <span className={isError ? "text-red-500" : "text-green-500"}>{userInput}</span>
                         <span className="border-b-2 border-primary">{remainingPart[0]}</span>
                         <span>{remainingPart.substring(1)}</span>
                     </span>
@@ -284,7 +290,8 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                                 key={`${drill.prompt}-${currentDrillIndex + index}`} 
                                 word={drill.prompt}
                                 isCurrent={index === 0}
-                                isTypedCorrectly={null}
+                                userInput={userInput}
+                                isError={isError}
                            />
                        ))}
                        <Input 
@@ -328,7 +335,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const [wpmHistory, setWpmHistory] = useState<{ time: number, wpm: number }[]>([]);
     
     const maxTime = 360; // 6 minutes
-    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer, setTime } = useTimer();
+    const { time, isActive, isPaused, start, pause, resume, reset: resetTimer } = useTimer();
     const timeLeft = maxTime - time;
 
     const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -356,31 +363,30 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         setWpm(Math.round(finalWpm));
     }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
     
-     const startDrill = useCallback(() => {
+    const startDrill = useCallback(() => {
         start();
         wpmIntervalRef.current = setInterval(() => {
-            setTime(currentTime => {
-                setTotalCharsTyped(currentTotalChars => {
-                   const currentWpm = currentTime > 0 ? Math.round(((currentTotalChars / 5) / (currentTime / 60))) : 0;
-                   setWpmHistory(prev => [...prev, { time: currentTime, wpm: currentWpm }]);
-                   return currentTotalChars;
-                });
-                return currentTime;
+            setWpmHistory(prevHistory => {
+                const latestTime = prevHistory.length > 0 ? prevHistory[prevHistory.length - 1].time : 0;
+                const newTime = latestTime + 30;
+                
+                const currentWpm = newTime > 0 ? Math.round(((totalCharsTyped / 5) / (newTime / 60))) : 0;
+                return [...prevHistory, { time: newTime, wpm: currentWpm }];
             });
         }, 30000);
-    }, [start, setTime]);
+    }, [start, totalCharsTyped]);
+
 
     useEffect(() => {
-        startDrill();
         return () => {
             if(wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
             if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         }
-    }, [startDrill]);
+    }, []);
 
 
     useEffect(() => {
-        if (!isActive || isFinished) return;
+        if (!isActive || isPaused || isFinished) return;
 
         const currentWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
         const correctChars = totalCharsTyped - totalErrors;
@@ -393,7 +399,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         if (time >= maxTime) {
             finishDrill();
         }
-    }, [time, isActive, isFinished, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
+    }, [time, isActive, isPaused, isFinished, totalCharsTyped, totalErrors, accuracyGoal, finishDrill]);
 
     const resetInactivityTimer = useCallback(() => {
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
@@ -409,7 +415,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         if (isFinished) return;
         
         if (!isActive) {
-            start();
+            startDrill();
         } else if (isPaused) {
             resume();
         }
@@ -512,7 +518,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         } else {
             handleIncorrect();
         }
-    }, [isSessionOver, isFinished, drills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, start, resetInactivityTimer]);
+    }, [isSessionOver, isFinished, drills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, startDrill, resetInactivityTimer]);
 
 
     useEffect(() => {
@@ -539,8 +545,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         setTotalCharsTyped(0);
         setTotalErrors(0);
         setWpmHistory([]);
-        startDrill();
-    }, [initialDrills, resetTimer, startDrill]);
+    }, [initialDrills, resetTimer]);
 
     const startCustomDrill = () => {
         const erredChars = Array.from(erredCharacters.keys());
@@ -564,6 +569,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                     lessonId={lessonId}
                     isDrill={true}
                     customDrill={startCustomDrill}
+                    accuracyGoal={accuracyGoal}
                 />;
     }
 
@@ -807,38 +813,37 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const timeLeft = maxTime > 0 ? maxTime - time : time;
 
   useEffect(() => {
-    const newWords = textToType.split(' ').filter(w => w);
-    setWords(newWords);
-    // Loop the text for practice drills to ensure it's long enough
-    if(isPracticeDrill && newWords.length > 0) {
+    let newWords: string[] = [];
+    if (isPracticeDrill) {
         let repeatedText = '';
-        while(repeatedText.length < 5000) { // arbitrary large number
-            repeatedText += newWords.join(' ') + ' ';
+        const baseWords = initialText.split(' ').filter(w => w);
+        if (baseWords.length > 0) {
+            while(repeatedText.length < 10000) { // create a very long text to prevent running out
+                repeatedText += baseWords.join(' ') + ' ';
+            }
         }
-        setTextToType(repeatedText);
-        setWords(repeatedText.split(' ').filter(w => w));
+        newWords = repeatedText.split(' ').filter(w => w);
+    } else {
+        newWords = initialText?.normalize('NFC').split(' ').filter(w => w) || [];
     }
-  }, [initialText, isPracticeDrill, textToType]);
+    setWords(newWords);
+    setTextToType(newWords.join(' '));
+
+  }, [initialText, isPracticeDrill]);
 
 
   const calculateStats = useCallback(() => {
-    // Correct characters typed so far
-    let correctChars = 0;
-    typedWords.slice(0, currentWordIndex).forEach((typedWord, index) => {
-        const expectedWord = words[index];
-        for (let i = 0; i < Math.min(typedWord.length, expectedWord.length); i++) {
-            if (typedWord[i] === expectedWord[i]) {
-                correctChars++;
-            }
+    const wordsSoFar = typedWords.slice(0, currentWordIndex);
+    const correctChars = wordsSoFar.reduce((acc, typedWord, index) => {
+        const originalWord = words[index];
+        if (typedWord === originalWord) {
+            return acc + originalWord.length;
         }
-    });
+        return acc;
+    }, 0);
 
-    // Add spaces as correct characters
-    correctChars += currentWordIndex > 0 ? currentWordIndex -1 : 0;
+    const grossChars = wordsSoFar.join('').length + Math.max(0, wordsSoFar.length); // add spaces
     
-    // Total characters typed so far
-    const grossChars = typedWords.slice(0, currentWordIndex).join(" ").length;
-
     // Accuracy
     const currentAccuracy = grossChars > 0 ? (correctChars / grossChars) * 100 : 100;
     setAccuracy(Math.round(currentAccuracy));
@@ -945,12 +950,12 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
 
     calculateStats();
     
-    const isTestFinished = currentWordIndex === words.length && words.length > 0;
+    const isTestFinished = !isPracticeDrill && currentWordIndex === words.length && words.length > 0;
     const isTimeUp = maxTime > 0 && time >= maxTime;
     
     let isGoalMet = false;
     if (isPracticeDrill) {
-        isGoalMet = time >= 240 && wpm >= 25 && accuracy >= accuracyGoal;
+        isGoalMet = time >= 240 && wpm >= 25 && accuracy >= (accuracyGoal || 95);
     }
 
     if (isTestFinished || isTimeUp || isGoalMet) {
@@ -1016,7 +1021,7 @@ export default function TypingPractice({ textToType: initialText, timeLimit, les
   const isError = normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
 
   if(isFinished) {
-    return <TestResults stats={{ wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} />;
+    return <TestResults stats={{ wpm, accuracy: accuracy, errors: totalErrors, timeElapsed: time }} onRestart={() => resetTest(!timeLimit)} lessonId={lessonId} isDrill={isPracticeDrill} accuracyGoal={accuracyGoal}/>;
   }
 
   const textDisplayFontSize = 'text-3xl';

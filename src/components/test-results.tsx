@@ -13,7 +13,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { lessons } from "@/lib/lessons";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -38,16 +37,16 @@ const StatItem = ({ icon: Icon, label, value, unit }: { icon: React.ElementType,
   </div>
 );
 
-export default function TestResults({ stats, onRestart, lessonId, isDrill = false, customDrill }: { stats: TypingStats, onRestart: () => void, lessonId?: string, isDrill?: boolean, customDrill?: () => void }) {
+export default function TestResults({ stats, onRestart, lessonId, isDrill = false, customDrill, accuracyGoal = 95 }: { stats: TypingStats, onRestart: () => void, lessonId?: string, isDrill?: boolean, customDrill?: () => void, accuracyGoal?: number }) {
   const { wpm, accuracy, errors, timeElapsed, erredCharacters = [] } = stats;
   const router = useRouter();
   const { user, userData } = useAuth();
   const { toast } = useToast();
-  const nextLessonButtonRef = useRef<HTMLButtonElement>(null);
-  const restartButtonRef = useRef<HTMLButtonElement>(null);
+  const actionButtonRef = useRef<HTMLButtonElement>(null);
   const hasSavedResult = useRef(false);
 
-  const canGetCertificate = wpm >= 40 && accuracy >= 95 && !isDrill;
+  const passedDrill = isDrill && wpm >= 25 && accuracy >= accuracyGoal;
+  const canGetCertificate = !isDrill && wpm >= 40 && accuracy >= 95;
   
   let nextLesson: Lesson | null = null;
   if(lessonId) {
@@ -56,10 +55,12 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
         nextLesson = lessons[currentLessonIndex + 1];
     }
   }
+  
+  const showNextLessonButton = passedDrill && nextLesson;
 
   useEffect(() => {
     const saveResults = async () => {
-      if (user && !isDrill && !hasSavedResult.current) {
+      if (user && !hasSavedResult.current) {
         hasSavedResult.current = true;
         try {
           const statsCollectionRef = collection(db, `users/${user.uid}/stats`);
@@ -85,17 +86,15 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
     if (stats.timeElapsed > 0) {
         saveResults();
     }
-  }, [user, stats, lessonId, toast, isDrill]);
+  }, [user, stats, lessonId, toast]);
 
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Enter') {
         event.preventDefault();
-        if (nextLesson && nextLessonButtonRef.current) {
-          nextLessonButtonRef.current.click();
-        } else if (restartButtonRef.current) {
-          restartButtonRef.current.click();
+        if (actionButtonRef.current) {
+          actionButtonRef.current.click();
         }
       }
     };
@@ -104,15 +103,15 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [nextLesson]);
+  }, []);
 
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="text-center">
         <Award className="mx-auto h-12 w-12 text-yellow-500" />
-        <CardTitle className="text-3xl font-headline">ফলাফল</CardTitle>
-        <CardDescription>আপনার টাইপিং টেস্টের সারাংশ নিচে দেওয়া হলো।</CardDescription>
+        <CardTitle className="text-3xl font-headline">{isDrill ? (passedDrill ? 'অনুশীলন সফল!' : 'অনুশীলন ব্যর্থ') : 'ফলাফল'}</CardTitle>
+        <CardDescription>{isDrill ? `আপনার লক্ষ্য ছিল ${toBengaliNumber(accuracyGoal)}% নির্ভুলতা।` : 'আপনার টাইপিং টেস্টের সারাংশ নিচে দেওয়া হলো।'}</CardDescription>
       </CardHeader>
       <CardContent className="grid md:grid-cols-2 gap-8">
         <div className="space-y-6">
@@ -147,10 +146,17 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
                       </DialogContent>
                   </Dialog>
               )}
-              <Button ref={restartButtonRef} onClick={onRestart} variant="outline" className="w-full">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                পুনরায় চেষ্টা করুন
-              </Button>
+              
+              {showNextLessonButton ? (
+                  <Button ref={actionButtonRef} onClick={() => router.push(`/dashboard/practice/${nextLesson?.id}`)} className="w-full">
+                      পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+              ) : (
+                   <Button ref={actionButtonRef} onClick={onRestart} variant="outline" className="w-full">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    পুনরায় চেষ্টা করুন
+                  </Button>
+              )}
           </div>
           
           <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
@@ -158,11 +164,6 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
                 <Home className="mr-2 h-4 w-4" />
                 পাঠক্রমে ফিরে যান
               </Button>
-              {nextLesson && !isDrill && (
-                  <Button ref={nextLessonButtonRef} onClick={() => router.push(`/dashboard/practice/${nextLesson?.id}`)} className="w-full">
-                      পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-              )}
           </div>
         </div>
 
@@ -179,7 +180,10 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="char" />
                             <YAxis allowDecimals={false}/>
-                            <Tooltip cursor={{fill: 'hsl(var(--muted))'}}/>
+                            <Tooltip 
+                                cursor={{fill: 'hsl(var(--muted))'}}
+                                formatter={(value: number) => [toBengaliNumber(value), 'ভুলের সংখ্যা']}
+                            />
                             <Bar dataKey="count" fill="hsl(var(--primary))" name="ভুলের সংখ্যা" />
                         </BarChart>
                     </ResponsiveContainer>
