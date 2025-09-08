@@ -9,7 +9,7 @@ import { Card, CardContent } from './ui/card';
 import { Home, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-const words = ["বাংলা", "ভাষা", "நாடு", "পতাকা", "নদী", "ফুল", "ফল", "মাছ", "গান", "কবিতা", "স্বাধীনতা"];
+const words = ["বাংলা", "ভাষা", "জয়", "পতাকা", "নদী", "ফুল", "ফল", "মাছ", "গান", "কবিতা", "স্বাধীনতা"];
 
 const Word = ({ word, onComplete }: { word: string, onComplete: (w: string) => void }) => {
   const duration = Math.random() * 8 + 8; // Increased duration for slower fall
