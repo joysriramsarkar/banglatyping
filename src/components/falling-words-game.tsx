@@ -6,18 +6,33 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
-import { Home, RefreshCw } from 'lucide-react';
+import { Home, RefreshCw, Pause, Play } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import useSound from 'use-sound';
 import { cn } from '@/lib/utils';
+import { practiceParagraphs } from '@/lib/lessons';
 
-const wordsList = [
-    "বাংলা", "ভাষা", "জয়", "পতাকা", "নদী", "ফুল", "ফল", "মাছ", "গান", "কবিতা", "স্বাধীনতা",
-    "সূর্য", "চন্দ্র", "তারা", "আকাশ", "বাতাস", "জল", "আগুন", "মাটি", "পাখি", "সবুজ",
-    "মানুষ", "জীবন", "মরণ", "সময়", "কাজ", "খেলা", "হাসি", "কান্না", "ভালোবাসা", "বন্ধু"
-];
+// Extract unique words from practice paragraphs
+const getWordsFromParagraphs = (): string[] => {
+  const allWords = new Set<string>();
+  
+  practiceParagraphs.forEach(paragraph => {
+    const words = paragraph.split(/\s+/).filter(word => word.length > 0);
+    words.forEach(word => {
+      // Clean word and add if it's Bengali and reasonable length
+      const cleanWord = word.replace(/[।,!?;:।"''()।]/g, '').trim();
+      if (cleanWord.length >= 2 && cleanWord.length <= 15 && /[\u0980-\u09FF]/.test(cleanWord)) {
+        allWords.add(cleanWord);
+      }
+    });
+  });
+  
+  return Array.from(allWords);
+};
 
-const Word = ({ word, onComplete, speed }: { word: string, onComplete: (w: string) => void, speed: number }) => {
+const wordsList = getWordsFromParagraphs();
+
+const Word = ({ word, onComplete, speed, isPaused }: { word: string, onComplete: (w: string) => void, speed: number, isPaused: boolean }) => {
   const duration = Math.max(3, 16 - speed); // As speed increases, duration decreases
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const [isClient, setIsClient] = useState(false);
@@ -29,13 +44,24 @@ const Word = ({ word, onComplete, speed }: { word: string, onComplete: (w: strin
 
   if (!isClient) return null; // Avoid hydration mismatch
 
+  // Color based on word length
+  const getWordColor = (wordLength: number) => {
+    if (wordLength <= 3) return "text-green-600";
+    if (wordLength <= 6) return "text-blue-600";
+    if (wordLength <= 10) return "text-yellow-600";
+    return "text-red-600";
+  };
+
   return (
     <motion.div
       initial={{ y: -50, x: Math.random() * (windowSize.width > 400 ? windowSize.width - 200 : 300) }}
-      animate={{ y: windowSize.height - 150 }}
-      transition={{ duration, ease: "linear" }}
-      onAnimationComplete={() => onComplete(word)}
-      className="absolute px-4 py-2 bg-card border rounded-full text-lg font-mono shadow-lg"
+      animate={{ y: isPaused ? -50 : windowSize.height - 150 }}
+      transition={{ duration: isPaused ? 0 : duration, ease: "linear" }}
+      onAnimationComplete={() => !isPaused && onComplete(word)}
+      className={cn(
+        "absolute px-4 py-2 bg-card border rounded-full text-lg font-mono shadow-lg",
+        getWordColor(word.length)
+      )}
     >
       {word}
     </motion.div>
@@ -50,6 +76,8 @@ export default function FallingWordsGame() {
     const [lives, setLives] = useState(5);
     const [gameOver, setGameOver] = useState(false);
     const [level, setLevel] = useState(1);
+    const [totalWordsTyped, setTotalWordsTyped] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
     const gameInterval = useRef<NodeJS.Timeout | null>(null);
     const router = useRouter();
 
@@ -68,6 +96,26 @@ export default function FallingWordsGame() {
         }
     };
 
+    const pauseGame = useCallback(() => {
+        setIsPaused(true);
+        if (gameInterval.current) clearInterval(gameInterval.current);
+    }, []);
+
+    const resumeGame = useCallback(() => {
+        setIsPaused(false);
+        const maxWords = Math.min(5 + level, 15);
+        const intervalTime = Math.max(1500 - (level * 100), 800);
+        gameInterval.current = setInterval(() => {
+            setActiveWords(prev => {
+                if(prev.length < maxWords) {
+                    const newWord = wordsList[Math.floor(Math.random() * wordsList.length)];
+                    return [...prev, newWord + Math.random()];
+                }
+                return prev;
+            });
+        }, intervalTime);
+    }, [level]);
+
     const startGame = useCallback(() => {
         setActiveWords([]);
         setScore(0);
@@ -75,17 +123,24 @@ export default function FallingWordsGame() {
         setGameOver(false);
         setInputValue('');
         setLevel(1);
+        setTotalWordsTyped(0);
+        setIsPaused(false);
 
         if (gameInterval.current) clearInterval(gameInterval.current);
+        
+        // Start with level 1 parameters
+        const maxWords = 5;
+        const intervalTime = 1500;
+        
         gameInterval.current = setInterval(() => {
             setActiveWords(prev => {
-                if(prev.length < 10) {
+                if(prev.length < maxWords) {
                     const newWord = wordsList[Math.floor(Math.random() * wordsList.length)];
                     return [...prev, newWord + Math.random()]; // Add random number to make key unique
                 }
                 return prev;
             });
-        }, 2500);
+        }, intervalTime);
     }, []);
 
     const handleWordMiss = useCallback((word: string) => {
@@ -120,21 +175,22 @@ export default function FallingWordsGame() {
 
     // Level up logic
     useEffect(() => {
-        if (score > 0 && score % 50 === 0) {
+        if (score > 0 && score % 100 === 0) { // Level up every 100 points
             setLevel(prev => prev + 1);
             playSound(playLevelUp);
-            // Increase difficulty by speeding up word generation
-             if (gameInterval.current) clearInterval(gameInterval.current);
-             const newInterval = Math.max(1000, 2500 - (level * 200));
-             gameInterval.current = setInterval(() => {
+            // Restart game with new level parameters
+            if (gameInterval.current) clearInterval(gameInterval.current);
+            const maxWords = Math.min(5 + (level + 1), 15);
+            const intervalTime = Math.max(1500 - ((level + 1) * 100), 800);
+            gameInterval.current = setInterval(() => {
                 setActiveWords(prev => {
-                    if(prev.length < 10) {
+                    if(prev.length < maxWords) {
                         const newWord = wordsList[Math.floor(Math.random() * wordsList.length)];
                         return [...prev, newWord + Math.random()];
                     }
                     return prev;
                 });
-            }, newInterval);
+            }, intervalTime);
         }
     }, [score, level, playLevelUp]);
 
@@ -148,6 +204,7 @@ export default function FallingWordsGame() {
             if (matchedActiveWord) {
                 setScore(prev => prev + typedWord.length);
                 setActiveWords(prev => prev.filter(aw => aw !== matchedActiveWord));
+                setTotalWordsTyped(prev => prev + 1);
                 playSound(playSuccess);
             } else {
                 playSound(playError); // Missed word
@@ -182,7 +239,7 @@ export default function FallingWordsGame() {
         <div className={cn("relative w-full h-[70vh] rounded-lg overflow-hidden border transition-colors duration-500", lives <= 2 ? "bg-red-50" : "bg-secondary/30")}>
             <AnimatePresence>
                 {activeWords.map((word) => (
-                    <Word key={word} word={word.replace(/[0-9.]/g, '')} onComplete={handleWordMiss} speed={level} />
+                    <Word key={word} word={word.replace(/[0-9.]/g, '')} onComplete={handleWordMiss} speed={level} isPaused={isPaused} />
                 ))}
             </AnimatePresence>
 
@@ -192,6 +249,15 @@ export default function FallingWordsGame() {
                         <p>স্কোর: <span className="font-bold">{score}</span></p>
                         <p>লাইফ: <span className="font-bold">{'❤️'.repeat(lives)}</span></p>
                         <p>লেভেল: <span className="font-bold">{level}</span></p>
+                        <p>শব্দ: <span className="font-bold">{totalWordsTyped}</span></p>
+                        <Button 
+                            onClick={isPaused ? resumeGame : pauseGame} 
+                            size="sm" 
+                            variant="outline"
+                            className="h-8 px-2"
+                        >
+                            {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                        </Button>
                     </div>
                     <Input
                         type="text"

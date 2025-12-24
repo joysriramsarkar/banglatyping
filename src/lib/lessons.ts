@@ -302,6 +302,7 @@ const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Dri
 const homeRowWords = "জল ফল গল ডল জাল গাল ফাল সাল জগ গজ সাজ ডগা গজা জলা ফালা গালা ডালা সাজা সফল ফসল গজল ফস লগা অজ অঘ অলস অশ খল খস খাসা ঘষা ঘাস ঢল ঝল শখ সৎ হজ হল সহ ঢাল গলা ঝাল শসা শাখা শাল শালা হলফ হাসা হাল জগৎ জঙ্গল জলসা সহসা অলস জজ শাস হাহা খসখস খলখল ঝলসা অঢল".split(" ");
 const topRowWords = "ক্ষর রঙ রট রক্ষ টের ঠের এঁর ওঁর রঙে এঁটে ঠরঠর পর পট পিঠ পুড় পুর পীর টুপ টিপ টুঁটি টোপর টোপ ঠুঁটো ঠোঁট রূপ রূঢ় রীতি ঢের ক্ষয় ক্ষীর ক্ষুর যূপ যেই উর ঊরু পিউ টুট টুটি টোটো টইটই টুঁ রিপু পুঁটি পৈঠা পৈতে ইঁট এয়ো রুই রুটি পুঁই পিঁড়ি পরে পড়ে টর ঠর ঊর উঠ রোঁ টীট পুঁ ঠুঁই".split(" ");
 const bottomRowWords = "তথ্য তব বদ মন বন ভব ধন নদ দম নব মদ বধ ছন্দ বন্ধ মধ্য ভবন দম্ভ দ্বন্দ্ব চন্দন মন্থন তন নত মত মম নভ পণ বচন দমন মদন নন্দন বন্ধন বন্দন দন্ত ধন্য নব্য".split(" ");
+const gameWords = ["বই", "কলম", "বল", "জল", "ফল", "ঘর", "বন", "পথ", "মত", "নদ", "জন", "সব", "কম", "গম", "আম", "জাম", "গান", "ধান", "মালা", "চাকা", "পাতা", "লতা", "কাকা", "মামা", "নানা", "দাদা", "দিদি", "ফুল", "পাখি", "মাছ"];
 
 const homeRowChars = ['া', 'স', 'ড', 'ফ', 'গ', '্', 'জ', 'ক', 'ল', 'অ', 'শ', 'ঢ', 'ৎ', 'ঘ', 'হ', 'ঝ', 'খ', 'ষ'];
 const topRowChars = ['ঙ', 'র', 'ট', 'ে', 'ক্ষ', 'য', 'ু', 'ি', 'ো', 'প', 'ড', 'ব', 'ৃ', 'ঁ', 'ঃ', 'ৈ', 'ড়', 'ঠ', 'য়', 'ূ', 'ী', 'ৌ', 'ঢ়', 'ঢ', 'ভ', 'ঞ'];
@@ -323,7 +324,7 @@ export const lessons: Lesson[] = [
     level: "Beginner",
     row: "home-row",
     text: homeRowWords.join(' '),
-    isPracticeDrill: true,
+    isWordDrill: true,
   },
   
   // --- TOP ROW ---
@@ -340,7 +341,7 @@ export const lessons: Lesson[] = [
     level: "Beginner",
     row: "top-row",
     text: topRowWords.join(' '),
-    isPracticeDrill: true,
+    isWordDrill: true,
   },
 
   // --- BOTTOM ROW ---
@@ -357,7 +358,14 @@ export const lessons: Lesson[] = [
     level: "Beginner",
     row: "bottom-row",
     text: bottomRowWords.join(' '),
-    isPracticeDrill: true,
+    isWordDrill: true,
+  },
+  {
+    id: "game-easy",
+    title: "গেম - সহজ শব্দ",
+    level: "Beginner",
+    text: gameWords.join(' '),
+    isWordDrill: true,
   },
   
   // --- Kar Row ---
@@ -519,6 +527,3 @@ export const rowCategories: RowDrillCategory[] = [
     description: 'ব্যঞ্জনবর্ণের সাথে স্বরবর্ণের চিহ্ন অনুশীলন।'
   }
 ];
-
-
-
