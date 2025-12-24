@@ -8,16 +8,31 @@ import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 import { Home, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import useSound from 'use-sound';
+import { cn } from '@/lib/utils';
 
-const words = ["বাংলা", "ভাষা", "জয়", "পতাকা", "নদী", "ফুল", "ফল", "মাছ", "গান", "কবিতা", "স্বাধীনতা"];
+const wordsList = [
+    "বাংলা", "ভাষা", "জয়", "পতাকা", "নদী", "ফুল", "ফল", "মাছ", "গান", "কবিতা", "স্বাধীনতা",
+    "সূর্য", "চন্দ্র", "তারা", "আকাশ", "বাতাস", "জল", "আগুন", "মাটি", "পাখি", "সবুজ",
+    "মানুষ", "জীবন", "মরণ", "সময়", "কাজ", "খেলা", "হাসি", "কান্না", "ভালোবাসা", "বন্ধু"
+];
 
-const Word = ({ word, onComplete }: { word: string, onComplete: (w: string) => void }) => {
-  const duration = Math.random() * 8 + 8; // Increased duration for slower fall
+const Word = ({ word, onComplete, speed }: { word: string, onComplete: (w: string) => void, speed: number }) => {
+  const duration = Math.max(3, 16 - speed); // As speed increases, duration decreases
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+  }, []);
+
+  if (!isClient) return null; // Avoid hydration mismatch
 
   return (
     <motion.div
-      initial={{ y: -50, x: Math.random() * (window.innerWidth > 400 ? window.innerWidth - 200 : window.innerWidth - 100) }}
-      animate={{ y: window.innerHeight - 150 }}
+      initial={{ y: -50, x: Math.random() * (windowSize.width > 400 ? windowSize.width - 200 : 300) }}
+      animate={{ y: windowSize.height - 150 }}
       transition={{ duration, ease: "linear" }}
       onAnimationComplete={() => onComplete(word)}
       className="absolute px-4 py-2 bg-card border rounded-full text-lg font-mono shadow-lg"
@@ -34,9 +49,24 @@ export default function FallingWordsGame() {
     const [score, setScore] = useState(0);
     const [lives, setLives] = useState(5);
     const [gameOver, setGameOver] = useState(false);
+    const [level, setLevel] = useState(1);
     const gameInterval = useRef<NodeJS.Timeout | null>(null);
     const router = useRouter();
 
+    // Sound hooks - using use-sound but wrapping usage to avoid crash if file missing
+    const [playKeystroke] = useSound('/sounds/click.mp3', { volume: 0.5, interrupt: true });
+    const [playError] = useSound('/sounds/error.mp3', { volume: 0.5, interrupt: true });
+    const [playSuccess] = useSound('/sounds/success.mp3', { volume: 0.5, interrupt: true });
+    const [playLevelUp] = useSound('/sounds/levelup.mp3', { volume: 0.5, interrupt: true });
+
+    // Safety wrapper
+    const playSound = (soundFn: () => void) => {
+        try {
+            soundFn();
+        } catch (e) {
+            // Ignore sound errors
+        }
+    };
 
     const startGame = useCallback(() => {
         setActiveWords([]);
@@ -44,17 +74,18 @@ export default function FallingWordsGame() {
         setLives(5);
         setGameOver(false);
         setInputValue('');
+        setLevel(1);
 
         if (gameInterval.current) clearInterval(gameInterval.current);
         gameInterval.current = setInterval(() => {
             setActiveWords(prev => {
                 if(prev.length < 10) {
-                    const newWord = words[Math.floor(Math.random() * words.length)];
+                    const newWord = wordsList[Math.floor(Math.random() * wordsList.length)];
                     return [...prev, newWord + Math.random()]; // Add random number to make key unique
                 }
                 return prev;
             });
-        }, 2500); // Increased interval for new words
+        }, 2500);
     }, []);
 
     const handleWordMiss = useCallback((word: string) => {
@@ -64,12 +95,21 @@ export default function FallingWordsGame() {
                 const newLives = prev - 1;
                 if (newLives <= 0) {
                     setGameOver(true);
+                    playSound(playError); // Play error sound on game over
                     if(gameInterval.current) clearInterval(gameInterval.current);
+                } else {
+                    playSound(playError); // Play error sound on life lost
                 }
+
+                // Visual feedback for life lost
+                if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
+
                 return newLives;
             });
         }
-    }, [gameOver]);
+    }, [gameOver, playError]);
 
     useEffect(() => {
         startGame();
@@ -78,20 +118,44 @@ export default function FallingWordsGame() {
         };
     }, [startGame]);
 
+    // Level up logic
+    useEffect(() => {
+        if (score > 0 && score % 50 === 0) {
+            setLevel(prev => prev + 1);
+            playSound(playLevelUp);
+            // Increase difficulty by speeding up word generation
+             if (gameInterval.current) clearInterval(gameInterval.current);
+             const newInterval = Math.max(1000, 2500 - (level * 200));
+             gameInterval.current = setInterval(() => {
+                setActiveWords(prev => {
+                    if(prev.length < 10) {
+                        const newWord = wordsList[Math.floor(Math.random() * wordsList.length)];
+                        return [...prev, newWord + Math.random()];
+                    }
+                    return prev;
+                });
+            }, newInterval);
+        }
+    }, [score, level, playLevelUp]);
+
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const typedValue = e.target.value;
         if (typedValue.endsWith(' ')) {
             const typedWord = typedValue.trim();
-            const matchedWord = activeWords.find(aw => aw.startsWith(typedWord));
+            const matchedActiveWord = activeWords.find(aw => aw.replace(/[0-9.]/g, '') === typedWord);
 
-            if (matchedWord) {
+            if (matchedActiveWord) {
                 setScore(prev => prev + typedWord.length);
-                setActiveWords(prev => prev.filter(aw => aw !== matchedWord));
+                setActiveWords(prev => prev.filter(aw => aw !== matchedActiveWord));
+                playSound(playSuccess);
+            } else {
+                playSound(playError); // Missed word
             }
             setInputValue('');
         } else {
             setInputValue(typedValue);
+            playSound(playKeystroke);
         }
     };
     
@@ -115,18 +179,19 @@ export default function FallingWordsGame() {
     }
     
     return (
-        <div className="relative w-full h-[70vh] bg-secondary/30 rounded-lg overflow-hidden border">
+        <div className={cn("relative w-full h-[70vh] rounded-lg overflow-hidden border transition-colors duration-500", lives <= 2 ? "bg-red-50" : "bg-secondary/30")}>
             <AnimatePresence>
                 {activeWords.map((word) => (
-                    <Word key={word} word={word.replace(/[0-9.]/g, '')} onComplete={handleWordMiss} />
+                    <Word key={word} word={word.replace(/[0-9.]/g, '')} onComplete={handleWordMiss} speed={level} />
                 ))}
             </AnimatePresence>
 
-            <Card className="absolute bottom-4 left-1/2 -translate-x-1/2 w-11/12 max-w-md">
+            <Card className="absolute bottom-4 left-1/2 -translate-x-1/2 w-11/12 max-w-md z-10">
                 <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex flex-col sm:flex-row gap-x-4 gap-y-1">
                         <p>স্কোর: <span className="font-bold">{score}</span></p>
                         <p>লাইফ: <span className="font-bold">{'❤️'.repeat(lives)}</span></p>
+                        <p>লেভেল: <span className="font-bold">{level}</span></p>
                     </div>
                     <Input
                         type="text"
