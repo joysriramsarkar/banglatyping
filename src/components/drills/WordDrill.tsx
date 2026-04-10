@@ -240,7 +240,7 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                        />
                     </div>
                      {/* Virtual Keyboard */}
-                    <SimplifiedKeyboard highlightKey={currentDrill?.steps[currentCharIndex]?.key} needsShift={!!currentDrill?.steps[currentCharIndex]?.shift} />
+                    <SimplifiedKeyboard highlightKeyCode={currentDrill?.steps[currentCharIndex]?.keyCode} needsShift={!!currentDrill?.steps[currentCharIndex]?.shift} />
                  </div>
 
                  <div className="w-full md:w-1/3 space-y-4">

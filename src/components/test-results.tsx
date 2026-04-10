@@ -15,8 +15,7 @@ import {
 import { lessons } from "@/lib/lessons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -40,7 +39,7 @@ const StatItem = ({ icon: Icon, label, value, unit }: { icon: React.ElementType,
 export default function TestResults({ stats, onRestart, lessonId, isDrill = false, customDrill, accuracyGoal = 95 }: { stats: TypingStats, onRestart: () => void, lessonId?: string, isDrill?: boolean, customDrill?: () => void, accuracyGoal?: number }) {
   const { wpm, accuracy, errors, timeElapsed, erredCharacters = [] } = stats;
   const router = useRouter();
-  const { user, userData } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const actionButtonRef = useRef<HTMLButtonElement>(null);
   const hasSavedResult = useRef(false);
@@ -63,17 +62,25 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
       if (user && !hasSavedResult.current) {
         hasSavedResult.current = true;
         try {
-          const statsCollectionRef = collection(db, `users/${user.uid}/stats`);
-          const resultData: TestSummary = {
-            wpm,
-            accuracy,
-            errors,
-            timeElapsed,
-            lessonId: lessonId || 'typing-test',
-            timestamp: serverTimestamp(),
-            erredCharacters,
-          };
-          await addDoc(statsCollectionRef, resultData);
+          const { error } = await supabase
+            .from('test_results')
+            .insert([
+              {
+                user_id: user.id,
+                lesson_id: lessonId || 'typing-test',
+                wpm,
+                accuracy,
+                errors,
+                time_elapsed: timeElapsed,
+                erred_characters: erredCharacters,
+                created_at: new Date(),
+              }
+            ]);
+
+          if (error) {
+            throw error;
+          }
+
           toast({ title: "সাফল্য!", description: "আপনার ফলাফল সংরক্ষণ করা হয়েছে।" });
         } catch (error) {
           console.error("Error saving results: ", error);
@@ -142,7 +149,7 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
                           <DialogHeader className="sr-only">
                             <DialogTitle>সাফল্যের সনদপত্র</DialogTitle>
                           </DialogHeader>
-                          <Certificate name={userData?.displayName || 'ব্যবহারকারী'} wpm={wpm} accuracy={accuracy} />
+                          <Certificate name={user?.user_metadata?.display_name || 'ব্যবহারকারী'} wpm={wpm} accuracy={accuracy} />
                       </DialogContent>
                   </Dialog>
               )}

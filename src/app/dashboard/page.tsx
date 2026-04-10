@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
-import { collection, getDocs, orderBy, query, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/firebase";
 import type { UserTypingStats, TestSummary } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -61,7 +60,7 @@ const lessonsByLevel = [
 ];
 
 export default function DashboardPage() {
-  const { user, userData } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState<UserTypingStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [lastTest, setLastTest] = useState<TestSummary | null>(null);
@@ -71,34 +70,42 @@ export default function DashboardPage() {
       if (user) {
         setLoadingStats(true);
         try {
-          const statsRef = collection(db, `users/${user.uid}/stats`);
-          const q = query(statsRef, orderBy("timestamp", "desc"), limit(50));
-          const querySnapshot = await getDocs(q);
-          
-          const tests: TestSummary[] = [];
-          querySnapshot.forEach(doc => {
-            tests.push(doc.data() as TestSummary);
-          });
+          const { data: tests, error } = await supabase
+            .from('test_results')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(50);
 
-          if (tests.length > 0) {
-            setLastTest(tests[0]);
-            const totalWpm = tests.reduce((acc, t) => acc + t.wpm, 0);
-            const totalAccuracy = tests.reduce((acc, t) => acc + t.accuracy, 0);
-            const lessonIds = new Set(tests.map(t => t.lessonId).filter(Boolean));
+          if (error) {
+            console.error("Supabase error details:", {
+              message: error.message,
+              code: error.code,
+              details: error.details,
+              status: error.status,
+            });
+            throw error;
+          }
+
+          if (tests && tests.length > 0) {
+            setLastTest(tests[0] as TestSummary);
+            const totalWpm = tests.reduce((acc: number, t: any) => acc + (t.wpm || 0), 0);
+            const totalAccuracy = tests.reduce((acc: number, t: any) => acc + (t.accuracy || 0), 0);
+            const lessonIds = new Set(tests.map(t => t.lesson_id).filter(Boolean));
 
             const newStats: UserTypingStats = {
               averageWpm: Math.round(totalWpm / tests.length) || 0,
               averageAccuracy: Math.round(totalAccuracy / tests.length) || 0,
               lessonsCompleted: lessonIds.size || 0,
               testsTaken: tests.length || 0,
-              highestWpm: Math.max(...tests.map(t => t.wpm)) || 0,
+              highestWpm: Math.max(...tests.map(t => t.wpm || 0)) || 0,
             };
             setStats(newStats);
           } else {
             setStats(null); // No stats found
           }
-        } catch (error) {
-          console.error("Error fetching stats:", error);
+        } catch (error: any) {
+          console.error("Error fetching stats:", error?.message || error);
           setStats(null);
         } finally {
           setLoadingStats(false);
@@ -112,7 +119,7 @@ export default function DashboardPage() {
     fetchStats();
   }, [user]);
 
-  const welcomeMessage = userData?.displayName ? `স্বাগতম, ${userData.displayName}!` : 'স্বাগতম!';
+  const welcomeMessage = user?.user_metadata?.display_name ? `স্বাগতম, ${user.user_metadata.display_name}!` : 'স্বাগতম!';
   
   return (
     <div className="space-y-8">

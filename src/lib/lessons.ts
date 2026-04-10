@@ -1,51 +1,79 @@
 import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
+import { 
+  bengaliSegmenter, 
+  isConjunct, 
+  parseConjunct,
+  isBengaliVowelSign,
+  isBengaliConsonant,
+  isHalant,
+  normalizeBengaliString 
+} from "./bengali-grapheme";
 
-export const keyMap: {key: string; bn: string; bnShift?: string; row: 'top'|'home'|'bottom'|'other'; hand: 'left'|'right'}[] = [
+// Finger position mapping: 1-5 left hand, 6-10 right hand
+// Left: 1=Pinky, 2=Ring, 3=Middle, 4=Index, 5=Thumb
+// Right: 6=Thumb, 7=Index, 8=Middle, 9=Ring, 10=Pinky
+type KeyMapEntry = {
+    key: string;
+    keyCode: string;
+    bn: string;
+    bnShift?: string;
+    row: 'top'|'home'|'bottom'|'other';
+    hand: 'left'|'right';
+    fingerPosition: number;
+    fingerName: 'Pinky'|'Ring'|'Middle'|'Index'|'Thumb';
+};
+
+export const keyMap: KeyMapEntry[] = [
     // Top Row
-    {key: 'q', bn: 'ক্ষ', bnShift: 'ঁ', row: 'top', hand: 'left'}, 
-    {key: 'w', bn: 'ঙ', bnShift: 'ঃ', row: 'top', hand: 'left'}, 
-    {key: 'e', bn: 'ে', bnShift: 'ৈ', row: 'top', hand: 'left'}, 
-    {key: 'r', bn: 'র', bnShift: 'ড়', row: 'top', hand: 'left'}, 
-    {key: 't', bn: 'ট', bnShift: 'ঠ', row: 'top', hand: 'left'}, 
-    {key: 'y', bn: 'য', bnShift: 'য়', row: 'top', hand: 'right'}, 
-    {key: 'u', bn: 'ু', bnShift: 'ূ', row: 'top', hand: 'right'}, 
-    {key: 'i', bn: 'ি', bnShift: 'ী', row: 'top', hand: 'right'}, 
-    {key: 'o', bn: 'ো', bnShift: 'ৌ', row: 'top', hand: 'right'}, 
-    {key: 'p', bn: 'প', bnShift: 'ঢ়', row: 'top', hand: 'right'},
-    {key: '[', bn: '[', bnShift: '{', row: 'top', hand: 'right'},
-    {key: ']', bn: ']', bnShift: '}', row: 'top', hand: 'right'},
-    {key: '\\', bn: 'ৃ', bnShift: 'ঞ', row: 'other', hand: 'right'},
+    {key: 'q', keyCode: 'KeyQ', bn: 'ক্ষ', bnShift: 'ঁ', row: 'top', hand: 'left', fingerPosition: 1, fingerName: 'Pinky'}, 
+    {key: 'w', keyCode: 'KeyW', bn: 'ঙ', bnShift: 'ঃ', row: 'top', hand: 'left', fingerPosition: 2, fingerName: 'Ring'}, 
+    {key: 'e', keyCode: 'KeyE', bn: 'ে', bnShift: 'ৈ', row: 'top', hand: 'left', fingerPosition: 3, fingerName: 'Middle'}, 
+    {key: 'r', keyCode: 'KeyR', bn: 'র', bnShift: 'ড়', row: 'top', hand: 'left', fingerPosition: 4, fingerName: 'Index'},
+    {key: 't', keyCode: 'KeyT', bn: 'ট', bnShift: 'ঠ', row: 'top', hand: 'left', fingerPosition: 4, fingerName: 'Index'}, 
+    {key: 'y', keyCode: 'KeyY', bn: 'য', bnShift: 'য়', row: 'top', hand: 'right', fingerPosition: 7, fingerName: 'Index'},
+    {key: 'u', keyCode: 'KeyU', bn: 'ু', bnShift: 'ূ', row: 'top', hand: 'right', fingerPosition: 7, fingerName: 'Index'}, 
+    {key: 'i', keyCode: 'KeyI', bn: 'ি', bnShift: 'ী', row: 'top', hand: 'right', fingerPosition: 8, fingerName: 'Middle'},
+    {key: 'o', keyCode: 'KeyO', bn: 'ো', bnShift: 'ৌ', row: 'top', hand: 'right', fingerPosition: 9, fingerName: 'Ring'}, 
+    {key: 'p', keyCode: 'KeyP', bn: 'প', bnShift: 'ঢ়', row: 'top', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
+    {key: '[', keyCode: 'BracketLeft', bn: '[', bnShift: '{', row: 'top', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
+    {key: ']', keyCode: 'BracketRight', bn: ']', bnShift: '}', row: 'top', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
+    {key: '\\', keyCode: 'Backslash', bn: 'ৃ', bnShift: 'ঞ', row: 'other', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
 
     // Home Row
-    {key: 'a', bn: 'া', bnShift: 'অ', row: 'home', hand: 'left'}, 
-    {key: 's', bn: 'স', bnShift: 'শ', row: 'home', hand: 'left'}, 
-    {key: 'd', bn: 'ড', bnShift: 'ঢ', row: 'home', hand: 'left'},
-    {key: 'f', bn: 'ফ', bnShift: 'ৎ', row: 'home', hand: 'left'},
-    {key: 'g', bn: 'গ', bnShift: 'ঘ', row: 'home', hand: 'left'}, 
-    {key: 'h', bn: '্', bnShift: 'হ', row: 'home', hand: 'right'}, 
-    {key: 'j', bn: 'জ', bnShift: 'ঝ', row: 'home', hand: 'right'}, 
-    {key: 'k', bn: 'ক', bnShift: 'খ', row: 'home', hand: 'right'}, 
-    {key: 'l', bn: 'ল', bnShift: 'ষ', row: 'home', hand: 'right'},
-    {key: ';', bn: ';', bnShift: ':', row: 'home', hand: 'right'},
-    {key: "'", bn: "'", bnShift: '"', row: 'home', hand: 'right'},
+    {key: 'a', keyCode: 'KeyA', bn: 'া', bnShift: 'অ', row: 'home', hand: 'left', fingerPosition: 1, fingerName: 'Pinky'}, 
+    {key: 's', keyCode: 'KeyS', bn: 'স', bnShift: 'শ', row: 'home', hand: 'left', fingerPosition: 2, fingerName: 'Ring'}, 
+    {key: 'd', keyCode: 'KeyD', bn: 'ড', bnShift: 'ঢ', row: 'home', hand: 'left', fingerPosition: 3, fingerName: 'Middle'},
+    {key: 'f', keyCode: 'KeyF', bn: 'ফ', bnShift: 'ৎ', row: 'home', hand: 'left', fingerPosition: 4, fingerName: 'Index'},
+    {key: 'g', keyCode: 'KeyG', bn: 'গ', bnShift: 'ঘ', row: 'home', hand: 'left', fingerPosition: 4, fingerName: 'Index'}, 
+    {key: 'h', keyCode: 'KeyH', bn: '্', bnShift: 'হ', row: 'home', hand: 'right', fingerPosition: 7, fingerName: 'Index'},
+    {key: 'j', keyCode: 'KeyJ', bn: 'জ', bnShift: 'ঝ', row: 'home', hand: 'right', fingerPosition: 7, fingerName: 'Index'}, 
+    {key: 'k', keyCode: 'KeyK', bn: 'ক', bnShift: 'খ', row: 'home', hand: 'right', fingerPosition: 8, fingerName: 'Middle'}, 
+    {key: 'l', keyCode: 'KeyL', bn: 'ল', bnShift: 'ষ', row: 'home', hand: 'right', fingerPosition: 9, fingerName: 'Ring'},
+    {key: ';', keyCode: 'Semicolon', bn: ';', bnShift: ':', row: 'home', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
+    {key: "'", keyCode: 'Quote', bn: "'", bnShift: '"', row: 'home', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
 
 
     // Bottom Row
-    {key: 'z', bn: '্য', bnShift: 'ং', row: 'bottom', hand: 'left'},
-    {key: 'x', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left'}, 
-    {key: 'c', bn: 'চ', bnShift: 'ছ', row: 'bottom', hand: 'left'}, 
-    {key: 'v', bn: 'দ', bnShift: 'ধ', row: 'bottom', hand: 'left'}, 
-    {key: 'b', bn: 'ব', bnShift: 'ভ', row: 'bottom', hand: 'left'},
-    {key: 'n', bn: 'ন', bnShift: 'ণ', row: 'bottom', hand: 'right'}, 
-    {key: 'm', bn: 'ম', row: 'bottom', hand: 'right'}, 
-    {key: ',', bn: ',', bnShift: '<', row: 'bottom', hand: 'right'},
-    {key: '.', bn: '।', bnShift: '>', row: 'bottom', hand: 'right'},
-    {key: '/', bn: '/', bnShift: '?', row: 'bottom', hand: 'right'},
-    // Added mapping for nukta (U+09BC). Adjust `key` if you prefer a different physical key.
-    {key: '-', bn: '়', row: 'other', hand: 'right'},
+    {key: 'z', keyCode: 'KeyZ', bn: '্য', bnShift: 'ং', row: 'bottom', hand: 'left', fingerPosition: 1, fingerName: 'Pinky'},
+    {key: 'x', keyCode: 'KeyX', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left', fingerPosition: 2, fingerName: 'Ring'},
+    {key: 'c', keyCode: 'KeyC', bn: 'চ', bnShift: 'ছ', row: 'bottom', hand: 'left', fingerPosition: 3, fingerName: 'Middle'}, 
+    {key: 'v', keyCode: 'KeyV', bn: 'দ', bnShift: 'ধ', row: 'bottom', hand: 'left', fingerPosition: 4, fingerName: 'Index'}, 
+    {key: 'b', keyCode: 'KeyB', bn: 'ব', bnShift: 'ভ', row: 'bottom', hand: 'left', fingerPosition: 4, fingerName: 'Index'},
+    {key: 'n', keyCode: 'KeyN', bn: 'ন', bnShift: 'ণ', row: 'bottom', hand: 'right', fingerPosition: 7, fingerName: 'Index'}, 
+    {key: 'm', keyCode: 'KeyM', bn: 'ম', row: 'bottom', hand: 'right', fingerPosition: 7, fingerName: 'Index'}, 
+    {key: ',', keyCode: 'Comma', bn: ',', bnShift: '<', row: 'bottom', hand: 'right', fingerPosition: 8, fingerName: 'Middle'},
+    {key: '.', keyCode: 'Period', bn: '।', bnShift: '>', row: 'bottom', hand: 'right', fingerPosition: 9, fingerName: 'Ring'},
+    {key: '/', keyCode: 'Slash', bn: '/', bnShift: '?', row: 'bottom', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
+    {key: '-', keyCode: 'Minus', bn: '়', row: 'other', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
 ];
 
-const findKey = (bengaliChar: string) => keyMap.find(k => k.bn === bengaliChar || k.bnShift === bengaliChar);
+const findKey = (bengaliChar: string) => {
+  const normalized = normalizeBengaliString(bengaliChar);
+  return keyMap.find(k => 
+    normalizeBengaliString(k.bn) === normalized || 
+    (k.bnShift && normalizeBengaliString(k.bnShift) === normalized)
+  );
+};
 const hasantKey = findKey('্');
 if (!hasantKey) {
   throw new Error("Hasant key mapping not found!");
@@ -68,93 +96,145 @@ const vowelMap: Record<string, { kar: string, vowel: string }> = {
 const getStepsForChar = (char: string): SingleDrill[] => {
     const steps: SingleDrill[] = [];
 
+    // Normalize the input for consistency (remove ZWJ/ZWNJ)
+    const normalizedChar = normalizeBengaliString(char);
+
     // Special case for 'ক্ষ' which can be typed directly with 'q'
-    if (char === 'ক্ষ') {
-        const directMapping = findKey(char);
+    if (normalizedChar === 'ক্ষ') {
+        const directMapping = findKey(normalizedChar);
         if (directMapping) {
              steps.push({
                 key: directMapping.key,
-                shift: directMapping.bnShift === char,
-                display: char
+                keyCode: directMapping.keyCode,
+                fingerPosition: directMapping.fingerPosition,
+                fingerName: directMapping.fingerName,
+                shift: directMapping.bnShift === normalizedChar,
+                display: normalizedChar
             });
             return steps;
         }
     }
 
     // Case 1: Is it a standalone vowel that can be formed with hasant?
-     const vowelEntry = Object.values(vowelMap).find(v => v.vowel === char);
+     const vowelEntry = Object.values(vowelMap).find(v => v.vowel === normalizedChar);
     if (vowelEntry) {
         const signKey = findKey(vowelEntry.kar);
         if (signKey && hasantKey) {
-            steps.push({ key: hasantKey.key, shift: hasantKey.bnShift === '্', display: '্' });
-            steps.push({ key: signKey.key, shift: signKey.bnShift === vowelEntry.kar, display: vowelEntry.kar });
+            steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: hasantKey.bnShift === '्', display: '्' });
+            steps.push({ key: signKey.key, keyCode: signKey.keyCode, fingerPosition: signKey.fingerPosition, fingerName: signKey.fingerName, shift: signKey.bnShift === vowelEntry.kar, display: vowelEntry.kar });
             return steps;
         }
     }
     
     // Case 2: Is it a direct mapping? (consonant, vowel sign, 'অ' or other direct keys)
-    const directMapping = findKey(char);
+    const directMapping = findKey(normalizedChar);
     if (directMapping) {
         steps.push({
             key: directMapping.key,
-            shift: directMapping.bnShift === char,
-            display: char
+            keyCode: directMapping.keyCode,
+            fingerPosition: directMapping.fingerPosition,
+            fingerName: directMapping.fingerName,
+            shift: directMapping.bnShift === normalizedChar,
+            display: normalizedChar
         });
         return steps;
     }
     
-    // Case 3: Is it a conjunct? (যুক্তাক্ষর) e.g., consonant + hasant + consonant
-    if (char.length > 1 && char.includes('্')) {
-        const parts = char.split('্');
-        const firstChar = parts[0];
-        const secondPart = parts.slice(1).join('্'); // Handle multiple hasants like 'ষ্ট্র'
+    // Case 3: Is it a conjunct? (যুক্তাক্ষর) - using proper grapheme-aware parsing
+    if (isConjunct(normalizedChar)) {
+        const { consonants, halants, trailingKar } = parseConjunct(normalizedChar);
         
-        let lastChar = '';
-        let kar = null;
+        if (consonants.length >= 2) {
+            // Add first consonant
+            let firstKey = findKey(consonants[0]);
+            if (!firstKey) {
+                console.warn("Could not find key mapping for consonant:", consonants[0]);
+                return [];
+            }
+            
+            steps.push({ 
+                key: firstKey.key,
+                keyCode: firstKey.keyCode,
+                fingerPosition: firstKey.fingerPosition,
+                fingerName: firstKey.fingerName,
+                shift: !!firstKey.bnShift && firstKey.bnShift === consonants[0], 
+                display: consonants[0] 
+            });
 
-        // Check for trailing vowel sign
-        const lastGlyphOfSecond = secondPart.slice(-1);
-        if (Object.values(vowelMap).some(v => v.kar === lastGlyphOfSecond)) {
-            kar = lastGlyphOfSecond;
-            lastChar = secondPart.slice(0, -1);
-        } else {
-            lastChar = secondPart;
-        }
+            // Process remaining consonants with halants between them
+            for (let i = 1; i < consonants.length; i++) {
+                // Add halant(s) - typically one, but handle multiple halants for complex conjuncts
+                const halantCountBefore = halants[i - 1] || 1;
+                for (let j = 0; j < halantCountBefore; j++) {
+                    steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: false, display: '्' });
+                }
 
-        const firstKey = findKey(firstChar);
-        const lastKey = findKey(lastChar);
-        
-        if (firstKey && lastKey && hasantKey) {
-            steps.push({ key: firstKey.key, shift: !!firstKey.bnShift && firstKey.bnShift === firstChar, display: firstChar });
-            steps.push({ key: hasantKey.key, shift: false, display: '্' });
-            steps.push({ key: lastKey.key, shift: !!lastKey.bnShift && lastKey.bnShift === lastChar, display: lastChar });
+                // Add consonant
+                const consonantKey = findKey(consonants[i]);
+                if (!consonantKey) {
+                    console.warn("Could not find key mapping for consonant:", consonants[i]);
+                    return [];
+                }
+                steps.push({ 
+                    key: consonantKey.key,
+                    keyCode: consonantKey.keyCode,
+                    fingerPosition: consonantKey.fingerPosition,
+                    fingerName: consonantKey.fingerName,
+                    shift: !!consonantKey.bnShift && consonantKey.bnShift === consonants[i], 
+                    display: consonants[i] 
+                });
+            }
 
-            if(kar) {
-                const karKey = findKey(kar);
-                if(karKey) {
-                    steps.push({ key: karKey.key, shift: karKey.bnShift === kar, display: kar });
+            // Add trailing vowel sign if present
+            if (trailingKar) {
+                const karKey = findKey(trailingKar);
+                if (karKey) {
+                    steps.push({ 
+                        key: karKey.key,
+                        keyCode: karKey.keyCode,
+                        fingerPosition: karKey.fingerPosition,
+                        fingerName: karKey.fingerName,
+                        shift: karKey.bnShift === trailingKar, 
+                        display: trailingKar 
+                    });
                 }
             }
-            return steps;
+
+            if (steps.length > 0) {
+                return steps;
+            }
         }
     }
 
     // Case 4: Is it a consonant + vowel sign combination?
-    const lastGlyphOfInput = char.slice(-1);
-    const isKar = Object.values(vowelMap).some(v => v.kar === lastGlyphOfInput);
-    if (isKar) {
-        const baseChar = char.slice(0, -1);
-        const baseSteps = getStepsForChar(baseChar); // Recursively get steps for base (could be conjunct)
-        const karKey = findKey(lastGlyphOfInput);
-        if (baseSteps.length > 0 && karKey) {
-            steps.push(...baseSteps);
-            steps.push({ key: karKey.key, shift: karKey.bnShift === lastGlyphOfInput, display: lastGlyphOfInput });
-            return steps;
+    const graphemes = bengaliSegmenter.segmentString(normalizedChar);
+    if (graphemes.length > 0) {
+        const lastGrapheme = graphemes[graphemes.length - 1];
+        const isKar = isBengaliVowelSign(lastGrapheme);
+        
+        if (isKar && graphemes.length > 1) {
+            // Reconstruct base without final kar
+            const baseChar = graphemes.slice(0, -1).join('');
+            const baseSteps = getStepsForChar(baseChar); // Recursively get steps for base (could be conjunct)
+            const karKey = findKey(lastGrapheme);
+            
+            if (baseSteps.length > 0 && karKey) {
+                steps.push(...baseSteps);
+                steps.push({ 
+                    key: karKey.key,
+                    keyCode: karKey.keyCode,
+                    fingerPosition: karKey.fingerPosition,
+                    fingerName: karKey.fingerName,
+                    shift: karKey.bnShift === lastGrapheme, 
+                    display: lastGrapheme 
+                });
+                return steps;
+            }
         }
     }
 
     // Fallback for complex cases not handled
-    console.warn("Could not determine steps for character:", char);
+    console.warn("Could not determine steps for character:", normalizedChar, "graphemes:", bengaliSegmenter.segmentString(normalizedChar));
     return [];
 };
 
@@ -167,7 +247,7 @@ export const generateDrills = (chars: string[], count: number): Drill[] => {
         if (spaceCounter === 4) {
             drills.push({
                 prompt: ' ',
-                steps: [{ key: ' ', shift: false, display: ' ' }]
+                steps: [{ key: ' ', keyCode: 'Space', shift: false, display: ' ', fingerPosition: 0, fingerName: 'Pinky' }]
             });
             spaceCounter = 0;
              i--; 
@@ -193,7 +273,9 @@ export const generateDrills = (chars: string[], count: number): Drill[] => {
 };
 
 const getStepsForWord = (word: string): SingleDrill[] => {
-    return word.split('').flatMap(char => getStepsForChar(char));
+    // Use grapheme-aware segmentation instead of naive split
+    const graphemes = bengaliSegmenter.segmentString(word);
+    return graphemes.flatMap(char => getStepsForChar(char));
 };
 
 const generateWordDrills = (words: string[]): Drill[] => {
@@ -246,19 +328,19 @@ const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: 
 
     const conKey = findKey(consonant.bn);
     if (!conKey) return null;
-    steps.push({ key: conKey.key, shift: !!conKey.bnShift && conKey.bnShift === consonant.bn, display: consonant.bn });
+    steps.push({ key: conKey.key, keyCode: conKey.keyCode, fingerPosition: conKey.fingerPosition, fingerName: conKey.fingerName, shift: !!conKey.bnShift && conKey.bnShift === consonant.bn, display: consonant.bn });
     
     if (sign.sign === '্য') {
          const jaFolaKey = findKey('্য');
          if(jaFolaKey){
-             steps.push({ key: jaFolaKey.key, shift: !!jaFolaKey.bnShift && jaFolaKey.bnShift === '্য', display: '্য'});
+             steps.push({ key: jaFolaKey.key, keyCode: jaFolaKey.keyCode, fingerPosition: jaFolaKey.fingerPosition, fingerName: jaFolaKey.fingerName, shift: !!jaFolaKey.bnShift && jaFolaKey.bnShift === '्य', display: '्य'});
          } else {
              return null;
          }
     } else {
         const signKey = findKey(sign.sign);
         if (signKey) {
-            steps.push({ key: signKey.key, shift: !!signKey.bnShift && signKey.bnShift === sign.sign, display: sign.sign });
+            steps.push({ key: signKey.key, keyCode: signKey.keyCode, fingerPosition: signKey.fingerPosition, fingerName: signKey.fingerName, shift: !!signKey.bnShift && signKey.bnShift === sign.sign, display: sign.sign });
         } else {
              return null;
         }
@@ -283,7 +365,7 @@ const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Dri
         if (spaceCounter === 4) {
             drills.push({
                 prompt: ' ',
-                steps: [{ key: ' ', shift: false, display: ' ' }]
+                steps: [{ key: ' ', keyCode: 'Space', shift: false, display: ' ', fingerPosition: 0, fingerName: 'Pinky' }]
             });
             spaceCounter = 0;
             continue;

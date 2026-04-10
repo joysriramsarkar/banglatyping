@@ -8,34 +8,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
-import { updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { supabase } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import AuthGuard from "@/components/auth-guard";
 
 function ProfilePageContent() {
-  const { user, userData, loading } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
   const [name, setName] = useState('');
   const [keyboardLayout, setKeyboardLayout] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (userData) {
-      setName(userData.displayName || '');
-      setKeyboardLayout(userData.keyboardLayout || 'avro');
+    if (user) {
+      setName(user.user_metadata?.display_name || '');
+      setKeyboardLayout(user.user_metadata?.keyboard_layout || 'avro');
     }
-  }, [userData]);
+  }, [user]);
 
   const handleProfileSave = async () => {
     if (!user) return;
     setIsSaving(true);
     try {
-      // Update Firebase Auth profile
-      await updateProfile(user, { displayName: name });
-      // Update Firestore document
-      await setDoc(doc(db, "users", user.uid), { displayName: name }, { merge: true });
+      // Update Supabase user metadata
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          display_name: name,
+          keyboard_layout: keyboardLayout,
+        }
+      });
+
+      if (error) throw error;
       
       toast({ title: "সাফল্য!", description: "আপনার প্রোফাইল তথ্য সংরক্ষণ করা হয়েছে।" });
     } catch (error) {
@@ -49,7 +52,14 @@ function ProfilePageContent() {
     if (!user) return;
     setIsSaving(true);
     try {
-      await setDoc(doc(db, "users", user.uid), { keyboardLayout }, { merge: true });
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          keyboard_layout: keyboardLayout,
+        }
+      });
+
+      if (error) throw error;
+      
       toast({ title: "সাফল্য!", description: "আপনার কীবোর্ড সেটিংস সংরক্ষণ করা হয়েছে।" });
     } catch (error) {
        toast({ variant: "destructive", title: "ত্রুটি", description: "সেটিংস সংরক্ষণ করা যায়নি।" });
@@ -77,7 +87,7 @@ function ProfilePageContent() {
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={user?.photoURL || "https://picsum.photos/200"} data-ai-hint="user avatar" />
+              <AvatarImage src={user?.user_metadata?.avatar_url || "https://picsum.photos/200"} data-ai-hint="user avatar" />
               <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <Button variant="outline">ছবি পরিবর্তন করুন</Button>

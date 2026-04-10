@@ -4,6 +4,7 @@ import { Inter, Noto_Sans_Bengali, Hind_Siliguri } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/hooks/use-auth";
 
 const inter = Inter({
   subsets: ['latin'],
@@ -35,7 +36,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={cn("font-body antialiased", inter.variable, noto_sans_bengali.variable, hind_siliguri.variable)}>
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Toaster />
         {process.env.NODE_ENV === 'development' && (
           <div className="fixed bottom-2 right-2 z-50 rounded bg-yellow-400 px-2 py-1 text-xs font-bold text-black">

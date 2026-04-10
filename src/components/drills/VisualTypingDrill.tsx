@@ -326,7 +326,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                     </div>
 
                     {/* Virtual Keyboard */}
-                    <SimplifiedKeyboard highlightKey={currentDrillStep?.key} needsShift={!!currentDrillStep?.shift} />
+                    <SimplifiedKeyboard highlightKeyCode={currentDrillStep?.keyCode} needsShift={!!currentDrillStep?.shift} />
 
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">

@@ -28,7 +28,10 @@ export interface TypingStats {
 export interface SingleDrill {
     display: string;
     key: string;
+    keyCode: string; // Physical keyboard code like 'KeyQ', 'KeyW'
     shift: boolean;
+    fingerPosition?: number; // 1-5 left hand, 6-10 right hand
+    fingerName?: string; // 'Pinky', 'Ring', 'Middle', 'Index', 'Thumb'
 }
 
 export interface Drill {

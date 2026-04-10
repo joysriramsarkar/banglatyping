@@ -10,9 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { signInWithEmailAndPassword, GoogleAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { supabase } from "@/lib/firebase";
 
 const GoogleIcon = () => (
     <svg className="h-5 w-5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
@@ -54,60 +52,61 @@ export default function LoginPage() {
     }
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "ত্রুটি",
+          description: error.message === "Invalid login credentials" 
+            ? "আপনার ইমেল বা পাসওয়ার্ড সঠিক নয়।"
+            : error.message,
+        });
+        setIsLoading(false);
+        return;
+      }
+
       toast({ title: "সাফল্য!", description: "সফলভাবে লগইন করেছেন।" });
       router.push("/dashboard");
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "ত্রুটি",
-        description: "আপনার ইমেল বা পাসওয়ার্ড সঠিক নয়।",
+        description: error.message || "লগইনে সমস্যা হয়েছে।",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOAuthLogin = async (providerName: 'google' | 'facebook' | 'microsoft') => {
+  const handleOAuthLogin = async (providerName: 'google' | 'facebook' | 'discord') => {
     setIsLoading(true);
-    let provider;
-    if (providerName === 'google') {
-        provider = new GoogleAuthProvider();
-    } else if (providerName === 'facebook') {
-        provider = new FacebookAuthProvider();
-    } else {
-        provider = new OAuthProvider('microsoft.com');
-    }
-
+    
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: providerName,
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
 
-      if (!userSnap.exists()) {
-         await setDoc(doc(db, "users", user.uid), {
-            uid: user.uid,
-            displayName: user.displayName,
-            email: user.email,
-            photoURL: user.photoURL,
-            createdAt: new Date(),
-          }, { merge: true });
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "ত্রুটি",
+          description: error.message,
+        });
+        setIsLoading(false);
       }
-
-      toast({ title: "সাফল্য!", description: `স্বাগতম, ${user.displayName}!` });
-      router.push("/dashboard");
     } catch (error: any) {
-       toast({
+      toast({
         variant: "destructive",
         title: "ত্রুটি",
-        description: "লগইন করার সময় একটি সমস্যা হয়েছে।",
+        description: error.message || "অথেন্টিকেশনে সমস্যা হয়েছে।",
       });
-    } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">

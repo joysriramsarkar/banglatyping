@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils"
 
 function SidebarFooterContent() {
   const router = useRouter();
-  const { user, userData, signOut, loading } = useAuth();
+  const { user, signOut, loading } = useAuth();
   
   if (loading) {
     return (
@@ -61,14 +61,16 @@ function SidebarFooterContent() {
     )
   }
 
+  const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || 'User';
+
   return (
       <div className="flex items-center gap-2 p-2 rounded-md transition-colors hover:bg-sidebar-accent">
         <Avatar className="h-9 w-9">
-          <AvatarImage src={user.photoURL || "https://picsum.photos/100"} alt={userData?.displayName || 'User'} data-ai-hint="user avatar" />
-          <AvatarFallback>{userData?.displayName?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+          <AvatarImage src={user.user_metadata?.avatar_url || "https://picsum.photos/100"} alt={displayName} data-ai-hint="user avatar" />
+          <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
-          <p className="font-semibold text-sm truncate">{userData?.displayName || user.email}</p>
+          <p className="font-semibold text-sm truncate">{displayName}</p>
           <p className="text-xs text-sidebar-foreground/70 truncate">{user.email}</p>
         </div>
         <Button variant="ghost" size="icon" className="group-data-[collapsible=icon]:hidden" onClick={signOut}>
