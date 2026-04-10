@@ -66,7 +66,7 @@ function SidebarFooterContent() {
   return (
       <div className="flex items-center gap-2 p-2 rounded-md transition-colors hover:bg-sidebar-accent">
         <Avatar className="h-9 w-9">
-          <AvatarImage src={user.user_metadata?.avatar_url || "https://picsum.photos/100"} alt={displayName} data-ai-hint="user avatar" />
+          <AvatarImage src={(user.user_metadata as any)?.avatar_url || "https://picsum.photos/100"} alt={displayName} data-ai-hint="user avatar" />
           <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
@@ -127,11 +127,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               <SidebarMenu>
                 {navItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      href={item.href}
-                      isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
-                      asChild
-                    >
+                    <SidebarMenuButton isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')} asChild>
                       <a href={item.href}>
                         <item.icon />
                         <span>{item.label}</span>

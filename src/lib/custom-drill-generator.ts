@@ -1,7 +1,8 @@
 // Dynamic custom drill generator based on weak characters
 import { supabase } from './db';
 import { generateDrills } from './lessons';
-import type { Drill, CustomDrill, WeakCharacterView } from './types';
+import type { Drill } from './types';
+import type { CustomDrill, WeakCharacterView } from './db';
 
 /**
  * Generate a custom drill focused on user's weak characters

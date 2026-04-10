@@ -79,7 +79,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleOAuthLogin = async (providerName: 'google' | 'facebook' | 'discord') => {
+  const handleOAuthLogin = async (providerName: 'google' | 'facebook' | 'discord' | 'azure') => {
     setIsLoading(true);
     
     try {
@@ -144,7 +144,7 @@ export default function LoginPage() {
               <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('facebook')} disabled={isLoading} aria-label="Facebook দিয়ে লগইন করুন">
                   <FacebookIcon />
               </Button>
-              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('microsoft')} disabled={isLoading} aria-label="Microsoft দিয়ে লগইন করুন">
+              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('azure')} disabled={isLoading} aria-label="Microsoft দিয়ে লগইন করুন">
                   <MicrosoftIcon />
               </Button>
             </div>

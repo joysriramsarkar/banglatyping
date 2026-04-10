@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, PlayCircle, ChevronRight } from "lucide-react"
 import Link from "next/link"
-import { lessons, rowCategories, RowDrillCategory } from "@/lib/lessons"
+import { lessons, rowCategories } from "@/lib/lessons";
+import { RowDrillCategory } from "@/lib/types"
 
 const beginnerLessons = lessons.filter(lesson => lesson.level === "Beginner" && !lesson.row);
 const intermediateLessons = lessons.filter(lesson => lesson.level === "Intermediate");

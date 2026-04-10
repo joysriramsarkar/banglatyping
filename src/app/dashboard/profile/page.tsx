@@ -22,7 +22,7 @@ function ProfilePageContent() {
   useEffect(() => {
     if (user) {
       setName(user.user_metadata?.display_name || '');
-      setKeyboardLayout(user.user_metadata?.keyboard_layout || 'avro');
+      setKeyboardLayout((user.user_metadata as any)?.keyboard_layout || 'avro');
     }
   }, [user]);
 
@@ -87,7 +87,7 @@ function ProfilePageContent() {
         <CardContent className="space-y-6">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={user?.user_metadata?.avatar_url || "https://picsum.photos/200"} data-ai-hint="user avatar" />
+              <AvatarImage src={(user?.user_metadata as any)?.avatar_url || "https://picsum.photos/200"} data-ai-hint="user avatar" />
               <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <Button variant="outline">ছবি পরিবর্তন করুন</Button>

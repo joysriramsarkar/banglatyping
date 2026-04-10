@@ -1,6 +1,7 @@
 // User progress tracking service
 import { supabase } from './db';
-import type { UserProgress, CharacterError, WeakCharacterView, UserStatistics, ErredCharacter } from './types';
+import type { ErredCharacter } from './types';
+import type { UserProgress, CharacterError, WeakCharacterView, UserStatistics } from './db';
 
 /**
  * Save a typing session to the database

@@ -22,7 +22,7 @@ const BENGALI_CHAR_RANGES = {
  * Uses Intl.Segmenter for proper grapheme boundary detection
  */
 export class BengaliSegmenter {
-  private segmenter: SegmentData;
+  private segmenter: any;
 
   constructor() {
     // Intl.Segmenter for 'grapheme' granularity handles combining marks properly
@@ -34,7 +34,7 @@ export class BengaliSegmenter {
    * e.g., 'ক্ষ্ম' → ['ক্ষ', '্', 'ম'] (handles complex conjuncts)
    */
   segmentString(text: string): string[] {
-    const segments = Array.from(this.segmenter.segment(text), s => s.segment);
+    const segments = Array.from(this.segmenter.segment(text), (s: any) => s.segment);
     return segments;
   }
 

@@ -4,10 +4,10 @@ import { getUserWeakCharacters } from '@/lib/user-progress';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     const threshold = parseInt(request.nextUrl.searchParams.get('threshold') || '95');
 
     if (!userId) {

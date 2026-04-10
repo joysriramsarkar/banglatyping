@@ -82,7 +82,7 @@ export default function DashboardPage() {
               message: error.message,
               code: error.code,
               details: error.details,
-              status: error.status,
+              status: (error as any).status,
             });
             throw error;
           }
