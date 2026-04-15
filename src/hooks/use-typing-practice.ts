@@ -149,7 +149,15 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
       const currentInput = (state.charInputPerWord[state.currentWordIndex] || '').normalize('NFC');
       
       if (currentInput.length > 0) {
-        const newInput = currentInput.slice(0, -1);
+        // Use Intl.Segmenter to correctly handle Bengali grapheme clusters
+        let newInput: string;
+        try {
+          const segmenter = new Intl.Segmenter('bn', { granularity: 'grapheme' });
+          const segments = Array.from(segmenter.segment(currentInput));
+          newInput = segments.slice(0, -1).map(s => s.segment).join('');
+        } catch {
+          newInput = currentInput.slice(0, -1);
+        }
         const newCharInput = { ...state.charInputPerWord };
         if (newInput.length === 0) {
           delete newCharInput[state.currentWordIndex];

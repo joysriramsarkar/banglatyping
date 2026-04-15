@@ -164,8 +164,8 @@ export default function TypingPractice({
         return;
       }
 
-      // Regular character input
-      if (key.length === 1 && !ctrl) {
+      // Regular character input (including Bengali combining characters like হসন্ত ্)
+      if ((key.length === 1 || /^[\u0980-\u09FF]$/.test(key)) && !ctrl && !e.isComposing) {
         e.preventDefault();
         const expectedWord = state.words[state.currentWordIndex]?.normalize('NFC') || '';
         const maxLength = Math.max(expectedWord.length + 5, 30);

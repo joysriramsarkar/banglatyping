@@ -8,7 +8,6 @@ import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 import { Home, RefreshCw, Pause, Play } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import useSound from 'use-sound';
 import { cn } from '@/lib/utils';
 import { practiceParagraphs } from '@/lib/lessons';
 
@@ -81,20 +80,29 @@ export default function FallingWordsGame() {
     const gameInterval = useRef<NodeJS.Timeout | null>(null);
     const router = useRouter();
 
-    // Sound hooks - using use-sound but wrapping usage to avoid crash if file missing
-    const [playKeystroke] = useSound('/sounds/click.mp3', { volume: 0.5, interrupt: true });
-    const [playError] = useSound('/sounds/error.mp3', { volume: 0.5, interrupt: true });
-    const [playSuccess] = useSound('/sounds/success.mp3', { volume: 0.5, interrupt: true });
-    const [playLevelUp] = useSound('/sounds/levelup.mp3', { volume: 0.5, interrupt: true });
-
-    // Safety wrapper
-    const playSound = (soundFn: () => void) => {
+    const playSound = useCallback((type: 'click' | 'error' | 'success' | 'levelup') => {
         try {
-            soundFn();
-        } catch (e) {
-            // Ignore sound errors
-        }
-    };
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g);
+            g.connect(ctx.destination);
+            const configs = {
+                click:   { freq: 800,  type: 'sine'     as OscillatorType, duration: 0.05, vol: 0.2 },
+                error:   { freq: 200,  type: 'sawtooth' as OscillatorType, duration: 0.2,  vol: 0.3 },
+                success: { freq: 600,  type: 'sine'     as OscillatorType, duration: 0.15, vol: 0.3 },
+                levelup: { freq: 1000, type: 'sine'     as OscillatorType, duration: 0.4,  vol: 0.4 },
+            };
+            const c = configs[type];
+            o.type = c.type;
+            o.frequency.setValueAtTime(c.freq, ctx.currentTime);
+            if (type === 'levelup') o.frequency.linearRampToValueAtTime(1400, ctx.currentTime + c.duration);
+            g.gain.setValueAtTime(c.vol, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + c.duration);
+            o.start(ctx.currentTime);
+            o.stop(ctx.currentTime + c.duration);
+        } catch (e) { /* ignore */ }
+    }, []);
 
     const pauseGame = useCallback(() => {
         setIsPaused(true);
@@ -150,10 +158,10 @@ export default function FallingWordsGame() {
                 const newLives = prev - 1;
                 if (newLives <= 0) {
                     setGameOver(true);
-                    playSound(playError); // Play error sound on game over
+                    playSound('error');
                     if(gameInterval.current) clearInterval(gameInterval.current);
                 } else {
-                    playSound(playError); // Play error sound on life lost
+                    playSound('error');
                 }
 
                 // Visual feedback for life lost
@@ -164,7 +172,7 @@ export default function FallingWordsGame() {
                 return newLives;
             });
         }
-    }, [gameOver, playError]);
+    }, [gameOver, playSound]);
 
     useEffect(() => {
         startGame();
@@ -177,7 +185,7 @@ export default function FallingWordsGame() {
     useEffect(() => {
         if (score > 0 && score % 100 === 0) { // Level up every 100 points
             setLevel(prev => prev + 1);
-            playSound(playLevelUp);
+            playSound('levelup');
             // Restart game with new level parameters
             if (gameInterval.current) clearInterval(gameInterval.current);
             const maxWords = Math.min(5 + (level + 1), 15);
@@ -192,7 +200,7 @@ export default function FallingWordsGame() {
                 });
             }, intervalTime);
         }
-    }, [score, level, playLevelUp]);
+    }, [score, level, playSound]);
 
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,14 +213,14 @@ export default function FallingWordsGame() {
                 setScore(prev => prev + typedWord.length);
                 setActiveWords(prev => prev.filter(aw => aw !== matchedActiveWord));
                 setTotalWordsTyped(prev => prev + 1);
-                playSound(playSuccess);
+                playSound('success');
             } else {
-                playSound(playError); // Missed word
+                playSound('error');
             }
             setInputValue('');
         } else {
             setInputValue(typedValue);
-            playSound(playKeystroke);
+            playSound('click');
         }
     };
     
