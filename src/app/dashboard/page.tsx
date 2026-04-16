@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/firebase";
+import { supabase } from "@/lib/db";
 import type { UserTypingStats, TestSummary } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 

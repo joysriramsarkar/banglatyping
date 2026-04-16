@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { supabase } from '@/lib/firebase';
+import { supabase } from '@/lib/db';
 import { useRouter } from 'next/navigation';
 
 interface AuthUser {

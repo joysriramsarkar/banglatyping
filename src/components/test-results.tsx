@@ -15,7 +15,6 @@ import {
 import { lessons } from "@/lib/lessons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -62,24 +61,21 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
       if (user && !hasSavedResult.current) {
         hasSavedResult.current = true;
         try {
-          const { error } = await supabase
-            .from('test_results')
-            .insert([
-              {
-                user_id: user.id,
-                lesson_id: lessonId || 'typing-test',
-                wpm,
-                accuracy,
-                errors,
-                time_elapsed: timeElapsed,
-                erred_characters: erredCharacters,
-                created_at: new Date(),
-              }
-            ]);
+          const response = await fetch('/api/user-progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id,
+              lessonId: lessonId || 'typing-test',
+              wpm,
+              accuracy,
+              errors,
+              timeElapsed,
+              erredCharacters,
+            }),
+          });
 
-          if (error) {
-            throw error;
-          }
+          if (!response.ok) throw new Error('Failed to save');
 
           toast({ title: "সাফল্য!", description: "আপনার ফলাফল সংরক্ষণ করা হয়েছে।" });
         } catch (error) {

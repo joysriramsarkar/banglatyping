@@ -244,7 +244,12 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                  </div>
 
                  <div className="w-full md:w-1/3 space-y-4">
-                    <DrillProgress wpmHistory={wpmHistory} timeLeft={timeLeft} />
+                    <DrillProgress
+                        wpmHistory={wpmHistory}
+                        timeLeft={timeLeft}
+                        currentWpm={time > 0 ? Math.round((totalCharsTyped / 5) / (time / 60)) : 0}
+                        currentAccuracy={totalCharsTyped > 0 ? Math.round(((totalCharsTyped - totalErrors) / totalCharsTyped) * 100) : 100}
+                    />
                      <div className="flex justify-end gap-2 mt-4">
                         <Button onClick={() => router.push('/dashboard/lessons')} variant="destructive">অনুশীলন বাতিল করুন</Button>
                     </div>

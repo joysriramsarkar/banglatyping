@@ -7,7 +7,7 @@ import type { UserProgress, CharacterError, WeakCharacterView, UserStatistics, E
  */
 export async function saveTypingSession(
   userId: string,
-  lessonId: string,
+  lessonId: string | null,
   wpm: number,
   accuracy: number,
   errors: number,

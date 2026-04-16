@@ -6,7 +6,12 @@ import { BarChart2 } from "lucide-react";
 import { toBengaliNumber } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
-export const DrillProgress = ({ wpmHistory, timeLeft }: { wpmHistory: { time: number, wpm: number }[], timeLeft: number }) => (
+export const DrillProgress = ({ wpmHistory, timeLeft, currentWpm, currentAccuracy }: {
+    wpmHistory: { time: number, wpm: number }[];
+    timeLeft: number;
+    currentWpm: number;
+    currentAccuracy: number;
+}) => (
     <Card className="h-full">
         <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -15,9 +20,19 @@ export const DrillProgress = ({ wpmHistory, timeLeft }: { wpmHistory: { time: nu
             </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-            <div className="text-center">
-                <p className="text-sm text-muted-foreground">সময় বাকি</p>
-                <p className="text-4xl font-bold font-mono">{toBengaliNumber(new Date(timeLeft * 1000).toISOString().substr(14, 5))}</p>
+            <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                    <p className="text-xs text-muted-foreground">সময় বাকি</p>
+                    <p className="text-2xl font-bold font-mono">{toBengaliNumber(new Date(Math.max(0, timeLeft) * 1000).toISOString().substr(14, 5))}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-muted-foreground">গতি (WPM)</p>
+                    <p className="text-2xl font-bold">{toBengaliNumber(currentWpm)}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-muted-foreground">নির্ভুলতা</p>
+                    <p className="text-2xl font-bold">{toBengaliNumber(currentAccuracy)}%</p>
+                </div>
             </div>
             <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={wpmHistory} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>

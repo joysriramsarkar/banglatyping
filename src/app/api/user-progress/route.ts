@@ -20,17 +20,21 @@ export async function POST(request: NextRequest) {
     const { userId, lessonId, wpm, accuracy, errors, timeElapsed, erredCharacters } = body;
 
     // Validate required fields
-    if (!userId || !lessonId) {
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: 'userId and lessonId are required' },
         { status: 400 }
       );
     }
 
+    // Validate lessonId is a valid UUID, otherwise use null
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validLessonId = lessonId && uuidRegex.test(lessonId) ? lessonId : null;
+
     // Save the typing session
     const progress = await saveTypingSession(
       userId,
-      lessonId,
+      validLessonId,
       wpm,
       accuracy,
       errors,
@@ -46,7 +50,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Update lesson completion stats
-    const completionUpdated = await updateLessonCompletion(userId, lessonId, accuracy, wpm);
+    const completionUpdated = validLessonId
+      ? await updateLessonCompletion(userId, validLessonId, accuracy, wpm)
+      : false;
 
     return NextResponse.json({
       success: true,

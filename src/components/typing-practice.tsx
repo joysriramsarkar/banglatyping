@@ -47,7 +47,7 @@ export default function TypingPractice({
   accuracyGoal = 95,
 }: TypingPracticeProps) {
   // Use the centralized typing state management hook
-  const { state, handleBackspace, handleSpace, navigate, calculateStats, finish, reset, getCurrentInput, getCurrentWord, getWordClass, isError, inputChar, getVisibleWords } = useTypingPractice({
+  const { state, handleBackspace, handleSpace, navigate, calculateStats, finish, reset, getCurrentInput, getCurrentWord, getWordClass, isError, inputChar, setCurrentInput, getVisibleWords } = useTypingPractice({
     initialText,
     isPracticeDrill,
   });
@@ -164,15 +164,9 @@ export default function TypingPractice({
         return;
       }
 
-      // Regular character input (including Bengali combining characters like হসন্ত ্)
-      if ((key.length === 1 || /^[\u0980-\u09FF]$/.test(key)) && !ctrl && !e.isComposing) {
-        e.preventDefault();
-        const expectedWord = state.words[state.currentWordIndex]?.normalize('NFC') || '';
-        const maxLength = Math.max(expectedWord.length + 5, 30);
-        inputChar(key, maxLength);
-      }
+      // Regular character input — handled by hidden input onChange for IME/Bengali support
     },
-    [state.isFinished, isActive, isPaused, start, resume, resetInactivityTimer, state.words, state.currentWordIndex, handleBackspace, handleSpace, navigate, inputChar]
+    [state.isFinished, isActive, isPaused, start, resume, resetInactivityTimer, handleBackspace, handleSpace, navigate]
   );
 
   // Set up global keydown listener
@@ -298,12 +292,16 @@ export default function TypingPractice({
         type="text"
         className="absolute -left-full"
         value={normalizedInput}
-        onChange={() => {}}
+        onChange={(e) => {
+          if (!isActive && !isPaused) start();
+          if (isPaused && isActive) resume();
+          resetInactivityTimer();
+          setCurrentInput(e.target.value);
+        }}
         autoComplete="off"
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck="false"
-        tabIndex={-1}
       />
 
       {/* Stats Display Card */}
@@ -329,6 +327,7 @@ export default function TypingPractice({
         <VirtualizedWordDisplay 
           visibleWords={getVisibleWords(2)}
           currentWordIndex={state.currentWordIndex}
+          totalWords={state.words.length}
           getWordClass={getWordClass}
           textDisplayFontSize="text-3xl"
         />

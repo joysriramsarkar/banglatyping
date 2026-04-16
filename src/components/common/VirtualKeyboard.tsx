@@ -54,7 +54,7 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
         {key: 'd', keyCode: 'KeyD', bn: 'ড', bnShift: 'ঢ', fingerPosition: 3, fingerName: 'Middle'},
         {key: 'f', keyCode: 'KeyF', bn: 'ফ', bnShift: 'ৎ', fingerPosition: 4, fingerName: 'Index'},
         {key: 'g', keyCode: 'KeyG', bn: 'গ', bnShift: 'ঘ', fingerPosition: 4, fingerName: 'Index'},
-        {key: 'h', keyCode: 'KeyH', bn: '्', bnShift: 'হ', fingerPosition: 7, fingerName: 'Index'},
+        {key: 'h', keyCode: 'KeyH', bn: '্', bnShift: 'হ', fingerPosition: 7, fingerName: 'Index'},
         {key: 'j', keyCode: 'KeyJ', bn: 'জ', bnShift: 'ঝ', fingerPosition: 7, fingerName: 'Index'},
         {key: 'k', keyCode: 'KeyK', bn: 'ক', bnShift: 'খ', fingerPosition: 8, fingerName: 'Middle'},
         {key: 'l', keyCode: 'KeyL', bn: 'ল', bnShift: 'ষ', fingerPosition: 9, fingerName: 'Ring'},
@@ -63,7 +63,7 @@ const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
     ],
     bottom: [
         {key: 'ShiftLeft', keyCode: 'ShiftLeft', bn: 'Shift', width: 'w-24', align: 'left', special: 'shift', fingerPosition: 5, fingerName: 'Thumb'},
-        {key: 'z', keyCode: 'KeyZ', bn: '्य', bnShift: 'ং', fingerPosition: 1, fingerName: 'Pinky'},
+        {key: 'z', keyCode: 'KeyZ', bn: '্য', bnShift: 'ং', fingerPosition: 1, fingerName: 'Pinky'},
         {key: 'x', keyCode: 'KeyX', bn: 'ত', bnShift: 'থ', fingerPosition: 2, fingerName: 'Ring'},
         {key: 'c', keyCode: 'KeyC', bn: 'চ', bnShift: 'ছ', fingerPosition: 3, fingerName: 'Middle'},
         {key: 'v', keyCode: 'KeyV', bn: 'দ', bnShift: 'ধ', fingerPosition: 4, fingerName: 'Index'},
@@ -125,7 +125,6 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
             </div>
          )
     }
-
 
     return (
         <div className={baseKeyClasses}>

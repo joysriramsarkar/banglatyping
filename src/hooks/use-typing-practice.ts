@@ -21,6 +21,7 @@ interface TypingState {
 type TypingAction =
   | { type: 'INIT'; payload: { initialText: string; isPracticeDrill: boolean } }
   | { type: 'INPUT_CHAR'; payload: { key: string; maxLength: number } }
+  | { type: 'SET_INPUT'; payload: { input: string } }
   | { type: 'BACKSPACE' }
   | { type: 'CTRL_BACKSPACE' }
   | { type: 'SPACE' }
@@ -144,6 +145,19 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
       }
       return state;
     }
+    case 'SET_INPUT': {
+      if (state.isFinished) return state;
+      const newInput = action.payload.input.normalize('NFC');
+      const expectedWord = state.words[state.currentWordIndex]?.normalize('NFC') || '';
+      const maxLength = Math.max(expectedWord.length + 5, 30);
+      if (newInput.length <= maxLength) {
+        return {
+          ...state,
+          charInputPerWord: { ...state.charInputPerWord, [state.currentWordIndex]: newInput },
+        };
+      }
+      return state;
+    }
     case 'BACKSPACE': {
       if (state.isFinished) return state;
       const currentInput = (state.charInputPerWord[state.currentWordIndex] || '').normalize('NFC');
@@ -237,6 +251,7 @@ interface UseTypingPracticeReturn {
   
   // Convenience methods
   inputChar: (key: string, maxLength: number) => void;
+  setCurrentInput: (input: string) => void;
   handleBackspace: (isCtrl?: boolean) => void;
   handleSpace: () => void;
   navigate: (direction: -1 | 1) => void;
@@ -277,6 +292,10 @@ export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingP
   // Memoized dispatch methods to prevent recreating functions on every render
   const inputChar = useCallback((key: string, maxLength: number) => {
     dispatch({ type: 'INPUT_CHAR', payload: { key, maxLength } });
+  }, []);
+
+  const setCurrentInput = useCallback((input: string) => {
+    dispatch({ type: 'SET_INPUT', payload: { input } });
   }, []);
 
   const handleBackspace = useCallback((isCtrl = false) => {
@@ -349,6 +368,7 @@ export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingP
     state,
     dispatch,
     inputChar,
+    setCurrentInput,
     handleBackspace,
     handleSpace,
     navigate,

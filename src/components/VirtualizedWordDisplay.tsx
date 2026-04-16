@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 interface VirtualizedWordDisplayProps {
   visibleWords: Array<{ word: string; index: number }>;
   currentWordIndex: number;
+  totalWords: number;
   getWordClass: (index: number) => string;
   textDisplayFontSize?: string;
 }
@@ -25,6 +26,7 @@ interface VirtualizedWordDisplayProps {
 export const VirtualizedWordDisplay = ({
   visibleWords,
   currentWordIndex,
+  totalWords,
   getWordClass,
   textDisplayFontSize = 'text-3xl',
 }: VirtualizedWordDisplayProps) => {
@@ -51,7 +53,7 @@ export const VirtualizedWordDisplay = ({
       {visibleWords.length > 0 && visibleWords[0].index > 0 && (
         <div className="absolute left-4 top-2 text-xs text-muted-foreground">↑ আরও শব্দ আছে</div>
       )}
-      {visibleWords.length > 0 && visibleWords[visibleWords.length - 1].index < currentWordIndex + 100 && (
+      {visibleWords.length > 0 && visibleWords[visibleWords.length - 1].index < totalWords - 1 && (
         <div className="absolute right-4 bottom-2 text-xs text-muted-foreground">↓ আরও শব্দ আছে</div>
       )}
     </div>

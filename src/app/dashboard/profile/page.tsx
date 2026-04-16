@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/firebase";
+import { supabase } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import AuthGuard from "@/components/auth-guard";
 
