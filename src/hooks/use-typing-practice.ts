@@ -11,6 +11,8 @@ interface TypingState {
   words: string[];
   currentWordIndex: number;
   charInputPerWord: Record<number, string>;
+  accumulatedChars: number;
+  accumulatedErrors: number;
   totalErrors: number;
   totalChars: number;
   wpm: number;
@@ -35,12 +37,36 @@ const initialTypingState: TypingState = {
   words: [],
   currentWordIndex: 0,
   charInputPerWord: {},
+  accumulatedChars: 0,
+  accumulatedErrors: 0,
   totalErrors: 0,
   totalChars: 0,
   wpm: 0,
   accuracy: 100,
   isFinished: false,
 };
+
+/**
+ * Helper to calculate stats for a single word, used to maintain running totals
+ */
+function getWordStats(expectedWord: string | undefined, typedWord: string | undefined, addSpace: boolean) {
+  const nExpected = expectedWord?.normalize('NFC') || '';
+  const nTyped = (typedWord || '').normalize('NFC');
+
+  let chars = nTyped.length + (addSpace ? 1 : 0);
+  let errors = 0;
+
+  const expectedLength = nExpected.length;
+  const typedLength = nTyped.length;
+
+  for (let j = 0; j < Math.max(expectedLength, typedLength); j++) {
+    if ((nExpected[j] || '') !== (nTyped[j] || '')) {
+      errors++;
+    }
+  }
+
+  return { chars, errors };
+}
 
 /**
  * Calculates WPM, accuracy, and error count based on current typing state
@@ -54,38 +80,17 @@ function calculateStatsHelper(
   words: string[],
   charInputPerWord: Record<number, string>,
   currentWordIndex: number,
-  time: number
+  time: number,
+  accumulatedChars: number,
+  accumulatedErrors: number
 ) {
-  let totalKeystrokesTyped = 0;
-  let uncorrectedErrors = 0;
+  let totalKeystrokesTyped = accumulatedChars;
+  let uncorrectedErrors = accumulatedErrors;
 
-  // Process all words up to and including current word
-  for (let i = 0; i <= currentWordIndex; i++) {
-    const typedWord = (charInputPerWord[i] || '').normalize('NFC');
-    const expectedWord = words[i]?.normalize('NFC') || '';
-    
-    // Add each typed character to keystroke count
-    totalKeystrokesTyped += typedWord.length;
-    
-    // Add space between words (except for current incomplete word)
-    if (i < currentWordIndex) {
-      totalKeystrokesTyped += 1;
-    }
-    
-    // Count character-by-character differences for error tracking
-    const expectedLength = expectedWord.length;
-    const typedLength = typedWord.length;
-    
-    // Compare character by character up to the longer length
-    for (let j = 0; j < Math.max(expectedLength, typedLength); j++) {
-      const expectedChar = expectedWord[j] || '';
-      const typedChar = typedWord[j] || '';
-      
-      if (expectedChar !== typedChar) {
-        uncorrectedErrors++;
-      }
-    }
-  }
+  // Add stats for the current word only (O(1) compared to recalculating all words)
+  const currentWordStats = getWordStats(words[currentWordIndex], charInputPerWord[currentWordIndex], false);
+  totalKeystrokesTyped += currentWordStats.chars;
+  uncorrectedErrors += currentWordStats.errors;
 
   // Calculate accuracy: (characters correct) / (total characters typed) * 100
   const totalCharsTyped = totalKeystrokesTyped;
@@ -166,9 +171,9 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
         // Use Intl.Segmenter to correctly handle Bengali grapheme clusters
         let newInput: string;
         try {
-          const segmenter = new Intl.Segmenter('bn', { granularity: 'grapheme' });
+          const segmenter = new (Intl as any).Segmenter('bn', { granularity: 'grapheme' });
           const segments = Array.from(segmenter.segment(currentInput));
-          newInput = segments.slice(0, -1).map(s => s.segment).join('');
+          newInput = segments.slice(0, -1).map((s: any) => s.segment).join('');
         } catch {
           newInput = currentInput.slice(0, -1);
         }
@@ -180,7 +185,14 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
         }
         return { ...state, charInputPerWord: newCharInput };
       } else if (state.currentWordIndex > 0) {
-        return { ...state, currentWordIndex: state.currentWordIndex - 1 };
+        const prevIndex = state.currentWordIndex - 1;
+        const statsToSubtract = getWordStats(state.words[prevIndex], state.charInputPerWord[prevIndex], true);
+        return {
+          ...state,
+          currentWordIndex: prevIndex,
+          accumulatedChars: state.accumulatedChars - statsToSubtract.chars,
+          accumulatedErrors: state.accumulatedErrors - statsToSubtract.errors
+        };
       }
       return state;
     }
@@ -196,7 +208,13 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
       if (currentInput.trim().length === 0) return state;
 
       if (state.currentWordIndex < state.words.length - 1) {
-        return { ...state, currentWordIndex: state.currentWordIndex + 1 };
+        const statsToAdd = getWordStats(state.words[state.currentWordIndex], state.charInputPerWord[state.currentWordIndex], true);
+        return {
+          ...state,
+          currentWordIndex: state.currentWordIndex + 1,
+          accumulatedChars: state.accumulatedChars + statsToAdd.chars,
+          accumulatedErrors: state.accumulatedErrors + statsToAdd.errors
+        };
       }
       return state;
     }
@@ -204,13 +222,40 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
       if (state.isFinished) return state;
       const newIndex = state.currentWordIndex + action.payload.direction;
       if (newIndex >= 0 && newIndex < state.words.length) {
-        return { ...state, currentWordIndex: newIndex };
+        let newAccumulatedChars = state.accumulatedChars;
+        let newAccumulatedErrors = state.accumulatedErrors;
+
+        if (action.payload.direction === 1) {
+          // Moving forward
+          const statsToAdd = getWordStats(state.words[state.currentWordIndex], state.charInputPerWord[state.currentWordIndex], true);
+          newAccumulatedChars += statsToAdd.chars;
+          newAccumulatedErrors += statsToAdd.errors;
+        } else if (action.payload.direction === -1) {
+          // Moving backward
+          const statsToSubtract = getWordStats(state.words[newIndex], state.charInputPerWord[newIndex], true);
+          newAccumulatedChars -= statsToSubtract.chars;
+          newAccumulatedErrors -= statsToSubtract.errors;
+        }
+
+        return {
+          ...state,
+          currentWordIndex: newIndex,
+          accumulatedChars: newAccumulatedChars,
+          accumulatedErrors: newAccumulatedErrors
+        };
       }
       return state;
     }
     case 'CALCULATE_STATS': {
       if (state.isFinished) return state;
-      const stats = calculateStatsHelper(state.words, state.charInputPerWord, state.currentWordIndex, action.payload.time);
+      const stats = calculateStatsHelper(
+        state.words,
+        state.charInputPerWord,
+        state.currentWordIndex,
+        action.payload.time,
+        state.accumulatedChars,
+        state.accumulatedErrors
+      );
       
       // Only update if stats actually changed to prevent unnecessary re-renders
       if (
