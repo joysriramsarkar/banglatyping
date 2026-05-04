@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Award, RefreshCw, Zap, Target, XCircle, Timer as TimerIcon, Home, ArrowRight, BrainCircuit } from "lucide-react";
 import { TypingStats, Lesson, TestSummary, ErredCharacter } from "@/lib/types";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import Certificate from "./certificate";
 import {
   Dialog,
