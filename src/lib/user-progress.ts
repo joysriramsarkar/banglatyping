@@ -15,12 +15,6 @@ export async function saveTypingSession(
   erredCharacters: ErredCharacter[]
 ): Promise<UserProgress | null> {
   try {
-    // Format erred characters for storage
-    const formattedErrors = erredCharacters.map(item => ({
-      char: item.char,
-      count: item.count
-    }));
-
     const { data, error } = await supabase
       .from('user_progress')
       .insert({
@@ -30,7 +24,7 @@ export async function saveTypingSession(
         accuracy,
         errors,
         time_elapsed: timeElapsed,
-        erred_characters: formattedErrors,
+        erred_characters: erredCharacters as any,
       })
       .select()
       .single();
