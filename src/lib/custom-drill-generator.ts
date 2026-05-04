@@ -17,14 +17,15 @@ export async function generateCustomDrill(
       return null;
     }
 
-    // Extract characters from weak character data
-    const characterList = weakCharacters.map(w => w.character);
-    
-    // Focus on the weakest characters - weight stronger emphasis on very weak chars
-    const focusCharacters: Record<string, number> = {};
-    weakCharacters.forEach(w => {
-      focusCharacters[w.character] = w.accuracy_rate;
-    });
+    // Extract characters and focus on the weakest characters in a single pass
+    const { characterList, focusCharacters } = weakCharacters.reduce(
+      (acc, w) => {
+        acc.characterList.push(w.character);
+        acc.focusCharacters[w.character] = w.accuracy_rate;
+        return acc;
+      },
+      { characterList: [] as string[], focusCharacters: {} as Record<string, number> }
+    );
 
     // Generate drills using existing generateDrills function
     // This maintains consistency with how regular drills are created
