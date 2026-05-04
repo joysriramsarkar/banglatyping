@@ -3,6 +3,18 @@ import { supabase } from './db';
 import { generateDrills } from './lessons';
 import type { Drill, CustomDrill, WeakCharacterView } from './types';
 
+interface RecommendationsCacheEntry {
+  data: {
+    shouldCreateCustomDrill: boolean;
+    weakCharacterCount: number;
+    avgWeakCharAccuracy: number;
+  };
+  timestamp: number;
+}
+
+const recommendationsCache = new Map<string, RecommendationsCacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache TTL
+
 /**
  * Generate a custom drill focused on user's weak characters
  */
@@ -229,6 +241,12 @@ export async function getDrillRecommendations(userId: string): Promise<{
   avgWeakCharAccuracy: number;
 }> {
   try {
+    // Check cache first
+    const cachedEntry = recommendationsCache.get(userId);
+    if (cachedEntry && (Date.now() - cachedEntry.timestamp < CACHE_TTL_MS)) {
+      return cachedEntry.data;
+    }
+
     const { data: stats } = await supabase
       .from('user_statistics')
       .select('*')
@@ -251,6 +269,12 @@ export async function getDrillRecommendations(userId: string): Promise<{
           ? weakCharacterData.reduce((sum, w) => sum + w.accuracy_rate, 0) / weakCharacterData.length
           : 100,
     };
+
+    // Update cache
+    recommendationsCache.set(userId, {
+      data: recommendations,
+      timestamp: Date.now()
+    });
 
     return recommendations;
   } catch (err) {
