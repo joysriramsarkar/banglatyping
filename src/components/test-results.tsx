@@ -1,9 +1,9 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Award, RefreshCw, Zap, Target, XCircle, Timer as TimerIcon, Home, ArrowRight, BrainCircuit } from "lucide-react";
-import { TypingStats, Lesson, TestSummary, ErredCharacter } from "@/lib/types";
-import { useState, useEffect, useRef } from "react";
+import { Award, RefreshCw, Target, XCircle, Timer as TimerIcon, Home, ArrowRight, BrainCircuit } from "lucide-react";
+import { TypingStats, Lesson, ErredCharacter } from "@/lib/types";
+import { useEffect, useRef } from "react";
 import Certificate from "./certificate";
 import {
   Dialog,
