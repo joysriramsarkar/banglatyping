@@ -16,6 +16,7 @@ interface TypingState {
   wpm: number;
   accuracy: number;
   isFinished: boolean;
+  wordStatsCache: Record<number, { rawInput: string, typedWord: string, keystrokes: number, errors: number }>;
 }
 
 type TypingAction =
@@ -40,6 +41,7 @@ const initialTypingState: TypingState = {
   wpm: 0,
   accuracy: 100,
   isFinished: false,
+  wordStatsCache: {},
 };
 
 /**
@@ -54,37 +56,52 @@ function calculateStatsHelper(
   words: string[],
   charInputPerWord: Record<number, string>,
   currentWordIndex: number,
-  time: number
+  time: number,
+  wordStatsCache: Record<number, { rawInput: string, typedWord: string, keystrokes: number, errors: number }>
 ) {
   let totalKeystrokesTyped = 0;
   let uncorrectedErrors = 0;
+  let newCache: Record<number, { rawInput: string, typedWord: string, keystrokes: number, errors: number }> | null = null;
 
   // Process all words up to and including current word
   for (let i = 0; i <= currentWordIndex; i++) {
-    const typedWord = (charInputPerWord[i] || '').normalize('NFC');
-    const expectedWord = words[i]?.normalize('NFC') || '';
+    const rawInput = charInputPerWord[i] || '';
+    let stats = wordStatsCache[i];
+
+    // Calculate stats if not cached or if the word has changed
+    if (!stats || stats.rawInput !== rawInput) {
+      const typedWord = rawInput.normalize('NFC');
+      const expectedWord = words[i]?.normalize('NFC') || '';
+      let errors = 0;
+
+      const expectedLength = expectedWord.length;
+      const typedLength = typedWord.length;
+
+      // Compare character by character up to the longer length
+      for (let j = 0; j < Math.max(expectedLength, typedLength); j++) {
+        const expectedChar = expectedWord[j] || '';
+        const typedChar = typedWord[j] || '';
+
+        if (expectedChar !== typedChar) {
+          errors++;
+        }
+      }
+
+      stats = { rawInput, typedWord, keystrokes: typedLength, errors };
+      if (!newCache) newCache = { ...wordStatsCache };
+      newCache[i] = stats;
+    }
     
     // Add each typed character to keystroke count
-    totalKeystrokesTyped += typedWord.length;
+    totalKeystrokesTyped += stats.keystrokes;
     
     // Add space between words (except for current incomplete word)
     if (i < currentWordIndex) {
       totalKeystrokesTyped += 1;
     }
     
-    // Count character-by-character differences for error tracking
-    const expectedLength = expectedWord.length;
-    const typedLength = typedWord.length;
-    
-    // Compare character by character up to the longer length
-    for (let j = 0; j < Math.max(expectedLength, typedLength); j++) {
-      const expectedChar = expectedWord[j] || '';
-      const typedChar = typedWord[j] || '';
-      
-      if (expectedChar !== typedChar) {
-        uncorrectedErrors++;
-      }
-    }
+    // Add uncorrected errors for this word
+    uncorrectedErrors += stats.errors;
   }
 
   // Calculate accuracy: (characters correct) / (total characters typed) * 100
@@ -100,7 +117,7 @@ function calculateStatsHelper(
   // Use Net WPM (with minimum of 0)
   const wpm = Math.round(Math.max(0, netWpm));
 
-  return { totalCharsTyped, errors: uncorrectedErrors, accuracy, wpm };
+  return { totalCharsTyped, errors: uncorrectedErrors, accuracy, wpm, newCache };
 }
 
 /**
@@ -210,14 +227,17 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
     }
     case 'CALCULATE_STATS': {
       if (state.isFinished) return state;
-      const stats = calculateStatsHelper(state.words, state.charInputPerWord, state.currentWordIndex, action.payload.time);
+      const stats = calculateStatsHelper(state.words, state.charInputPerWord, state.currentWordIndex, action.payload.time, state.wordStatsCache);
       
+      const newCache = stats.newCache || state.wordStatsCache;
+
       // Only update if stats actually changed to prevent unnecessary re-renders
       if (
         stats.totalCharsTyped !== state.totalChars ||
         stats.errors !== state.totalErrors ||
         stats.accuracy !== state.accuracy ||
-        stats.wpm !== state.wpm
+        stats.wpm !== state.wpm ||
+        newCache !== state.wordStatsCache
       ) {
         return {
           ...state,
@@ -225,6 +245,7 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
           totalErrors: stats.errors,
           accuracy: stats.accuracy,
           wpm: stats.wpm,
+          wordStatsCache: newCache,
         };
       }
       return state;
