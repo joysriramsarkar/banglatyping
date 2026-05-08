@@ -128,7 +128,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 {navItems.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
-                      href={item.href}
                       isActive={pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')}
                       asChild
                     >

@@ -51,8 +51,66 @@ export interface TestSummary {
   errors: number;
   timeElapsed: number;
   lessonId: string;
-  timestamp: any; // Firestore ServerTimestamp
+  timestamp?: string;
   erredCharacters: ErredCharacter[];
+}
+
+export interface UserProgress {
+  id: string;
+  user_id: string;
+  lesson_id: string | null;
+  wpm: number;
+  accuracy: number;
+  errors: number;
+  time_elapsed: number;
+  erred_characters: ErredCharacter[];
+  session_timestamp: string;
+  created_at: string;
+}
+
+export interface CharacterError {
+  id: string;
+  user_id: string;
+  character: string;
+  error_count: number;
+  total_attempts: number;
+  accuracy_rate: number;
+  last_error_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WeakCharacterView {
+  user_id: string;
+  character: string;
+  accuracy_rate: number;
+  error_count: number;
+  total_attempts: number;
+  strength_level: 'Strong' | 'Good' | 'Weak' | 'Very Weak';
+}
+
+export interface UserStatistics {
+  user_id: string;
+  lessons_practiced: number;
+  average_accuracy: number;
+  average_wpm: number;
+  best_wpm: number;
+  best_accuracy: number;
+  total_sessions: number;
+}
+
+export interface CustomDrill {
+  id: string;
+  user_id: string;
+  name?: string;
+  characters: string;
+  drill_data: Drill[];
+  focus_characters: Record<string, number>;
+  generated_at: string;
+  last_used_at?: string;
+  usage_count: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UserTypingStats {

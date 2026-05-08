@@ -4,10 +4,10 @@ import { getUserStatistics, analyzeUserErrors } from '@/lib/user-progress';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     const includeAnalysis = request.nextUrl.searchParams.get('includeAnalysis') === 'true';
 
     if (!userId) {

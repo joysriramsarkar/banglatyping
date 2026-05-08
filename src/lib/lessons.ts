@@ -1,4 +1,4 @@
-import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
+﻿import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
 import { 
   bengaliSegmenter, 
   isConjunct, 
@@ -120,7 +120,7 @@ const getStepsForChar = (char: string): SingleDrill[] => {
     if (vowelEntry) {
         const signKey = findKey(vowelEntry.kar);
         if (signKey && hasantKey) {
-            steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: hasantKey.bnShift === '्', display: '्' });
+            steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: hasantKey.bnShift === '্', display: '্' });
             steps.push({ key: signKey.key, keyCode: signKey.keyCode, fingerPosition: signKey.fingerPosition, fingerName: signKey.fingerName, shift: signKey.bnShift === vowelEntry.kar, display: vowelEntry.kar });
             return steps;
         }
@@ -166,7 +166,7 @@ const getStepsForChar = (char: string): SingleDrill[] => {
                 // Add halant(s) - typically one, but handle multiple halants for complex conjuncts
                 const halantCountBefore = halants[i - 1] || 1;
                 for (let j = 0; j < halantCountBefore; j++) {
-                    steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: false, display: '्' });
+                    steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: false, display: '্' });
                 }
 
                 // Add consonant
@@ -333,7 +333,7 @@ const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: 
     if (sign.sign === '্য') {
          const jaFolaKey = findKey('্য');
          if(jaFolaKey){
-             steps.push({ key: jaFolaKey.key, keyCode: jaFolaKey.keyCode, fingerPosition: jaFolaKey.fingerPosition, fingerName: jaFolaKey.fingerName, shift: !!jaFolaKey.bnShift && jaFolaKey.bnShift === '्য', display: '्য'});
+             steps.push({ key: jaFolaKey.key, keyCode: jaFolaKey.keyCode, fingerPosition: jaFolaKey.fingerPosition, fingerName: jaFolaKey.fingerName, shift: !!jaFolaKey.bnShift && jaFolaKey.bnShift === '্য', display: '্য'});
          } else {
              return null;
          }

@@ -9,7 +9,7 @@ const BENGALI_CHAR_RANGES = {
   VOWELS: /[\u0985-\u0988\u098F-\u0990\u0993-\u0994]/,
   CONSONANTS: /[\u0995-\u09B9\u09CE\u09DC-\u09DD\u09DF]/,
   VOWEL_SIGNS: /[\u09BE-\u09C4\u09C7-\u09C8\u09CB-\u09CC]/,
-  HALANT: /\u094D/,
+  HALANT: /\u09CD/,
   NUKTA: /\u09BC/,
   ZWJ: /\u200D/,
   ZWNJ: /\u200C/,
@@ -22,20 +22,14 @@ const BENGALI_CHAR_RANGES = {
  * Uses Intl.Segmenter for proper grapheme boundary detection
  */
 export class BengaliSegmenter {
-  private segmenter: SegmentData;
+  private segmenter: Intl.Segmenter;
 
   constructor() {
-    // Intl.Segmenter for 'grapheme' granularity handles combining marks properly
     this.segmenter = new Intl.Segmenter('bn-IN', { granularity: 'grapheme' });
   }
 
-  /**
-   * Split a Bengali string into proper grapheme clusters
-   * e.g., 'ক্ষ্ম' → ['ক্ষ', '্', 'ম'] (handles complex conjuncts)
-   */
   segmentString(text: string): string[] {
-    const segments = Array.from(this.segmenter.segment(text), s => s.segment);
-    return segments;
+    return Array.from(this.segmenter.segment(text), (s: Intl.SegmentData) => s.segment);
   }
 
   /**

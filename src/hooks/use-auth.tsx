@@ -9,6 +9,8 @@ interface AuthUser {
     email?: string;
     user_metadata?: {
         display_name?: string;
+        avatar_url?: string;
+        keyboard_layout?: string;
     };
 }
 

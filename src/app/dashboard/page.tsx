@@ -72,37 +72,27 @@ export default function DashboardPage() {
         try {
           const { data: tests, error } = await supabase
             .from('test_results')
-            .select('*')
+            .select('wpm, accuracy, lesson_id, created_at')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(50);
 
-          if (error) {
-            console.error("Supabase error details:", {
-              message: error.message,
-              code: error.code,
-              details: error.details,
-              status: error.status,
-            });
-            throw error;
-          }
+          if (error) throw error;
 
           if (tests && tests.length > 0) {
-            setLastTest(tests[0] as TestSummary);
-            const totalWpm = tests.reduce((acc: number, t: any) => acc + (t.wpm || 0), 0);
-            const totalAccuracy = tests.reduce((acc: number, t: any) => acc + (t.accuracy || 0), 0);
-            const lessonIds = new Set(tests.map(t => t.lesson_id).filter(Boolean));
-
-            const newStats: UserTypingStats = {
+            setLastTest(tests[0] as any);
+            const totalWpm = tests.reduce((acc, t: any) => acc + (t.wpm || 0), 0);
+            const totalAccuracy = tests.reduce((acc, t: any) => acc + (t.accuracy || 0), 0);
+            const lessonIds = new Set(tests.map((t: any) => t.lesson_id).filter(Boolean));
+            setStats({
               averageWpm: Math.round(totalWpm / tests.length) || 0,
               averageAccuracy: Math.round(totalAccuracy / tests.length) || 0,
               lessonsCompleted: lessonIds.size || 0,
               testsTaken: tests.length || 0,
-              highestWpm: Math.max(...tests.map(t => t.wpm || 0)) || 0,
-            };
-            setStats(newStats);
+              highestWpm: Math.max(...tests.map((t: any) => t.wpm || 0)) || 0,
+            });
           } else {
-            setStats(null); // No stats found
+            setStats(null);
           }
         } catch (error: any) {
           console.error("Error fetching stats:", error?.message || error);
@@ -115,7 +105,6 @@ export default function DashboardPage() {
         setStats(null);
       }
     };
-
     fetchStats();
   }, [user]);
 

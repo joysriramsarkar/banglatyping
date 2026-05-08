@@ -21,7 +21,7 @@ export async function saveTypingSession(
       count: item.count
     }));
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('user_progress')
       .insert({
         user_id: userId,
@@ -218,7 +218,7 @@ export async function updateLessonCompletion(
   wpm: number
 ): Promise<boolean> {
   try {
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('user_lesson_completion')
       .upsert(
         {

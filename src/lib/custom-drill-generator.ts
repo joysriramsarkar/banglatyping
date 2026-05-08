@@ -40,7 +40,7 @@ export async function generateCustomDrill(
       generated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('custom_drills')
       .insert(customDrill)
       .select()
@@ -111,44 +111,27 @@ export async function getCustomDrill(drillId: string): Promise<CustomDrill | nul
 /**
  * Update custom drill usage statistics
  */
-export async function updateCustomDrillUsage(
-  drillId: string
-): Promise<boolean> {
+export async function updateCustomDrillUsage(drillId: string): Promise<boolean> {
   try {
-    const { error } = await supabase
+    const { data: current } = await (supabase as any)
+      .from('custom_drills')
+      .select('usage_count')
+      .eq('id', drillId)
+      .single();
+
+    const { error } = await (supabase as any)
       .from('custom_drills')
       .update({
-        usage_count: supabase.rpc('increment_usage_count', { id: drillId }),
+        usage_count: (current?.usage_count || 0) + 1,
         last_used_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', drillId);
 
     if (error) {
-      // Fallback if RPC doesn't exist, use increment directly
-      const { data: current } = await supabase
-        .from('custom_drills')
-        .select('usage_count')
-        .eq('id', drillId)
-        .single();
-
-      if (current) {
-        const { error: updateError } = await supabase
-          .from('custom_drills')
-          .update({
-            usage_count: (current.usage_count || 0) + 1,
-            last_used_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', drillId);
-
-        if (updateError) {
-          console.error('Error updating drill usage:', updateError);
-          return false;
-        }
-      }
+      console.error('Error updating drill usage:', error);
+      return false;
     }
-
     return true;
   } catch (err) {
     console.error('Exception updating drill usage:', err);
