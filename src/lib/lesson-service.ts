@@ -1,5 +1,6 @@
 // Lesson service - fetch lessons from database
-import { supabase, supabaseAdmin } from './db';
+import { supabase } from './db';
+import { supabaseAdmin } from './db-admin';
 import type { Lesson, LessonDrill } from './db';
 
 /**

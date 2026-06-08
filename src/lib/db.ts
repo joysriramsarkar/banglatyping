@@ -3,14 +3,12 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('⚠️ Supabase credentials not fully configured');
 }
 
 let _client: ReturnType<typeof createClient> | null = null;
-let _adminClient: ReturnType<typeof createClient> | null = null;
 
 // Client for authentication and basic queries
 export function getSupabase() {
@@ -18,18 +16,8 @@ export function getSupabase() {
   return _client;
 }
 
-// Service role client for admin operations (server-side only)
-export function getSupabaseAdmin() {
-  if (!_adminClient) _adminClient = createClient(supabaseUrl, supabaseServiceKey);
-  return _adminClient;
-}
-
 export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
   get: (_, prop) => getSupabase()[prop as keyof ReturnType<typeof createClient>],
-});
-
-export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient>, {
-  get: (_, prop) => getSupabaseAdmin()[prop as keyof ReturnType<typeof createClient>],
 });
 
 // Type definitions
