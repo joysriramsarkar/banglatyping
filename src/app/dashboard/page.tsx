@@ -106,8 +106,8 @@ export default function DashboardPage() {
           } else {
             setStats(null);
           }
-        } catch (error: any) {
-          console.error("Error fetching stats:", error?.message || error);
+        } catch (error: unknown) {
+          console.error("Error fetching stats:", error instanceof Error ? error.message : error);
           setStats(null);
         } finally {
           setLoadingStats(false);
