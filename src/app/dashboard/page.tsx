@@ -81,15 +81,27 @@ export default function DashboardPage() {
 
           if (tests && tests.length > 0) {
             setLastTest(tests[0] as any);
-            const totalWpm = tests.reduce((acc, t: any) => acc + (t.wpm || 0), 0);
-            const totalAccuracy = tests.reduce((acc, t: any) => acc + (t.accuracy || 0), 0);
-            const lessonIds = new Set(tests.map((t: any) => t.lesson_id).filter(Boolean));
+
+            let totalWpm = 0;
+            let totalAccuracy = 0;
+            let highestWpm = 0;
+            const lessonIds = new Set();
+
+            for (let i = 0; i < tests.length; i++) {
+              const t: any = tests[i];
+              const wpm = t.wpm || 0;
+              totalWpm += wpm;
+              totalAccuracy += (t.accuracy || 0);
+              if (t.lesson_id) lessonIds.add(t.lesson_id);
+              if (wpm > highestWpm) highestWpm = wpm;
+            }
+
             setStats({
               averageWpm: Math.round(totalWpm / tests.length) || 0,
               averageAccuracy: Math.round(totalAccuracy / tests.length) || 0,
               lessonsCompleted: lessonIds.size || 0,
               testsTaken: tests.length || 0,
-              highestWpm: Math.max(...tests.map((t: any) => t.wpm || 0)) || 0,
+              highestWpm: highestWpm,
             });
           } else {
             setStats(null);
