@@ -67,11 +67,11 @@ export default function LoginPage() {
 
       toast({ title: "\u09b8\u09be\u09ab\u09b2\u09cd\u09af!", description: "\u09b8\u09ab\u09b2\u09ad\u09be\u09ac\u09c7 \u09b2\u0997\u0987\u09a8 \u0995\u09b0\u09c7\u099b\u09c7\u09a8\u0964" });
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf",
-        description: error.message || "\u09b2\u0997\u0987\u09a8\u09c7 \u09b8\u09ae\u09b8\u09cd\u09af\u09be \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964",
+        description: error instanceof Error ? error.message : "\u09b2\u0997\u0987\u09a8\u09c7 \u09b8\u09ae\u09b8\u09cd\u09af\u09be \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964",
       });
     } finally {
       setIsLoading(false);
@@ -89,8 +89,8 @@ export default function LoginPage() {
         toast({ variant: "destructive", title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf", description: error.message });
         setIsLoading(false);
       }
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf", description: error.message || "\u0985\u09a5\u09c7\u09a8\u09cd\u099f\u09bf\u0995\u09c7\u09b6\u09a8\u09c7 \u09b8\u09ae\u09b8\u09cd\u09af\u09be \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964" });
+    } catch (error: unknown) {
+      toast({ variant: "destructive", title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf", description: error instanceof Error ? error.message : "\u0985\u09a5\u09c7\u09a8\u09cd\u099f\u09bf\u0995\u09c7\u09b6\u09a8\u09c7 \u09b8\u09ae\u09b8\u09cd\u09af\u09be \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964" });
       setIsLoading(false);
     }
   };
