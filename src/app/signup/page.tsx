@@ -88,11 +88,11 @@ export default function SignupPage() {
       
       router.push("/login");
 
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "ত্রুটি",
-        description: error.message || "সাইন আপে সমস্যা হয়েছে।",
+        description: error instanceof Error ? error.message : "সাইন আপে সমস্যা হয়েছে।",
       });
     } finally {
       setIsLoading(false);
@@ -118,11 +118,11 @@ export default function SignupPage() {
         });
         setIsLoading(false);
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "ত্রুটি",
-        description: error.message || "সাইন আপে সমস্যা হয়েছে।",
+        description: error instanceof Error ? error.message : "সাইন আপে সমস্যা হয়েছে।",
       });
       setIsLoading(false);
     }
