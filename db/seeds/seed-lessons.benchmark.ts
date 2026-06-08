@@ -26,11 +26,9 @@ async function seedLessons() {
   try {
     // Dynamic import to handle TypeScript modules
     const { lessons } = await import('../../src/lib/lessons');
-    
+
     // Map to track lesson IDs for drill insertion
     const lessonIdMap: Record<string, string> = {};
-    const allLessonsData = [];
-    const allDrillsData: any[] = [];
 
     for (let i = 0; i < lessons.length; i++) {
       const lesson = lessons[i];
@@ -49,10 +47,20 @@ async function seedLessons() {
         sort_order: i,
       };
 
-      allLessonsData.push(lessonData);
+      // Insert lesson
+      const { error: lessonError } = await supabase
+        .from('lessons')
+        .upsert([lessonData], { onConflict: 'id' });
+
+      if (lessonError) {
+        console.error(`Error inserting lesson ${lesson.id}:`, lessonError.message);
+        continue;
+      }
 
       // Store the mapping
       lessonIdMap[lesson.id] = newUuid;
+
+      console.log(`✓ Inserted lesson: ${lesson.title}`);
 
       // Insert drills if they exist
       if (lesson.drills && lesson.drills.length > 0) {
@@ -63,31 +71,15 @@ async function seedLessons() {
           drill_order: idx,
         }));
 
-        allDrillsData.push(...drillsData);
-      }
-    }
+        const { error: drillsError } = await supabase
+          .from('lesson_drills')
+          .insert(drillsData);
 
-    // Insert all lessons
-    const { error: lessonsError } = await supabase
-      .from('lessons')
-      .upsert(allLessonsData, { onConflict: 'id' });
-
-    if (lessonsError) {
-      console.error('Error inserting lessons:', lessonsError.message);
-    } else {
-      console.log(`✓ Inserted ${allLessonsData.length} lessons`);
-    }
-
-    // Insert all drills
-    if (allDrillsData.length > 0) {
-      const { error: drillsError } = await supabase
-        .from('lesson_drills')
-        .insert(allDrillsData);
-
-      if (drillsError) {
-        console.error('Error inserting drills:', drillsError.message);
-      } else {
-        console.log(`  ├─ Added ${allDrillsData.length} drills`);
+        if (drillsError) {
+          console.error(`Error inserting drills for ${lesson.id}:`, drillsError.message);
+        } else {
+          console.log(`  ├─ Added ${drillsData.length} drills`);
+        }
       }
     }
 
