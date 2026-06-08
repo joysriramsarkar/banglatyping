@@ -253,13 +253,27 @@ export async function analyzeUserErrors(userId: string) {
   try {
     const errors = await getUserWeakCharacters(userId);
     
+    const veryWeak: WeakCharacterView[] = [];
+    const weak: WeakCharacterView[] = [];
+    let sumAccuracy = 0;
+
+    for (let i = 0; i < errors.length; i++) {
+      const e = errors[i];
+      if (e.strength_level === 'Very Weak') {
+        veryWeak.push(e);
+      } else if (e.strength_level === 'Weak') {
+        weak.push(e);
+      }
+      sumAccuracy += e.accuracy_rate;
+    }
+
     const analysis = {
       totalWeakChars: errors.length,
-      veryWeak: errors.filter(e => e.strength_level === 'Very Weak'),
-      weak: errors.filter(e => e.strength_level === 'Weak'),
+      veryWeak,
+      weak,
       avgAccuracyWeakChars: 
         errors.length > 0 
-          ? Math.round((errors.reduce((sum, e) => sum + e.accuracy_rate, 0) / errors.length) * 100) / 100
+          ? Math.round((sumAccuracy / errors.length) * 100) / 100
           : 100,
       focusAreas: errors.slice(0, 5).map(e => ({ char: e.character, accuracy: e.accuracy_rate })),
     };
