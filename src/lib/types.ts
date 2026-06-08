@@ -45,6 +45,13 @@ export type RowDrillCategory = {
     description: string;
 }
 
+export interface TestResult {
+  wpm: number;
+  accuracy: number;
+  lesson_id: string;
+  created_at: string;
+}
+
 export interface TestSummary {
   wpm: number;
   accuracy: number;

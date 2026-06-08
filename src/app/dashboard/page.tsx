@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/db";
-import type { UserTypingStats, TestSummary } from "@/lib/types";
+import type { UserTypingStats, TestSummary, TestResult } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const toBengaliNumber = (num: number | string) => {
@@ -70,7 +70,7 @@ export default function DashboardPage() {
       if (user) {
         setLoadingStats(true);
         try {
-          const { data: tests, error } = await supabase
+          const { data, error } = await supabase
             .from('test_results')
             .select('wpm, accuracy, lesson_id, created_at')
             .eq('user_id', user.id)
@@ -79,17 +79,28 @@ export default function DashboardPage() {
 
           if (error) throw error;
 
+          const tests = data as TestResult[] | null;
+
           if (tests && tests.length > 0) {
-            setLastTest(tests[0] as any);
-            const totalWpm = tests.reduce((acc, t: any) => acc + (t.wpm || 0), 0);
-            const totalAccuracy = tests.reduce((acc, t: any) => acc + (t.accuracy || 0), 0);
-            const lessonIds = new Set(tests.map((t: any) => t.lesson_id).filter(Boolean));
+            const latestTest = tests[0];
+            setLastTest({
+              wpm: latestTest.wpm,
+              accuracy: latestTest.accuracy,
+              lessonId: latestTest.lesson_id,
+              timestamp: latestTest.created_at,
+              errors: 0, // Fallback since it's not selected
+              timeElapsed: 0, // Fallback since it's not selected
+              erredCharacters: [], // Fallback since it's not selected
+            });
+            const totalWpm = tests.reduce((acc, t) => acc + (t.wpm || 0), 0);
+            const totalAccuracy = tests.reduce((acc, t) => acc + (t.accuracy || 0), 0);
+            const lessonIds = new Set(tests.map((t) => t.lesson_id).filter(Boolean));
             setStats({
               averageWpm: Math.round(totalWpm / tests.length) || 0,
               averageAccuracy: Math.round(totalAccuracy / tests.length) || 0,
               lessonsCompleted: lessonIds.size || 0,
               testsTaken: tests.length || 0,
-              highestWpm: Math.max(...tests.map((t: any) => t.wpm || 0)) || 0,
+              highestWpm: Math.max(...tests.map((t) => t.wpm || 0)) || 0,
             });
           } else {
             setStats(null);
