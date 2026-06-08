@@ -5,7 +5,6 @@ import * as React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useTimer } from "@/hooks/use-timer";
-import { CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TestResults from "@/components/test-results";
 import { generateDrills as generateDrillsFromLib } from "@/lib/lessons";
@@ -13,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import type { Drill, ErredCharacter } from "@/lib/types";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { DrillProgress } from "./DrillProgress";
+import { DrillPromptDisplay } from "./DrillPromptDisplay";
 
 export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
@@ -270,60 +270,12 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                 />;
     }
 
-    const getVisibleDrills = () => {
-        const visible: Drill[] = [];
-        const startIndex = Math.floor(currentDrillIndex / 10) * 10;
-        for(let i = startIndex; i < startIndex + 10 && i < drills.length; i++) {
-            visible.push(drills[i]);
-        }
-        return visible;
-    };
-
-    const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, isCompleted: boolean, key: string | number) => {
-        let boxClass = "bg-secondary";
-        if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 border-red-500";
-
-        if(drillData.prompt === ' '){
-            return (
-                <div key={key} className={cn("flex items-center justify-center h-16 w-24 rounded-md border-2", boxClass, isCurrent && "ring-2 ring-primary" )}>
-                     {isCompleted ? <CheckCircle className="h-6 w-6 text-muted-foreground" /> : <span className="text-muted-foreground italic">স্পেস</span>}
-                </div>
-            )
-        }
-
-        return (
-            <div key={key} className={cn("flex items-center justify-center h-16 w-16 rounded-md border text-3xl font-hind", boxClass, isCurrent && "ring-2 ring-primary")}>
-               {isCompleted ? <CheckCircle className="h-6 w-6 text-muted-foreground" /> : drillData.prompt}
-            </div>
-        )
-    }
-
-    const visibleDrills = getVisibleDrills();
-    const promptsWithSpacers: (Drill | {isSpacer: true})[] = [];
-    visibleDrills.forEach((drill, index) => {
-        promptsWithSpacers.push(drill);
-        const originalIndex = drills.indexOf(drill);
-        if (drill.prompt === ' ' && (originalIndex + 1) % 5 === 0 && index < visibleDrills.length - 1) {
-           promptsWithSpacers.push({ isSpacer: true });
-        }
-    });
-
     return (
         <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-full mx-auto">
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-2/3 space-y-4">
                     {/* Prompt Display */}
-                    <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px] flex-wrap">
-                        {promptsWithSpacers.map((item, index) => {
-                             if ('isSpacer' in item) {
-                                return <div key={`spacer-${index}`} className="w-full h-2"></div>
-                            }
-                            const originalIndex = drills.indexOf(item);
-                            const isCurrent = currentDrillIndex === originalIndex;
-                            const isCompleted = originalIndex < currentDrillIndex;
-                            return renderDrillPrompt(item, isCurrent, isCompleted, `${item.prompt}-${originalIndex}`);
-                        })}
-                    </div>
+                    <DrillPromptDisplay drills={drills} currentDrillIndex={currentDrillIndex} status={status} />
 
                     {/* Virtual Keyboard */}
                     <SimplifiedKeyboard highlightKeyCode={currentDrillStep?.keyCode} needsShift={!!currentDrillStep?.shift} />
