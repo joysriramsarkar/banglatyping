@@ -192,7 +192,6 @@ export async function createWeakCharacterDrill(
 
     // If no weak characters found, return null
     if (characters.length < minCharacters) {
-      console.log(`Not enough weak characters (${characters.length} < ${minCharacters})`);
       return null;
     }
 
