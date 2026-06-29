@@ -1,5 +1,6 @@
 // API endpoint to manage custom drills
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthenticatedUser } from '@/lib/auth-server';
 import { 
   createWeakCharacterDrill, 
   getUserCustomDrills,
@@ -18,6 +19,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'userId is required' },
         { status: 400 }
+      );
+    }
+
+    // Verify user authorization
+    const authUser = await getAuthenticatedUser(request);
+    if (!authUser || authUser.id !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized access' },
+        { status: 401 }
       );
     }
 
@@ -56,6 +66,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'userId is required' },
         { status: 400 }
+      );
+    }
+
+    // Verify user authorization
+    const authUser = await getAuthenticatedUser(request);
+    if (!authUser || authUser.id !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized access' },
+        { status: 401 }
       );
     }
 
