@@ -67,12 +67,18 @@ export const keyMap: KeyMapEntry[] = [
     {key: '-', keyCode: 'Minus', bn: '়', row: 'other', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
 ];
 
+const keyLookupMap = new Map<string, KeyMapEntry>();
+
+keyMap.forEach(k => {
+  keyLookupMap.set(normalizeBengaliString(k.bn), k);
+  if (k.bnShift) {
+    keyLookupMap.set(normalizeBengaliString(k.bnShift), k);
+  }
+});
+
 const findKey = (bengaliChar: string) => {
   const normalized = normalizeBengaliString(bengaliChar);
-  return keyMap.find(k => 
-    normalizeBengaliString(k.bn) === normalized || 
-    (k.bnShift && normalizeBengaliString(k.bnShift) === normalized)
-  );
+  return keyLookupMap.get(normalized);
 };
 const hasantKey = findKey('্');
 if (!hasantKey) {
