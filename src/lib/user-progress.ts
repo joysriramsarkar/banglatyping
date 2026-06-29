@@ -177,24 +177,30 @@ export async function getUserProgressHistory(
   offset: number = 0
 ): Promise<{ data: UserProgress[] | null; total: number }> {
   try {
-    // Get total count
-    const { count, error: countError } = await supabase
-      .from('user_progress')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
+    // Run count and data fetch in parallel
+    const [countResult, dataResult] = await Promise.all([
+      // Get total count
+      supabase
+        .from('user_progress')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId),
+
+      // Get paginated data
+      supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .order('session_timestamp', { ascending: false })
+        .range(offset, offset + limit - 1)
+    ]);
+
+    const { count, error: countError } = countResult;
+    const { data, error } = dataResult;
 
     if (countError) {
       console.error('Error counting progress:', countError);
       return { data: null, total: 0 };
     }
-
-    // Get paginated data
-    const { data, error } = await supabase
-      .from('user_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .order('session_timestamp', { ascending: false })
-      .range(offset, offset + limit - 1);
 
     if (error) {
       console.error('Error fetching progress history:', error);
