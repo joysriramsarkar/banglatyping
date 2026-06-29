@@ -290,60 +290,52 @@ interface UseTypingPracticeReturn {
   getVisibleWords: (bufferSize?: number) => Array<{ word: string; index: number }>;
 }
 
-/**
- * Hook that manages all typing practice state and logic
- * Returns state and dispatch functions for use in components
- * 
- * Benefits:
- * - Single source of truth for all typing state
- * - Memoized callbacks to prevent unnecessary re-renders
- * - Encapsulates complex state logic
- * - Easy to reuse across multiple components
- */
-export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingPracticeReturn {
-  const { initialText, isPracticeDrill } = options;
-  const [state, dispatch] = useReducer(typingReducer, initialTypingState);
-  const prevStatsRef = useRef({ wpm: 0, accuracy: 100, errors: 0, chars: 0 });
-
-  // Initialize on mount or when text changes
-  useEffect(() => {
-    dispatch({ type: 'INIT', payload: { initialText, isPracticeDrill } });
-  }, [initialText, isPracticeDrill]);
-
-  // Memoized dispatch methods to prevent recreating functions on every render
+function useTypingActions(dispatch: React.Dispatch<TypingAction>, isPracticeDrill: boolean) {
   const inputChar = useCallback((key: string, maxLength: number) => {
     dispatch({ type: 'INPUT_CHAR', payload: { key, maxLength } });
-  }, []);
+  }, [dispatch]);
 
   const setCurrentInput = useCallback((input: string) => {
     dispatch({ type: 'SET_INPUT', payload: { input } });
-  }, []);
+  }, [dispatch]);
 
   const handleBackspace = useCallback((isCtrl = false) => {
     dispatch({ type: isCtrl ? 'CTRL_BACKSPACE' : 'BACKSPACE' });
-  }, []);
+  }, [dispatch]);
 
   const handleSpace = useCallback(() => {
     dispatch({ type: 'SPACE' });
-  }, []);
+  }, [dispatch]);
 
   const navigate = useCallback((direction: -1 | 1) => {
     dispatch({ type: 'NAVIGATE', payload: { direction } });
-  }, []);
+  }, [dispatch]);
 
   const calculateStats = useCallback((time: number) => {
     dispatch({ type: 'CALCULATE_STATS', payload: { time } });
-  }, []);
+  }, [dispatch]);
 
   const finish = useCallback(() => {
     dispatch({ type: 'FINISH' });
-  }, []);
+  }, [dispatch]);
 
   const reset = useCallback((text: string) => {
     dispatch({ type: 'RESET', payload: { text, isPracticeDrill } });
-  }, [isPracticeDrill]);
+  }, [dispatch, isPracticeDrill]);
 
-  // Derived values with proper normalization
+  return {
+    inputChar,
+    setCurrentInput,
+    handleBackspace,
+    handleSpace,
+    navigate,
+    calculateStats,
+    finish,
+    reset,
+  };
+}
+
+function useTypingDerivedValues(state: TypingState) {
   const getCurrentInput = useCallback(() => {
     return (state.charInputPerWord[state.currentWordIndex] || '').normalize('NFC');
   }, [state.currentWordIndex, state.charInputPerWord]);
@@ -386,21 +378,41 @@ export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingP
   }, [state.currentWordIndex, state.words]);
 
   return {
-    state,
-    dispatch,
-    inputChar,
-    setCurrentInput,
-    handleBackspace,
-    handleSpace,
-    navigate,
-    calculateStats,
-    finish,
-    reset,
     getCurrentInput,
     getCurrentWord,
     getWordClass,
     isError,
     getVisibleWords,
+  };
+}
+
+/**
+ * Hook that manages all typing practice state and logic
+ * Returns state and dispatch functions for use in components
+ *
+ * Benefits:
+ * - Single source of truth for all typing state
+ * - Memoized callbacks to prevent unnecessary re-renders
+ * - Encapsulates complex state logic
+ * - Easy to reuse across multiple components
+ */
+export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingPracticeReturn {
+  const { initialText, isPracticeDrill } = options;
+  const [state, dispatch] = useReducer(typingReducer, initialTypingState);
+
+  // Initialize on mount or when text changes
+  useEffect(() => {
+    dispatch({ type: 'INIT', payload: { initialText, isPracticeDrill } });
+  }, [initialText, isPracticeDrill]);
+
+  const actions = useTypingActions(dispatch, isPracticeDrill);
+  const derivedValues = useTypingDerivedValues(state);
+
+  return {
+    state,
+    dispatch,
+    ...actions,
+    ...derivedValues,
   };
 }
 
