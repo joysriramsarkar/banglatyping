@@ -212,17 +212,21 @@ export async function getDrillRecommendations(userId: string): Promise<{
   avgWeakCharAccuracy: number;
 }> {
   try {
-    const { data: stats } = await supabase
-      .from('user_statistics')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    const { data: weakChars } = await supabase
-      .from('user_weak_characters')
-      .select('*')
-      .eq('user_id', userId)
-      .lt('accuracy_rate', 85);
+    const [
+      { data: stats },
+      { data: weakChars }
+    ] = await Promise.all([
+      supabase
+        .from('user_statistics')
+        .select('*')
+        .eq('user_id', userId)
+        .single(),
+      supabase
+        .from('user_weak_characters')
+        .select('*')
+        .eq('user_id', userId)
+        .lt('accuracy_rate', 85)
+    ]);
 
     const weakCharacterData = (weakChars || []) as WeakCharacterView[];
     
