@@ -6,35 +6,35 @@ import { Check, ChevronRight, Circle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-function MenubarMenu({
+const MenubarMenu = ({
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.Menu>) {
-  return <MenubarPrimitive.Menu {...props} />
-}
+}: React.ComponentProps<typeof MenubarPrimitive.Menu>) => (
+  <MenubarPrimitive.Menu {...props} />
+)
 
-function MenubarGroup({
+const MenubarGroup = ({
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.Group>) {
-  return <MenubarPrimitive.Group {...props} />
-}
+}: React.ComponentProps<typeof MenubarPrimitive.Group>) => (
+  <MenubarPrimitive.Group {...props} />
+)
 
-function MenubarPortal({
+const MenubarPortal = ({
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.Portal>) {
-  return <MenubarPrimitive.Portal {...props} />
-}
+}: React.ComponentProps<typeof MenubarPrimitive.Portal>) => (
+  <MenubarPrimitive.Portal {...props} />
+)
 
-function MenubarRadioGroup({
+const MenubarRadioGroup = ({
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.RadioGroup>) {
-  return <MenubarPrimitive.RadioGroup {...props} />
-}
+}: React.ComponentProps<typeof MenubarPrimitive.RadioGroup>) => (
+  <MenubarPrimitive.RadioGroup {...props} />
+)
 
-function MenubarSub({
+const MenubarSub = ({
   ...props
-}: React.ComponentProps<typeof MenubarPrimitive.Sub>) {
-  return <MenubarPrimitive.Sub data-slot="menubar-sub" {...props} />
-}
+}: React.ComponentProps<typeof MenubarPrimitive.Sub>) => (
+  <MenubarPrimitive.Sub data-slot="menubar-sub" {...props} />
+)
 
 const Menubar = React.forwardRef<
   React.ElementRef<typeof MenubarPrimitive.Root>,
