@@ -31,24 +31,27 @@ export async function getAllLessons(): Promise<Lesson[]> {
  */
 export async function getLessonWithDrills(lessonId: string): Promise<(Lesson & { drills?: LessonDrill[] }) | null> {
   try {
-    // Get lesson
-    const { data: lesson, error: lessonError } = await supabaseAdmin
-      .from('lessons')
-      .select('*')
-      .eq('id', lessonId)
-      .single();
+    // Get lesson and drills concurrently
+    const [lessonResult, drillsResult] = await Promise.all([
+      supabaseAdmin
+        .from('lessons')
+        .select('*')
+        .eq('id', lessonId)
+        .single(),
+      supabaseAdmin
+        .from('lesson_drills')
+        .select('*')
+        .eq('lesson_id', lessonId)
+        .order('drill_order', { ascending: true })
+    ]);
+
+    const { data: lesson, error: lessonError } = lessonResult;
+    const { data: drills, error: drillsError } = drillsResult;
 
     if (lessonError) {
       console.error('Error fetching lesson:', lessonError);
       return null;
     }
-
-    // Get drills for this lesson
-    const { data: drills, error: drillsError } = await supabaseAdmin
-      .from('lesson_drills')
-      .select('*')
-      .eq('lesson_id', lessonId)
-      .order('drill_order', { ascending: true });
 
     if (drillsError) {
       console.error('Error fetching drills:', drillsError);
