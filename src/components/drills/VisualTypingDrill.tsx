@@ -14,6 +14,33 @@ import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { DrillProgress } from "./DrillProgress";
 import { DrillPromptDisplay } from "./DrillPromptDisplay";
 
+function checkIsCorrectKey(event: KeyboardEvent, expectedKey: string, expectedShift: boolean | undefined): boolean {
+    if (expectedKey === ' ') {
+        return event.code === 'Space';
+    } else {
+        let expectedCode = '';
+        if (expectedKey.match(/^[a-z]$/)) {
+            expectedCode = `Key${expectedKey.toUpperCase()}`;
+        } else if (expectedKey.match(/^[0-9]$/)) {
+            expectedCode = `Digit${expectedKey}`;
+        } else {
+            switch(expectedKey) {
+                case '[': expectedCode = 'BracketLeft'; break;
+                case ']': expectedCode = 'BracketRight'; break;
+                case '\\': expectedCode = 'Backslash'; break;
+                case ';': expectedCode = 'Semicolon'; break;
+                case "'": expectedCode = 'Quote'; break;
+                case ',': expectedCode = 'Comma'; break;
+                case '.': expectedCode = 'Period'; break;
+                case '/': expectedCode = 'Slash'; break;
+                case '-': expectedCode = 'Minus'; break;
+                default: expectedCode = expectedKey;
+            }
+        }
+        return event.code === expectedCode && event.shiftKey === !!expectedShift;
+    }
+}
+
 export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
     const [drills, setDrills] = useState<Drill[]>(initialDrills);
@@ -107,6 +134,25 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         }, 4000);
     }, [isActive, isPaused, pause]);
 
+    const handleIncorrect = useCallback(() => {
+        setTotalErrors(prev => prev + 1);
+        if(currentDrill) {
+            const newErredChars = new Map(erredCharacters);
+            const char = currentDrill.prompt;
+            newErredChars.set(char, (newErredChars.get(char) || 0) + 1);
+            setDrillState(prev => ({ ...prev, status: 'incorrect', erredCharacters: newErredChars }));
+        } else {
+             setDrillState(prev => ({ ...prev, status: 'incorrect' }));
+        }
+
+        if (statusTimeoutRef.current) {
+            clearTimeout(statusTimeoutRef.current);
+        }
+        statusTimeoutRef.current = setTimeout(() => {
+            setDrillState(prev => ({ ...prev, status: 'pending' }));
+        }, 500);
+    }, [currentDrill, erredCharacters, setTotalErrors, setDrillState]);
+
 
      const handleKeyPress = useCallback((event: KeyboardEvent) => {
         if (isFinished) return;
@@ -136,22 +182,6 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
             statusTimeoutRef.current = null;
         }
 
-        const handleIncorrect = () => {
-            setTotalErrors(prev => prev + 1);
-            if(currentDrill) {
-                const newErredChars = new Map(erredCharacters);
-                const char = currentDrill.prompt;
-                newErredChars.set(char, (newErredChars.get(char) || 0) + 1);
-                setDrillState(prev => ({ ...prev, status: 'incorrect', erredCharacters: newErredChars }));
-            } else {
-                 setDrillState(prev => ({ ...prev, status: 'incorrect' }));
-            }
-
-            statusTimeoutRef.current = setTimeout(() => {
-                setDrillState(prev => ({ ...prev, status: 'pending' }));
-            }, 500);
-        };
-
         if (!currentDrill || !currentDrillStep) {
             handleIncorrect();
             return;
@@ -159,34 +189,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
 
         const { key: expectedKey, shift: expectedShift } = currentDrillStep;
 
-        let isCorrect = false;
-
-        if (expectedKey === ' ') {
-            if (event.code === 'Space') {
-                isCorrect = true;
-            }
-        } else {
-             let expectedCode = '';
-             if (expectedKey.match(/^[a-z]$/)) {
-                expectedCode = `Key${expectedKey.toUpperCase()}`;
-             } else if (expectedKey.match(/^[0-9]$/)) {
-                 expectedCode = `Digit${expectedKey}`;
-             } else {
-                 switch(expectedKey) {
-                    case '[': expectedCode = 'BracketLeft'; break;
-                    case ']': expectedCode = 'BracketRight'; break;
-                    case '\\': expectedCode = 'Backslash'; break;
-                    case ';': expectedCode = 'Semicolon'; break;
-                    case "'": expectedCode = 'Quote'; break;
-                    case ',': expectedCode = 'Comma'; break;
-                    case '.': expectedCode = 'Period'; break;
-                    case '/': expectedCode = 'Slash'; break;
-                    case '-': expectedCode = 'Minus'; break;
-                    default: expectedCode = expectedKey;
-                }
-            }
-             isCorrect = event.code === expectedCode && event.shiftKey === expectedShift;
-        }
+        const isCorrect = checkIsCorrectKey(event, expectedKey, expectedShift);
 
         if (isCorrect) {
             setTotalCharsTyped(prev => prev + 1);
@@ -215,7 +218,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         } else {
             handleIncorrect();
         }
-    }, [isSessionOver, isFinished, drills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, startDrill, resetInactivityTimer]);
+    }, [isSessionOver, isFinished, drills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, startDrill, resetInactivityTimer, handleIncorrect]);
 
 
     useEffect(() => {
