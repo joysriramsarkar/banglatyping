@@ -59,7 +59,35 @@ const lessonsByLevel = [
   { level: "উন্নত", lessons: ["অনুচ্ছেদ অনুশীলন", "জটিল বাক্য", "দ্রুত গতির ড্রিল"] }
 ];
 
+
+export const calculateUserStats = (tests: any[] | null): UserTypingStats | null => {
+  if (!tests || tests.length === 0) return null;
+
+  let totalWpm = 0;
+  let totalAccuracy = 0;
+  let highestWpm = 0;
+  const lessonIds = new Set<string>();
+
+  for (let i = 0; i < tests.length; i++) {
+    const t = tests[i];
+    const wpm = t.wpm || 0;
+    totalWpm += wpm;
+    totalAccuracy += (t.accuracy || 0);
+    if (t.lesson_id) lessonIds.add(t.lesson_id);
+    if (wpm > highestWpm) highestWpm = wpm;
+  }
+
+  return {
+    averageWpm: Math.round(totalWpm / tests.length) || 0,
+    averageAccuracy: Math.round(totalAccuracy / tests.length) || 0,
+    lessonsCompleted: lessonIds.size || 0,
+    testsTaken: tests.length || 0,
+    highestWpm: highestWpm,
+  };
+};
+
 export default function DashboardPage() {
+
   const { user } = useAuth();
   const [stats, setStats] = useState<UserTypingStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
@@ -67,54 +95,33 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (user) {
-        setLoadingStats(true);
-        try {
-          const { data: tests, error } = await supabase
-            .from('test_results')
-            .select('wpm, accuracy, lesson_id, created_at')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(50);
-
-          if (error) throw error;
-
-          if (tests && tests.length > 0) {
-            setLastTest(tests[0] as any);
-
-            let totalWpm = 0;
-            let totalAccuracy = 0;
-            let highestWpm = 0;
-            const lessonIds = new Set();
-
-            for (let i = 0; i < tests.length; i++) {
-              const t: any = tests[i];
-              const wpm = t.wpm || 0;
-              totalWpm += wpm;
-              totalAccuracy += (t.accuracy || 0);
-              if (t.lesson_id) lessonIds.add(t.lesson_id);
-              if (wpm > highestWpm) highestWpm = wpm;
-            }
-
-            setStats({
-              averageWpm: Math.round(totalWpm / tests.length) || 0,
-              averageAccuracy: Math.round(totalAccuracy / tests.length) || 0,
-              lessonsCompleted: lessonIds.size || 0,
-              testsTaken: tests.length || 0,
-              highestWpm: highestWpm,
-            });
-          } else {
-            setStats(null);
-          }
-        } catch (error: unknown) {
-          console.error("Error fetching stats:", error instanceof Error ? error.message : error);
-          setStats(null);
-        } finally {
-          setLoadingStats(false);
-        }
-      } else {
+      if (!user) {
         setLoadingStats(false);
         setStats(null);
+        return;
+      }
+
+      setLoadingStats(true);
+      try {
+        const { data: tests, error } = await supabase
+          .from('test_results')
+          .select('wpm, accuracy, lesson_id, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (error) throw error;
+
+        if (tests && tests.length > 0) {
+          setLastTest(tests[0] as any);
+        }
+
+        setStats(calculateUserStats(tests));
+      } catch (error: unknown) {
+        console.error("Error fetching stats:", error instanceof Error ? error.message : error);
+        setStats(null);
+      } finally {
+        setLoadingStats(false);
       }
     };
     fetchStats();
