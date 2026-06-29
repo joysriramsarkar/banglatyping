@@ -16,6 +16,7 @@ const config: Config = {
     'src/lib/lessons.ts',
     'src/hooks/use-timer.ts',
     'src/hooks/use-typing-practice.ts',
+    'src/lib/user-progress.ts',
   ],
   coverageThreshold: {
     global: { lines: 70 },
