@@ -45,7 +45,7 @@ export default function LoginPage() {
     const password = formData.get("password") as string;
 
     if (!email || !password) {
-        toast({ variant: "destructive", title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf", description: "\u0985\u09a8\u09c1\u0997\u09cd\u09b0\u09b9 \u0995\u09b0\u09c7 \u0987\u09ae\u09c7\u09b2 \u098f\u09ac\u0982 \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u09a6\u09bf\u09a8\u0964" });
+        toast({ variant: "destructive", title: "ত্রুটি", description: "অনুগ্রহ করে ইমেল এবং পাসওয়ার্ড দিন।" });
         setIsLoading(false);
         return;
     }
@@ -56,22 +56,22 @@ export default function LoginPage() {
       if (error) {
         toast({
           variant: "destructive",
-          title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf",
+          title: "ত্রুটি",
           description: error.message === "Invalid login credentials"
-            ? "\u0986\u09aa\u09a8\u09be\u09b0 \u0987\u09ae\u09c7\u09b2 \u09ac\u09be \u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1 \u09b8\u09a0\u09bf\u0995 \u09a8\u09af\u09bc\u0964"
+            ? "আপনার ইমেল বা পাসওয়ার্ড সঠিক নয়।"
             : error.message,
         });
         setIsLoading(false);
         return;
       }
 
-      toast({ title: "\u09b8\u09be\u09ab\u09b2\u09cd\u09af!", description: "\u09b8\u09ab\u09b2\u09ad\u09be\u09ac\u09c7 \u09b2\u0997\u0987\u09a8 \u0995\u09b0\u09c7\u099b\u09c7\u09a8\u0964" });
+      toast({ title: "সাফল্য!", description: "সফলভাবে লগইন করেছেন।" });
       router.push("/dashboard");
     } catch (error: unknown) {
       toast({
         variant: "destructive",
-        title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf",
-        description: error instanceof Error ? error.message : "\u09b2\u0997\u0987\u09a8\u09c7 \u09b8\u09ae\u09b8\u09cd\u09af\u09be \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964",
+        title: "ত্রুটি",
+        description: error instanceof Error ? error.message : "লগইনে সমস্যা হয়েছে।",
       });
     } finally {
       setIsLoading(false);
@@ -86,11 +86,11 @@ export default function LoginPage() {
         options: { redirectTo: `${window.location.origin}/dashboard` },
       });
       if (error) {
-        toast({ variant: "destructive", title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf", description: error.message });
+        toast({ variant: "destructive", title: "ত্রুটি", description: error.message });
         setIsLoading(false);
       }
     } catch (error: unknown) {
-      toast({ variant: "destructive", title: "\u09a4\u09cd\u09b0\u09c1\u099f\u09bf", description: error instanceof Error ? error.message : "\u0985\u09a5\u09c7\u09a8\u09cd\u099f\u09bf\u0995\u09c7\u09b6\u09a8\u09c7 \u09b8\u09ae\u09b8\u09cd\u09af\u09be \u09b9\u09af\u09bc\u09c7\u099b\u09c7\u0964" });
+      toast({ variant: "destructive", title: "ত্রুটি", description: error instanceof Error ? error.message : "অথেন্টিকেশনে সমস্যা হয়েছে।" });
       setIsLoading(false);
     }
   };
@@ -100,46 +100,46 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm mx-auto">
         <CardHeader className="text-center">
           <Logo className="justify-center mb-2"/>
-          <CardTitle className="text-2xl">\u09b8\u09cd\u09ac\u09be\u0997\u09a4\u09ae!</CardTitle>
-          <CardDescription>\u0986\u09aa\u09a8\u09be\u09b0 \u0985\u09cd\u09af\u09be\u0995\u09be\u0989\u09a8\u09cd\u099f\u09c7 \u09b2\u0997\u0987\u09a8 \u0995\u09b0\u09c1\u09a8</CardDescription>
+          <CardTitle className="text-2xl">স্বাগতম!</CardTitle>
+          <CardDescription>আপনার অ্যাকাউন্টে লগইন করুন</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="email">\u0987\u09ae\u09c7\u09b2</Label>
+              <Label htmlFor="email">ইমেল</Label>
               <Input id="email" name="email" type="email" placeholder="email@example.com" required disabled={isLoading} />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">\u09aa\u09be\u09b8\u0993\u09af\u09bc\u09be\u09b0\u09cd\u09a1</Label>
+              <Label htmlFor="password">পাসওয়ার্ড</Label>
               <Input id="password" name="password" type="password" required disabled={isLoading} />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "\u09b2\u09cb\u09a1 \u09b9\u099a\u09cd\u099b\u09c7..." : "\u09b2\u0997\u0987\u09a8 \u0995\u09b0\u09c1\u09a8"}
+              {isLoading ? "লোড হচ্ছে..." : "লগইন করুন"}
             </Button>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">\u0985\u09a5\u09ac\u09be</span>
+                <span className="bg-background px-2 text-muted-foreground">অথবা</span>
               </div>
             </div>
             <div className="flex justify-center gap-4">
-              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('google')} disabled={isLoading} aria-label="Google \u09a6\u09bf\u09af\u09bc\u09c7 \u09b2\u0997\u0987\u09a8 \u0995\u09b0\u09c1\u09a8">
+              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('google')} disabled={isLoading} aria-label="Google দিয়ে লগইন করুন">
                 <GoogleIcon />
               </Button>
-              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('facebook')} disabled={isLoading} aria-label="Facebook \u09a6\u09bf\u09af\u09bc\u09c7 \u09b2\u0997\u0987\u09a8 \u0995\u09b0\u09c1\u09a8">
+              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('facebook')} disabled={isLoading} aria-label="Facebook দিয়ে লগইন করুন">
                 <FacebookIcon />
               </Button>
-              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('azure')} disabled={isLoading} aria-label="Microsoft \u09a6\u09bf\u09af\u09bc\u09c7 \u09b2\u0997\u0987\u09a8 \u0995\u09b0\u09c1\u09a8">
+              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('azure')} disabled={isLoading} aria-label="Microsoft দিয়ে লগইন করুন">
                 <MicrosoftIcon />
               </Button>
             </div>
           </form>
           <div className="mt-4 text-center text-sm">
-            \u0995\u09cb\u09a8\u09cb \u0985\u09cd\u09af\u09be\u0995\u09be\u0989\u09a8\u09cd\u099f \u09a8\u09c7\u0987?{" "}
+            কোনো অ্যাকাউন্ট নেই?{" "}
             <Link href="/signup" className="underline">
-              \u09b8\u09be\u0987\u09a8 \u0986\u09aa \u0995\u09b0\u09c1\u09a8
+              সাইন আপ করুন
             </Link>
           </div>
         </CardContent>
