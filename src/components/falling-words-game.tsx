@@ -31,41 +31,48 @@ const getWordsFromParagraphs = (): string[] => {
 
 const wordsList = getWordsFromParagraphs();
 
-const Word = ({ word, onComplete, speed, isPaused }: { word: string, onComplete: (w: string) => void, speed: number, isPaused: boolean }) => {
+// Memoized Word component to prevent unnecessary re-renders
+const Word = React.memo(({ word, onComplete, speed, isPaused, windowHeight, windowWidth }: { 
+  word: string, 
+  onComplete: (w: string) => void, 
+  speed: number, 
+  isPaused: boolean,
+  windowHeight: number,
+  windowWidth: number
+}) => {
   const duration = Math.max(3, 16 - speed); // As speed increases, duration decreases
-  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-    setWindowSize({ width: window.innerWidth, height: window.innerHeight });
-  }, []);
-
-  if (!isClient) return null; // Avoid hydration mismatch
-
-  // Color based on word length
-  const getWordColor = (wordLength: number) => {
+  
+  // Color based on word length - memoized
+  const wordColor = React.useMemo(() => {
+    const wordLength = word.length;
     if (wordLength <= 3) return "text-green-600";
     if (wordLength <= 6) return "text-blue-600";
     if (wordLength <= 10) return "text-yellow-600";
     return "text-red-600";
-  };
+  }, [word.length]);
+
+  // Calculate initial X position once
+  const initialX = React.useMemo(() => {
+    return Math.random() * (windowWidth > 400 ? windowWidth - 200 : 300);
+  }, [windowWidth]);
 
   return (
     <motion.div
-      initial={{ y: -50, x: Math.random() * (windowSize.width > 400 ? windowSize.width - 200 : 300) }}
-      animate={{ y: isPaused ? -50 : windowSize.height - 150 }}
+      initial={{ y: -50, x: initialX }}
+      animate={{ y: isPaused ? -50 : windowHeight - 150 }}
       transition={{ duration: isPaused ? 0 : duration, ease: "linear" }}
       onAnimationComplete={() => !isPaused && onComplete(word)}
       className={cn(
         "absolute px-4 py-2 bg-card border rounded-full text-lg font-mono shadow-lg",
-        getWordColor(word.length)
+        wordColor
       )}
     >
       {word}
     </motion.div>
   );
-};
+});
+
+Word.displayName = "Word";
 
 
 export default function FallingWordsGame() {
@@ -77,8 +84,16 @@ export default function FallingWordsGame() {
     const [level, setLevel] = useState(1);
     const [totalWordsTyped, setTotalWordsTyped] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
+    const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
     const gameInterval = useRef<NodeJS.Timeout | null>(null);
     const router = useRouter();
+    
+    // Get window size once on mount (client-side only)
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+        }
+    }, []);
 
     const playSound = useCallback((type: 'click' | 'error' | 'success' | 'levelup') => {
         try {
@@ -243,11 +258,24 @@ export default function FallingWordsGame() {
         );
     }
     
+    // Don't render game until window size is available (prevents hydration mismatch)
+    if (windowSize.height === 0) {
+        return <div className="w-full h-[70vh] flex items-center justify-center">লোড হচ্ছে...</div>;
+    }
+    
     return (
         <div className={cn("relative w-full h-[70vh] rounded-lg overflow-hidden border transition-colors duration-500", lives <= 2 ? "bg-red-50" : "bg-secondary/30")}>
             <AnimatePresence>
                 {activeWords.map((word) => (
-                    <Word key={word} word={word.replace(/[0-9.]/g, '')} onComplete={handleWordMiss} speed={level} isPaused={isPaused} />
+                    <Word 
+                        key={word} 
+                        word={word.replace(/[0-9.]/g, '')} 
+                        onComplete={handleWordMiss} 
+                        speed={level} 
+                        isPaused={isPaused}
+                        windowHeight={windowSize.height}
+                        windowWidth={windowSize.width}
+                    />
                 ))}
             </AnimatePresence>
 

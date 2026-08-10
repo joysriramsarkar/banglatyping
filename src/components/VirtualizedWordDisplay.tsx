@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { cn } from "@/lib/utils";
 
 interface VirtualizedWordDisplayProps {
@@ -12,7 +12,7 @@ interface VirtualizedWordDisplayProps {
 }
 
 /**
- * VirtualizedWordDisplay Component
+ * VirtualizedWordDisplay Component - Memoized for Performance
  * 
  * Efficiently renders only visible words instead of the entire word list.
  * This solves the DOM overload problem where thousands of DOM nodes were created.
@@ -22,8 +22,9 @@ interface VirtualizedWordDisplayProps {
  * - Dramatically reduces DOM node count (from 10,000+ to ~5-7 nodes)
  * - Prevents memory leaks and input delay
  * - Smooth scrolling experience with proper word transitions
+ * - Memoized to prevent unnecessary re-renders when props haven't changed
  */
-export const VirtualizedWordDisplay = ({
+export const VirtualizedWordDisplay = memo(({
   visibleWords,
   currentWordIndex,
   totalWords,
@@ -58,6 +59,8 @@ export const VirtualizedWordDisplay = ({
       )}
     </div>
   );
-};
+});
+
+VirtualizedWordDisplay.displayName = "VirtualizedWordDisplay";
 
 export default VirtualizedWordDisplay;

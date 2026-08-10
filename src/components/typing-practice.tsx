@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useRef, useCallback, useMemo } from "react";
+import { useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTimer } from "@/hooks/use-timer";
@@ -27,13 +27,16 @@ interface TypingPracticeProps {
   accuracyGoal?: number;
 }
 
-const StatDisplay = ({ icon: Icon, value, label }: { icon: React.ElementType; value: string | number; label: string }) => (
+// Memoized StatDisplay component to prevent unnecessary re-renders
+const StatDisplay = memo(({ icon: Icon, value, label }: { icon: React.ElementType; value: string | number; label: string }) => (
   <div className="flex items-center gap-2 text-lg">
     <Icon className="h-5 w-5 text-primary" />
     <span className="font-semibold">{toBengaliNumber(value)}</span>
     <span className="text-sm text-muted-foreground">{label}</span>
   </div>
-);
+));
+
+StatDisplay.displayName = "StatDisplay";
 
 // Exports for backward compatibility
 export { WordDrill, VisualTypingDrill };
@@ -112,7 +115,7 @@ export default function TypingPractice({
       if (!state.isFinished && isActive) {
         calculateStats(time);
       }
-    }, 100); // Update stats every 100ms max
+    }, 150); // Increased debounce time for better performance
   }, [calculateStats, time, isActive, state.isFinished]);
 
   // Real-time stats update - debounced to prevent excessive updates
@@ -169,11 +172,11 @@ export default function TypingPractice({
     [state.isFinished, isActive, isPaused, start, resume, resetInactivityTimer, handleBackspace, handleSpace, navigate]
   );
 
-  // Set up global keydown listener
+  // Set up global keydown listener with passive option for better performance
   useEffect(() => {
     hiddenInputRef.current?.focus();
 
-    window.addEventListener('keydown', handleGlobalKeyDown);
+    window.addEventListener('keydown', handleGlobalKeyDown, { passive: false });
 
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
@@ -267,8 +270,9 @@ export default function TypingPractice({
     );
   }, [getCurrentInput, getCurrentWord]);
 
-  const normalizedInput = getCurrentInput();
-  const isInputError = isError();
+  // Memoize derived values to prevent unnecessary recalculations
+  const normalizedInput = useMemo(() => getCurrentInput(), [getCurrentInput]);
+  const isInputError = useMemo(() => isError(), [isError]);
 
   if (state.isFinished) {
     return (
@@ -294,7 +298,7 @@ export default function TypingPractice({
         value={normalizedInput}
         onChange={(e) => {
           if (!isActive && !isPaused) start();
-          if (isPaused && isActive) resume();
+          else if (isPaused && isActive) resume();
           resetInactivityTimer();
           setCurrentInput(e.target.value);
         }}
@@ -302,6 +306,7 @@ export default function TypingPractice({
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck="false"
+        aria-label="Typing input field"
       />
 
       {/* Stats Display Card */}
@@ -340,6 +345,8 @@ export default function TypingPractice({
             "font-hind p-2 flex items-center justify-center min-h-[3rem] w-full",
             textDisplayFontSize
           )}
+          role="status"
+          aria-live="polite"
         >
           {previewContent}
         </div>
@@ -349,13 +356,16 @@ export default function TypingPractice({
             isInputError ? "border-red-500" : "border-green-500",
             textDisplayFontSize
           )}
+          role="textbox"
+          aria-label="Current typing input"
+          aria-readonly="true"
         >
           {normalizedInput}
         </div>
       </div>
 
       {/* Instructions */}
-      <div className="text-xs text-muted-foreground space-y-1 text-center">
+      <div className="text-xs text-muted-foreground space-y-1 text-center" role="note">
         <p>শব্দটি সম্পূর্ণ করতে <kbd className="px-2 py-1 bg-muted rounded border">Space</kbd> চাপুন</p>
         <p>আগের শব্দে ফিরতে <kbd className="px-2 py-1 bg-muted rounded border">←</kbd> বা ভুল সংশোধন করতে <kbd className="px-2 py-1 bg-muted rounded border">Backspace</kbd> ব্যবহার করুন</p>
         <p>পুরো শব্দ মোছার জন্য <kbd className="px-2 py-1 bg-muted rounded border">Ctrl+Backspace</kbd> চাপুন</p>
@@ -363,10 +373,10 @@ export default function TypingPractice({
 
       {/* Control Buttons */}
       <div className="flex items-center space-x-4">
-        <Button onClick={() => router.push('/dashboard/lessons')} variant="outline" size="icon" title="পাঠক্রমে ফিরে যান">
+        <Button onClick={() => router.push('/dashboard/lessons')} variant="outline" size="icon" title="পাঠক্রমে ফিরে যান" aria-label="Go back to lessons">
           <Home className="h-5 w-5" />
         </Button>
-        <Button onClick={isPaused ? resume : pause} variant="outline" size="icon" disabled={!isActive} title={isPaused ? "চালিয়ে যান" : "থামুন"}>
+        <Button onClick={isPaused ? resume : pause} variant="outline" size="icon" disabled={!isActive} title={isPaused ? "চালিয়ে যান" : "থামুন"} aria-label={isPaused ? "Resume typing" : "Pause typing"}>
           {isPaused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
         </Button>
       </div>
