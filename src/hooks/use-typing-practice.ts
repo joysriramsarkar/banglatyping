@@ -1,9 +1,15 @@
-import { useReducer, useCallback, useRef, useEffect } from 'react';
+import { useReducer, useCallback, useRef, useEffect, useMemo } from 'react';
 
 /**
- * Custom Hook: useTypingPractice
+ * Custom Hook: useTypingPractice - Optimized for Performance
  * Centralizes all typing state management and logic
  * Prevents "state hell" by consolidating related states into one reducer
+ * 
+ * Performance Optimizations:
+ * - Uses useReducer for efficient state batching
+ * - Memoized callbacks to prevent unnecessary re-renders
+ * - Word stats caching to avoid recalculating completed words
+ * - Virtualization support for large word lists
  */
 
 interface TypingState {
@@ -370,6 +376,7 @@ export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingP
 
   // Virtualization support: Returns only visible words to prevent DOM overload
   // bufferSize: how many words before/after current word to render (default: 2)
+  // Optimized with useCallback to prevent recreating the function on every render
   const getVisibleWords = useCallback((bufferSize: number = 2) => {
     const startIndex = Math.max(0, state.currentWordIndex - bufferSize);
     const endIndex = Math.min(state.words.length - 1, state.currentWordIndex + bufferSize);
@@ -383,7 +390,7 @@ export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingP
     }
     
     return visibleWords;
-  }, [state.currentWordIndex, state.words]);
+  }, [state.currentWordIndex, state.words.length]);
 
   return {
     state,
