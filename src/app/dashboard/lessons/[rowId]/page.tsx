@@ -54,7 +54,7 @@ export default function RowDrillPage() {
                 <Card className="w-full max-w-lg">
                     <CardHeader className="text-center">
                         <CardTitle className="text-2xl font-headline"> নির্ভুলতার লক্ষ্য নির্ধারণ করুন</CardTitle>
-                        <CardDescription>"{selectedLesson.title}" অনুশীলনের জন্য আপনার লক্ষ্যমাত্রা নির্বাচন করুন।</CardDescription>
+                        <CardDescription>&quot;{selectedLesson.title}&quot; অনুশীলনের জন্য আপনার লক্ষ্যমাত্রা নির্বাচন করুন।</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-8">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

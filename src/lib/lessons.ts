@@ -146,7 +146,7 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         
         if (consonants.length >= 2) {
             // Add first consonant
-            let firstKey = findKey(consonants[0]);
+            const firstKey = findKey(consonants[0]);
             if (!firstKey) {
                 console.warn("Could not find key mapping for consonant:", consonants[0]);
                 return [];
@@ -454,8 +454,8 @@ export const lessons: Lesson[] = [
   ...consonants.map(consonant => ({
     id: `kar-drill-${consonant.en}`,
     title: `${consonant.bn}-এর সাথে কার-চিহ্ন অনুশীলন`,
-    level: 'Beginner' as 'Beginner',
-    row: 'kar-row' as 'kar-row',
+    level: 'Beginner' as const,
+    row: 'kar-row' as const,
     drills: generateKarDrillsForConsonant(consonant),
   })),
   

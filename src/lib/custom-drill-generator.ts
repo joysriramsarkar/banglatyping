@@ -197,7 +197,7 @@ export async function createWeakCharacterDrill(
 ): Promise<CustomDrill | null> {
   try {
     // Fetch weak characters from database view
-    let { data: weakChars, error } = await supabase
+    const { data: weakChars, error } = await supabase
       .from('user_weak_characters')
       .select('*')
       .eq('user_id', userId)
