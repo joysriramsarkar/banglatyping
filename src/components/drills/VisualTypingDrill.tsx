@@ -11,11 +11,15 @@ import { generateDrills as generateDrillsFromLib } from "@/lib/lessons";
 import { useRouter } from 'next/navigation';
 import type { Drill, ErredCharacter } from "@/lib/types";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
+import { getKeyboardLayoutConfig } from "@/lib/keyboard-layouts";
+import { useAuth } from '@/hooks/use-auth';
 import { DrillProgress } from "./DrillProgress";
 import { DrillPromptDisplay } from "./DrillPromptDisplay";
 
 export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
+    const { user } = useAuth();
+    const selectedLayout = user?.user_metadata?.keyboard_layout || 'avro';
     const [drills, setDrills] = useState<Drill[]>(initialDrills);
     const [drillState, setDrillState] = useState({
         currentDrillIndex: 0,
@@ -157,35 +161,32 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
             return;
         }
 
-        const { key: expectedKey, shift: expectedShift } = currentDrillStep;
+        const { key: expectedKey } = currentDrillStep;
 
         let isCorrect = false;
 
+        let expectedCode = '';
+        let targetExpectedShift = false;
+
         if (expectedKey === ' ') {
-            if (event.code === 'Space') {
-                isCorrect = true;
-            }
+            expectedCode = 'Space';
+            isCorrect = event.code === 'Space';
         } else {
-             let expectedCode = '';
-             if (expectedKey.match(/^[a-z]$/)) {
-                expectedCode = `Key${expectedKey.toUpperCase()}`;
-             } else if (expectedKey.match(/^[0-9]$/)) {
-                 expectedCode = `Digit${expectedKey}`;
-             } else {
-                 switch(expectedKey) {
-                    case '[': expectedCode = 'BracketLeft'; break;
-                    case ']': expectedCode = 'BracketRight'; break;
-                    case '\\': expectedCode = 'Backslash'; break;
-                    case ';': expectedCode = 'Semicolon'; break;
-                    case "'": expectedCode = 'Quote'; break;
-                    case ',': expectedCode = 'Comma'; break;
-                    case '.': expectedCode = 'Period'; break;
-                    case '/': expectedCode = 'Slash'; break;
-                    case '-': expectedCode = 'Minus'; break;
-                    default: expectedCode = expectedKey;
-                }
+            const layoutConfig = getKeyboardLayoutConfig(selectedLayout);
+            const rows = [...layoutConfig.top, ...layoutConfig.home, ...layoutConfig.bottom, ...layoutConfig.space];
+            const targetChar = currentDrillStep.display;
+
+            const keyData = rows.find(k => k.bn === targetChar || k.bnShift === targetChar || k.bnExtra === targetChar || k.bnShiftExtra === targetChar);
+
+            if (keyData) {
+                expectedCode = keyData.keyCode;
+                targetExpectedShift = keyData.bnShift === targetChar || keyData.bnShiftExtra === targetChar;
+            } else {
+                expectedCode = currentDrillStep.keyCode;
+                targetExpectedShift = currentDrillStep.shift;
             }
-             isCorrect = event.code === expectedCode && event.shiftKey === expectedShift;
+
+            isCorrect = event.code === expectedCode && event.shiftKey === targetExpectedShift;
         }
 
         if (isCorrect) {
@@ -278,7 +279,24 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                     <DrillPromptDisplay drills={drills} currentDrillIndex={currentDrillIndex} status={status} />
 
                     {/* Virtual Keyboard */}
-                    <SimplifiedKeyboard highlightKeyCode={currentDrillStep?.keyCode} needsShift={!!currentDrillStep?.shift} />
+                    {(() => {
+                        let displayKeyCode = currentDrillStep?.keyCode;
+                        let displayShift = !!currentDrillStep?.shift;
+                        
+                        if (currentDrillStep && currentDrillStep.key !== ' ') {
+                            const layoutConfig = getKeyboardLayoutConfig(selectedLayout);
+                            const rows = [...layoutConfig.top, ...layoutConfig.home, ...layoutConfig.bottom, ...layoutConfig.space];
+                            const targetChar = currentDrillStep.display;
+                            const keyData = rows.find(k => k.bn === targetChar || k.bnShift === targetChar || k.bnExtra === targetChar || k.bnShiftExtra === targetChar);
+                            
+                            if (keyData) {
+                                displayKeyCode = keyData.keyCode;
+                                displayShift = keyData.bnShift === targetChar || keyData.bnShiftExtra === targetChar;
+                            }
+                        }
+                        
+                        return <SimplifiedKeyboard highlightKeyCode={displayKeyCode} needsShift={displayShift} layout={selectedLayout} />;
+                    })()}
 
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">

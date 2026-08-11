@@ -1,4 +1,5 @@
 // API endpoint to manage custom drills
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { 
   createWeakCharacterDrill, 
@@ -8,16 +9,53 @@ import {
   getDrillRecommendations
 } from '@/lib/custom-drill-generator';
 
+async function getAuthenticatedUser(request: NextRequest) {
+  const authHeader = request.headers.get('x-supabase-access-token');
+
+  if (!authHeader) {
+    return null;
+  }
+
+  const supabaseClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }
+  );
+
+  const { data: { user }, error } = await supabaseClient.auth.getUser(authHeader);
+
+  if (error || !user) {
+    return null;
+  }
+
+  return user;
+}
+
 // GET: Retrieve custom drills for a user or recommendations
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId');
-    const action = request.nextUrl.searchParams.get('action'); // 'list', 'recommendations'
+    const authenticatedUser = await getAuthenticatedUser(request);
 
-    if (!userId) {
+    if (!authenticatedUser) {
       return NextResponse.json(
-        { success: false, error: 'userId is required' },
-        { status: 400 }
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const requestedUserId = request.nextUrl.searchParams.get('userId');
+    const action = request.nextUrl.searchParams.get('action'); // 'list', 'recommendations'
+    const userId = authenticatedUser.id;
+
+    if (requestedUserId && requestedUserId !== userId) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
       );
     }
 
@@ -49,10 +87,20 @@ export async function GET(request: NextRequest) {
 // POST: Create a new custom drill
 export async function POST(request: NextRequest) {
   try {
+    const authenticatedUser = await getAuthenticatedUser(request);
+
+    if (!authenticatedUser) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { userId, threshold = 85, minCharacters = 5, maxCharacters = 20, drillCount = 100 } = body;
+    const resolvedUserId = userId && userId !== authenticatedUser.id ? authenticatedUser.id : authenticatedUser.id;
 
-    if (!userId) {
+    if (!resolvedUserId) {
       return NextResponse.json(
         { success: false, error: 'userId is required' },
         { status: 400 }
@@ -60,7 +108,7 @@ export async function POST(request: NextRequest) {
     }
 
     const customDrill = await createWeakCharacterDrill(
-      userId,
+      resolvedUserId,
       threshold,
       minCharacters,
       maxCharacters,
@@ -94,6 +142,15 @@ export async function POST(request: NextRequest) {
 // PATCH: Update custom drill usage
 export async function PATCH(request: NextRequest) {
   try {
+    const authenticatedUser = await getAuthenticatedUser(request);
+
+    if (!authenticatedUser) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { drillId, action = 'recordUsage' } = body;
 
@@ -105,7 +162,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'recordUsage') {
-      const updated = await updateCustomDrillUsage(drillId);
+      const updated = await updateCustomDrillUsage(drillId, authenticatedUser.id);
       
       return NextResponse.json({
         success: updated,
@@ -129,6 +186,15 @@ export async function PATCH(request: NextRequest) {
 // DELETE: Delete a custom drill
 export async function DELETE(request: NextRequest) {
   try {
+    const authenticatedUser = await getAuthenticatedUser(request);
+
+    if (!authenticatedUser) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const drillId = request.nextUrl.searchParams.get('drillId');
 
     if (!drillId) {
@@ -138,7 +204,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const deleted = await deleteCustomDrill(drillId);
+    const deleted = await deleteCustomDrill(drillId, authenticatedUser.id);
 
     if (!deleted) {
       return NextResponse.json(

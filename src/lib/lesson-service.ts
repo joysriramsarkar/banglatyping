@@ -1,6 +1,5 @@
 // Lesson service - fetch lessons from database
 import { supabase } from './db';
-import { supabaseAdmin } from './db-admin';
 import type { Lesson, LessonDrill } from './db';
 
 /**
@@ -8,8 +7,7 @@ import type { Lesson, LessonDrill } from './db';
  */
 export async function getAllLessons(): Promise<Lesson[]> {
   try {
-    // Use admin client to bypass RLS and ensure we can read public lessons
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from('lessons')
       .select('*')
       .order('sort_order', { ascending: true });
@@ -31,8 +29,7 @@ export async function getAllLessons(): Promise<Lesson[]> {
  */
 export async function getLessonWithDrills(lessonId: string): Promise<(Lesson & { drills?: LessonDrill[] }) | null> {
   try {
-    // Get lesson
-    const { data: lesson, error: lessonError } = await supabaseAdmin
+    const { data: lesson, error: lessonError } = await supabase
       .from('lessons')
       .select('*')
       .eq('id', lessonId)
@@ -43,8 +40,7 @@ export async function getLessonWithDrills(lessonId: string): Promise<(Lesson & {
       return null;
     }
 
-    // Get drills for this lesson
-    const { data: drills, error: drillsError } = await supabaseAdmin
+    const { data: drills, error: drillsError } = await supabase
       .from('lesson_drills')
       .select('*')
       .eq('lesson_id', lessonId)

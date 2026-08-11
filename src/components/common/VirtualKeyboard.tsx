@@ -3,6 +3,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { getKeyboardLayoutConfig, type KeyboardLayoutKey } from "@/lib/keyboard-layouts";
 
 export type KeyLayoutData = {
     key: string;
@@ -33,51 +34,10 @@ const FINGER_COLORS: Record<number, string> = {
 };
 
 const simplifiedKeyboardLayout: Record<string, KeyLayoutData[]> = {
-    top: [
-        {key: 'q', keyCode: 'KeyQ', bn: 'ক্ষ', bnShift: 'ঁ', fingerPosition: 1, fingerName: 'Pinky'},
-        {key: 'w', keyCode: 'KeyW', bn: 'ঙ', bnShift: 'ঃ', fingerPosition: 2, fingerName: 'Ring'},
-        {key: 'e', keyCode: 'KeyE', bn: 'ে', bnShift: 'ৈ', bnExtra: 'এ', bnShiftExtra: 'ঐ', fingerPosition: 3, fingerName: 'Middle'},
-        {key: 'r', keyCode: 'KeyR', bn: 'র', bnShift: 'ড়', fingerPosition: 4, fingerName: 'Index'},
-        {key: 't', keyCode: 'KeyT', bn: 'ট', bnShift: 'ঠ', fingerPosition: 4, fingerName: 'Index'},
-        {key: 'y', keyCode: 'KeyY', bn: 'য', bnShift: 'য়', fingerPosition: 7, fingerName: 'Index'},
-        {key: 'u', keyCode: 'KeyU', bn: 'ু', bnShift: 'ূ', bnExtra: 'উ', bnShiftExtra: 'ঊ', fingerPosition: 7, fingerName: 'Index'},
-        {key: 'i', keyCode: 'KeyI', bn: 'ি', bnShift: 'ী', bnExtra: 'ই', bnShiftExtra: 'ঈ', fingerPosition: 8, fingerName: 'Middle'},
-        {key: 'o', keyCode: 'KeyO', bn: 'ো', bnShift: 'ৌ', bnExtra: 'ও', bnShiftExtra: 'ঔ', fingerPosition: 9, fingerName: 'Ring'},
-        {key: 'p', keyCode: 'KeyP', bn: 'প', bnShift: 'ঢ়', fingerPosition: 10, fingerName: 'Pinky'},
-        {key: '[', keyCode: 'BracketLeft', bn: '[', bnShift: '{', fingerPosition: 10, fingerName: 'Pinky'},
-        {key: ']', keyCode: 'BracketRight', bn: ']', bnShift: '}', fingerPosition: 10, fingerName: 'Pinky'},
-        {key: '\\', keyCode: 'Backslash', bn: 'ৃ', bnShift: 'ঞ', bnExtra: 'ঋ', fingerPosition: 10, fingerName: 'Pinky'},
-    ],
-    home: [
-        {key: 'a', keyCode: 'KeyA', bn: 'া', bnShift: 'অ', bnExtra: 'আ', fingerPosition: 1, fingerName: 'Pinky'},
-        {key: 's', keyCode: 'KeyS', bn: 'স', bnShift: 'শ', fingerPosition: 2, fingerName: 'Ring'},
-        {key: 'd', keyCode: 'KeyD', bn: 'ড', bnShift: 'ঢ', fingerPosition: 3, fingerName: 'Middle'},
-        {key: 'f', keyCode: 'KeyF', bn: 'ফ', bnShift: 'ৎ', fingerPosition: 4, fingerName: 'Index'},
-        {key: 'g', keyCode: 'KeyG', bn: 'গ', bnShift: 'ঘ', fingerPosition: 4, fingerName: 'Index'},
-        {key: 'h', keyCode: 'KeyH', bn: '্', bnShift: 'হ', fingerPosition: 7, fingerName: 'Index'},
-        {key: 'j', keyCode: 'KeyJ', bn: 'জ', bnShift: 'ঝ', fingerPosition: 7, fingerName: 'Index'},
-        {key: 'k', keyCode: 'KeyK', bn: 'ক', bnShift: 'খ', fingerPosition: 8, fingerName: 'Middle'},
-        {key: 'l', keyCode: 'KeyL', bn: 'ল', bnShift: 'ষ', fingerPosition: 9, fingerName: 'Ring'},
-        {key: ';', keyCode: 'Semicolon', bn: ';', bnShift: ':', fingerPosition: 10, fingerName: 'Pinky'},
-        {key: "'", keyCode: 'Quote', bn: "'", bnShift: '"', fingerPosition: 10, fingerName: 'Pinky'},
-    ],
-    bottom: [
-        {key: 'ShiftLeft', keyCode: 'ShiftLeft', bn: 'Shift', width: 'w-24', align: 'left', special: 'shift', fingerPosition: 5, fingerName: 'Thumb'},
-        {key: 'z', keyCode: 'KeyZ', bn: '্য', bnShift: 'ং', fingerPosition: 1, fingerName: 'Pinky'},
-        {key: 'x', keyCode: 'KeyX', bn: 'ত', bnShift: 'থ', fingerPosition: 2, fingerName: 'Ring'},
-        {key: 'c', keyCode: 'KeyC', bn: 'চ', bnShift: 'ছ', fingerPosition: 3, fingerName: 'Middle'},
-        {key: 'v', keyCode: 'KeyV', bn: 'দ', bnShift: 'ধ', fingerPosition: 4, fingerName: 'Index'},
-        {key: 'b', keyCode: 'KeyB', bn: 'ব', bnShift: 'ভ', fingerPosition: 4, fingerName: 'Index'},
-        {key: 'n', keyCode: 'KeyN', bn: 'ন', bnShift: 'ণ', fingerPosition: 7, fingerName: 'Index'},
-        {key: 'm', keyCode: 'KeyM', bn: 'ম', fingerPosition: 7, fingerName: 'Index'},
-        {key: ',', keyCode: 'Comma', bn: ',', bnShift: '<', fingerPosition: 8, fingerName: 'Middle'},
-        {key: '.', keyCode: 'Period', bn: '।', bnShift: '>', fingerPosition: 9, fingerName: 'Ring'},
-        {key: '/', keyCode: 'Slash', bn: '/', bnShift: '?', fingerPosition: 10, fingerName: 'Pinky'},
-        {key: 'ShiftRight', keyCode: 'ShiftRight', bn: 'Shift', width: 'flex-grow', align: 'right', special: 'shift', fingerPosition: 6, fingerName: 'Thumb'},
-    ],
-    space: [
-        {key: ' ', keyCode: 'Space', bn: 'Space', width: 'w-96', fingerPosition: 5, fingerName: 'Thumb'},
-    ]
+    top: [],
+    home: [],
+    bottom: [],
+    space: [],
 };
 
 const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighlighted: boolean, needsShift: boolean }) => {
@@ -144,23 +104,33 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
     );
 }
 
-export const SimplifiedKeyboard = ({ highlightKeyCode, needsShift }: { highlightKeyCode?: string, needsShift: boolean }) => (
-    <div className="p-2 sm:p-4 bg-background rounded-lg shadow-inner space-y-1.5 hidden md:block">
-        {Object.values(simplifiedKeyboardLayout).map((row, rowIndex) => (
-            <div key={rowIndex} className="flex justify-center gap-1.5">
-                {row.map(keyData => {
-                    let isHighlighted = false;
-                    if (highlightKeyCode) {
-                        if (keyData.special === 'shift') {
-                            isHighlighted = false;
-                        } else {
-                            isHighlighted = keyData.keyCode === highlightKeyCode;
-                        }
-                    }
+export const SimplifiedKeyboard = ({ highlightKeyCode, needsShift, layout = 'avro' }: { highlightKeyCode?: string, needsShift: boolean, layout?: KeyboardLayoutKey | string }) => {
+    const layoutConfig = getKeyboardLayoutConfig(layout);
+    const rows = {
+        top: layoutConfig.top as KeyLayoutData[],
+        home: layoutConfig.home as KeyLayoutData[],
+        bottom: layoutConfig.bottom as KeyLayoutData[],
+        space: layoutConfig.space as KeyLayoutData[],
+    };
 
-                    return <Key key={keyData.key} data={keyData} isHighlighted={isHighlighted} needsShift={needsShift} />;
-                })}
-            </div>
-        ))}
-    </div>
-);
+    return (
+        <div className="p-2 sm:p-4 bg-background rounded-lg shadow-inner space-y-1.5 hidden md:block">
+            {Object.values(rows).map((row, rowIndex) => (
+                <div key={rowIndex} className="flex justify-center gap-1.5">
+                    {row.map(keyData => {
+                        let isHighlighted = false;
+                        if (highlightKeyCode) {
+                            if (keyData.special === 'shift') {
+                                isHighlighted = false;
+                            } else {
+                                isHighlighted = keyData.keyCode === highlightKeyCode;
+                            }
+                        }
+
+                        return <Key key={keyData.key} data={keyData} isHighlighted={isHighlighted} needsShift={needsShift} />;
+                    })}
+                </div>
+            ))}
+        </div>
+    );
+};

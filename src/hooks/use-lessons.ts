@@ -1,5 +1,6 @@
 // Hook for managing lessons from database
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/db';
 import type { Lesson, Drill } from '@/lib/types';
 
 interface UseLessonsOptions {
@@ -215,8 +216,13 @@ export function useCustomDrills(userId: string | null) {
 
     try {
       setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
       const url = `/api/custom-drills?userId=${userId}`;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'x-supabase-access-token': session?.access_token || '',
+        },
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch custom drills: ${response.statusText}`);
@@ -241,9 +247,13 @@ export function useCustomDrills(userId: string | null) {
     if (!userId) return null;
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch('/api/custom-drills', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-supabase-access-token': session?.access_token || '',
+        },
         body: JSON.stringify({
           userId,
           threshold: threshold || 85,

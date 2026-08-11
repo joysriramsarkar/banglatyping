@@ -1,5 +1,8 @@
 "use client";
 
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+import { useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { Logo } from "./logo";
 import { Award, Download } from "lucide-react";
@@ -16,17 +19,38 @@ const toBengaliNumber = (num: number | string) => {
 };
 
 export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
+  const certificateRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handlePrint = () => {
-    const printButton = document.getElementById('print-button');
-    if (printButton) printButton.style.display = 'none';
-    window.print();
-    if (printButton) printButton.style.display = 'flex';
+  const handleDownload = async () => {
+    if (!certificateRef.current) return;
+    
+    try {
+      setIsGenerating(true);
+      const canvas = await html2canvas(certificateRef.current, {
+        scale: 2, // Higher resolution
+        useCORS: true,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "px",
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(`${name.replace(/\s+/g, "-") || "certificate"}-certificate.pdf`);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
     <div className="bg-white text-black p-8 relative">
-        <div className="border-4 border-yellow-500 p-8 space-y-6 relative bg-white">
+        <div ref={certificateRef} className="border-4 border-yellow-500 p-8 space-y-6 relative bg-white">
             <div className="absolute inset-0 bg-secondary/20 m-2 rounded-lg -z-10"
                 style={{
                     backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23dcb14a\' fill-opacity=\'0.1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
@@ -63,9 +87,9 @@ export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
                 </div>
             </div>
         </div>
-        <Button id="print-button" onClick={handlePrint} className="absolute bottom-4 right-4 print:hidden">
+        <Button id="print-button" onClick={handleDownload} disabled={isGenerating} className="absolute bottom-4 right-4 print:hidden">
             <Download className="mr-2 h-4 w-4" />
-            ডাউনলোড (PDF)
+            {isGenerating ? "ডাউনলোড হচ্ছে..." : "ডাউনলোড (PDF)"}
         </Button>
     </div>
   );

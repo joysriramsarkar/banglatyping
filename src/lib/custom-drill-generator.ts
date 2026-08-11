@@ -89,13 +89,18 @@ export async function getUserCustomDrills(
 /**
  * Get a specific custom drill by ID
  */
-export async function getCustomDrill(drillId: string): Promise<CustomDrill | null> {
+export async function getCustomDrill(drillId: string, userId?: string): Promise<CustomDrill | null> {
   try {
-    const { data, error } = await supabase
+    const query = supabase
       .from('custom_drills')
       .select('*')
-      .eq('id', drillId)
-      .single();
+      .eq('id', drillId);
+
+    if (userId) {
+      query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
       console.error('Error fetching custom drill:', error);
@@ -112,13 +117,23 @@ export async function getCustomDrill(drillId: string): Promise<CustomDrill | nul
 /**
  * Update custom drill usage statistics
  */
-export async function updateCustomDrillUsage(drillId: string): Promise<boolean> {
+export async function updateCustomDrillUsage(drillId: string, userId?: string): Promise<boolean> {
   try {
-    const { data: current } = await (supabase as any)
+    if (!userId) {
+      return false;
+    }
+
+    const { data: current, error: fetchError } = await supabase
       .from('custom_drills')
       .select('usage_count')
       .eq('id', drillId)
-      .single();
+      .eq('user_id', userId)
+      .single<{ usage_count: number }>();
+
+    if (fetchError) {
+      console.error('Error fetching drill usage:', fetchError);
+      return false;
+    }
 
     const { error } = await (supabase as any)
       .from('custom_drills')
@@ -127,7 +142,8 @@ export async function updateCustomDrillUsage(drillId: string): Promise<boolean> 
         last_used_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
-      .eq('id', drillId);
+      .eq('id', drillId)
+      .eq('user_id', userId);
 
     if (error) {
       console.error('Error updating drill usage:', error);
@@ -143,12 +159,18 @@ export async function updateCustomDrillUsage(drillId: string): Promise<boolean> 
 /**
  * Delete a custom drill
  */
-export async function deleteCustomDrill(drillId: string): Promise<boolean> {
+export async function deleteCustomDrill(drillId: string, userId?: string): Promise<boolean> {
   try {
-    const { error } = await supabase
+    const query = supabase
       .from('custom_drills')
       .delete()
       .eq('id', drillId);
+
+    if (userId) {
+      query.eq('user_id', userId);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Error deleting custom drill:', error);

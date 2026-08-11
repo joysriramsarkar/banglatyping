@@ -24,9 +24,10 @@ const FacebookIcon = () => (
     </svg>
 );
 
-const DiscordIcon = () => (
+const MicrosoftIcon = () => (
     <svg className="h-5 w-5" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <path fill="currentColor" d="M20.317 4.3671a19.8062 19.8062 0 0 0-4.8851-1.5152.074.074 0 0 0-.0784.0372c-.211.375-.444.864-.607 1.25a18.27 18.27 0 0 0-5.487 0c-.163-.386-.395-.875-.607-1.25a.077.077 0 0 0-.0785-.037 19.7512 19.7512 0 0 0-4.8854 1.515.0699.0699 0 0 0-.032.0277C.5934 9.834.57 15.1648 1.6591 20.3734a.082.082 0 0 0 .031.0477 19.9384 19.9384 0 0 0 5.9921 3.0398.084.084 0 0 0 .084-.028c.462-.612.873-1.25 1.226-1.911a.081.081 0 0 0-.044-.113 13.07 13.07 0 0 1-1.857-.892.083.083 0 0 1-.008-.138c.125-.093.25-.19.371-.287a.08.08 0 0 1 .082-.01c3.904 1.879 8.129 1.879 12.013 0a.082.082 0 0 1 .083.011c.121.098.246.195.371.288a.083.083 0 0 1-.006.138 12.299 12.299 0 0 1-1.857.892.084.084 0 0 0-.046.113c.353.66.764 1.299 1.225 1.911a.084.084 0 0 0 .084.028 19.963 19.963 0 0 0 6.002-3.0398.083.083 0 0 0 .032-.0477c1.309-5.271 1.175-10.451.166-15.5562a.06.06 0 0 0-.031-.0286zM8.02 17.982c-1.316 0-2.404-.956-2.404-2.131 0-1.175.956-2.134 2.404-2.134 1.454 0 2.404.959 2.404 2.134 0 1.175-.95 2.131-2.404 2.131zm7.952 0c-1.316 0-2.404-.956-2.404-2.131 0-1.175.956-2.134 2.404-2.134 1.454 0 2.404.959 2.404 2.134 0 1.175-.95 2.131-2.404 2.131Z"/>
+      <title>Microsoft</title>
+      <path fill="currentColor" d="M11.4 22.2h-10v-10h10v10zm0-11.6h-10v-10h10v10zm11.2 11.6h-10v-10h10v10zm0-11.6h-10v-10h10v10z"/>
     </svg>
 );
 
@@ -99,7 +100,7 @@ export default function SignupPage() {
     }
   };
   
-  const handleOAuthSignup = async (providerName: 'google' | 'facebook' | 'discord') => {
+  const handleOAuthSignup = async (providerName: 'google' | 'facebook' | 'azure') => {
     setIsLoading(true);
 
     try {
@@ -169,8 +170,8 @@ export default function SignupPage() {
                <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthSignup('facebook')} disabled={isLoading} aria-label="Facebook দিয়ে সাইন আপ করুন">
                   <FacebookIcon />
                </Button>
-               <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthSignup('discord')} disabled={isLoading} aria-label="Discord দিয়ে সাইন আপ করুন">
-                  <DiscordIcon />
+               <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthSignup('azure')} disabled={isLoading} aria-label="Microsoft দিয়ে সাইন আপ করুন">
+                  <MicrosoftIcon />
                </Button>
             </div>
           </form>
