@@ -24,8 +24,8 @@ const hind_siliguri = Hind_Siliguri({
 });
 
 export const metadata: Metadata = {
-  title: 'মাস্টার',
-  description: 'Master Bangla typing with interactive lessons and games.',
+  title: 'বাংলা টাইপিং মাস্টার',
+  description: 'ইন্টারেক্টিভ পাঠ, গেম এবং পরীক্ষার মাধ্যমে বাংলা টাইপিং দক্ষতা বাড়ান।',
 };
 
 export default function RootLayout({

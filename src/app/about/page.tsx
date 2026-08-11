@@ -7,44 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Keyboard, Brain, Trophy, Users, Globe, BookOpen } from 'lucide-react';
+import Link from 'next/link';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
 
 export default function AboutPage() {
-  // Mocking the classes object that was causing issues
-  // Mapping the requested properties to Tailwind classes
-  const classes = {
-    background: "bg-background",
-    surface: "bg-card",
-    text: "text-foreground",
-    accent: "text-primary",
-    border: "border-border",
-    primary: "bg-primary text-primary-foreground",
-    secondary: "bg-secondary text-secondary-foreground",
-    muted: "text-muted-foreground",
-    card: "rounded-lg border bg-card text-card-foreground shadow-sm",
-    button: "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
-    input: "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-    pageTransition: "animate-in fade-in zoom-in duration-500",
-    hoverEffects: "hover:bg-accent hover:text-accent-foreground transition-colors",
-    scrollEffects: "scroll-smooth"
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0 }
-  };
-
   return (
-    <div className={`min-h-screen ${classes.background} ${classes.text}`}>
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <motion.section
         initial={{ opacity: 0, y: -20 }}
@@ -56,7 +33,7 @@ export default function AboutPage() {
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-primary">
           বাংলা টাইপিং মাস্টার
         </h1>
-        <p className={`text-xl md:text-2xl max-w-3xl mx-auto ${classes.muted}`}>
+        <p className="text-xl md:text-2xl max-w-3xl mx-auto text-muted-foreground">
           বাংলা ভাষা শেখা এবং টাইপিং চর্চার জন্য একটি আধুনিক এবং ইন্টারেক্টিভ প্ল্যাটফর্ম।
         </p>
       </motion.section>
@@ -74,14 +51,14 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           <motion.div variants={itemVariants} className="space-y-6">
             <h2 className="text-3xl font-bold">আমাদের লক্ষ্য</h2>
-            <p className={classes.muted}>
+            <p className="text-muted-foreground">
               আমাদের লক্ষ্য হলো বাংলা ভাষাকে প্রযুক্তির মাধ্যমে সবার কাছে সহজলভ্য করে তোলা। আমরা বিশ্বাস করি, সঠিক টুল এবং নির্দেশনার মাধ্যমে যে কেউ দ্রুত এবং নির্ভুলভাবে বাংলা টাইপ করতে শিখতে পারে।
             </p>
-            <p className={classes.muted}>
+            <p className="text-muted-foreground">
               ছাত্রছাত্রী, পেশাজীবী এবং সাধারণ ব্যবহারকারী - সবার জন্যই আমাদের এই প্রচেষ্টা।
             </p>
-            <Button className="mt-4">
-              আরও জানুন
+            <Button asChild className="mt-4">
+              <Link href="/dashboard/lessons">শুরু করুন</Link>
             </Button>
           </motion.div>
           <motion.div variants={itemVariants} className="grid grid-cols-2 gap-4">
@@ -138,7 +115,7 @@ export default function AboutPage() {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         transition={{ duration: 0.8 }}
-        className={`py-20 ${classes.surface}`}
+        className="py-20 bg-card"
       >
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">কেন আমাদের বেছে নেবেন?</h2>
@@ -148,7 +125,7 @@ export default function AboutPage() {
                 <BookOpen className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold">বিস্তৃত পাঠ্যক্রম</h3>
-              <p className={classes.muted}>
+              <p className="text-muted-foreground">
                 বর্ণমালা থেকে শুরু করে জটিল বাক্য গঠন পর্যন্ত ধাপে ধাপে শেখার ব্যবস্থা।
               </p>
             </div>
@@ -157,7 +134,7 @@ export default function AboutPage() {
                 <Users className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold">কমিউনিটি সাপোর্ট</h3>
-              <p className={classes.muted}>
+              <p className="text-muted-foreground">
                 অন্যান্য শিক্ষার্থীদের সাথে প্রতিযোগিতা এবং অভিজ্ঞতা শেয়ার করার সুযোগ।
               </p>
             </div>
@@ -166,7 +143,7 @@ export default function AboutPage() {
                 <Trophy className="h-8 w-8 text-primary" />
               </div>
               <h3 className="text-xl font-semibold">সার্টিফিকেট</h3>
-              <p className={classes.muted}>
+              <p className="text-muted-foreground">
                 কোর্স সম্পন্ন করার পর দক্ষতা প্রমাণের জন্য সার্টিফিকেট অর্জন করুন।
               </p>
             </div>
@@ -177,11 +154,11 @@ export default function AboutPage() {
       {/* Footer CTA */}
       <section className="py-20 container mx-auto px-4 text-center">
         <h2 className="text-3xl font-bold mb-6">আজই শুরু করুন</h2>
-        <p className={`text-xl mb-8 max-w-2xl mx-auto ${classes.muted}`}>
+        <p className="text-xl mb-8 max-w-2xl mx-auto text-muted-foreground">
           বিনামূল্যে রেজিস্ট্রেশন করুন এবং আপনার বাংলা টাইপিং যাত্রা শুরু করুন।
         </p>
-        <Button size="lg" className="text-lg px-8">
-          অ্যাকাউন্ট তৈরি করুন
+        <Button size="lg" className="text-lg px-8" asChild>
+          <Link href="/signup">অ্যাকাউন্ট তৈরি করুন</Link>
         </Button>
       </section>
     </div>

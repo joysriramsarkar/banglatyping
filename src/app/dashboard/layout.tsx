@@ -151,7 +151,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     {/* Potentially add breadcrumbs or page title here */}
                 </div>
             </header>
-            <main className={cn("p-4 sm:px-6 sm:py-0", isPracticePage && "p-0 sm:p-0")}>
+            <main className={cn("p-4 sm:p-6", isPracticePage && "p-0 sm:p-0")}>
               <Suspense fallback={<PageSkeleton />}>
                 {isProfilePage ? <AuthGuard>{children}</AuthGuard> : children}
               </Suspense>

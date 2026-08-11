@@ -108,28 +108,23 @@ function ProfilePageContent() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="opacity-60">
         <CardHeader>
           <CardTitle>কীবোর্ড সেটিংস</CardTitle>
-          <CardDescription>আপনার পছন্দের কীবোর্ড লেআউট পরিবর্তন করুন।</CardDescription>
+          <CardDescription>বর্তমানে শুধুমাত্র BanglaWord (লিপিঘর) লেআউট সক্রিয় আছে।</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="keyboard-layout">কীবোর্ড লেআউট</Label>
-            <Select value={keyboardLayout} onValueChange={setKeyboardLayout} disabled={isSaving}>
+            <Select value="banglaword" disabled>
               <SelectTrigger id="keyboard-layout">
-                <SelectValue placeholder="একটি লেআউট নির্বাচন করুন" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="avro">Avro Phonetic</SelectItem>
-                <SelectItem value="bijoy">Bijoy Classic</SelectItem>
-                <SelectItem value="banglaword">BanglaWord</SelectItem>
+                <SelectItem value="banglaword">BanglaWord (লিপিঘর)</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleSettingsSave} disabled={isSaving}>
-            {isSaving ? "সংরক্ষণ করা হচ্ছে..." : "সেটিংস সংরক্ষণ করুন"}
-            </Button>
         </CardContent>
       </Card>
     </div>

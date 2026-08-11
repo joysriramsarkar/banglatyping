@@ -100,54 +100,52 @@ export const useWordDrill = (initialDrills: Drill[], accuracyGoal: number) => {
         }, 4000);
     }, [isActive, isPaused, pause]);
 
-    const handleKeyPress = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleInputChange = useCallback((newValue: string) => {
         if (isFinished) return;
-
         if (!isActive) startDrill();
         else if (isPaused) resume();
-
         resetInactivityTimer();
 
-        const typedChar = event.key;
+        // newValue is the full input string from the controlled input
+        // We only care about the last character added
+        if (newValue.length <= userInput.length) return; // deletion handled by handleBackspace
 
-        if (typedChar === ' ') {
-            event.preventDefault();
-             if(userInput.trim() === currentWord) {
-                setTotalCharsTyped(prev => prev + 1); // for the space
-                let nextDrillIndex = currentDrillIndex + 1;
-                if(nextDrillIndex >= drills.length) nextDrillIndex = 0; // Loop
+        const typedChar = newValue[newValue.length - 1];
+        const newUserInput = userInput + typedChar;
+        setTotalCharsTyped(prev => prev + 1);
 
-                setDrillState(prev => ({
-                    ...prev,
-                    currentDrillIndex: nextDrillIndex,
-                    currentCharIndex: 0,
-                    userInput: '',
-                    isError: false,
-                }));
-             } else {
-                 setTotalErrors(prev => prev + 1);
-                 setDrillState(prev => ({ ...prev, isError: true }));
-             }
-        } else if (typedChar === 'Backspace') {
-             setDrillState(prev => ({ ...prev, userInput: prev.userInput.slice(0, -1), currentCharIndex: Math.max(0, prev.currentCharIndex - 1), isError: false}));
-        } else if (typedChar.length === 1) { // handle normal characters
-             const newTotalChars = totalCharsTyped + 1;
-             setTotalCharsTyped(newTotalChars);
-
-             const newUserInput = userInput + typedChar;
-             const expectedSubstring = currentWord.substring(0, newUserInput.length);
-
-             if(newUserInput === expectedSubstring) {
-                 setDrillState(prev => ({...prev, currentCharIndex: prev.currentCharIndex + 1, userInput: newUserInput, isError: false}));
-             } else {
-                setTotalErrors(prev => prev + 1);
-                const expectedChar = currentWord[currentCharIndex];
-                const newErredChars = new Map(erredCharacters);
-                newErredChars.set(expectedChar, (newErredChars.get(expectedChar) || 0) + 1);
-                setDrillState(prev => ({ ...prev, userInput: newUserInput, erredCharacters: newErredChars, isError: true }));
-             }
+        const expectedSubstring = currentWord.substring(0, newUserInput.length);
+        if (newUserInput === expectedSubstring) {
+            setDrillState(prev => ({ ...prev, currentCharIndex: prev.currentCharIndex + 1, userInput: newUserInput, isError: false }));
+        } else {
+            setTotalErrors(prev => prev + 1);
+            const expectedChar = currentWord[currentCharIndex];
+            const newErredChars = new Map(erredCharacters);
+            newErredChars.set(expectedChar, (newErredChars.get(expectedChar) || 0) + 1);
+            setDrillState(prev => ({ ...prev, userInput: newUserInput, erredCharacters: newErredChars, isError: true }));
         }
-    }, [isFinished, isActive, isPaused, startDrill, resume, resetInactivityTimer, currentWord, currentCharIndex, userInput, currentDrillIndex, drills.length, erredCharacters, totalCharsTyped]);
+    }, [isFinished, isActive, isPaused, startDrill, resume, resetInactivityTimer, currentWord, currentCharIndex, userInput, erredCharacters]);
+
+    const handleSpace = useCallback(() => {
+        if (isFinished) return;
+        if (!isActive) startDrill();
+        else if (isPaused) resume();
+        resetInactivityTimer();
+
+        if (userInput.trim() === currentWord) {
+            setTotalCharsTyped(prev => prev + 1);
+            let nextDrillIndex = currentDrillIndex + 1;
+            if (nextDrillIndex >= drills.length) nextDrillIndex = 0;
+            setDrillState(prev => ({ ...prev, currentDrillIndex: nextDrillIndex, currentCharIndex: 0, userInput: '', isError: false }));
+        } else {
+            setTotalErrors(prev => prev + 1);
+            setDrillState(prev => ({ ...prev, isError: true }));
+        }
+    }, [isFinished, isActive, isPaused, startDrill, resume, resetInactivityTimer, userInput, currentWord, currentDrillIndex, drills.length]);
+
+    const handleBackspace = useCallback(() => {
+        setDrillState(prev => ({ ...prev, userInput: prev.userInput.slice(0, -1), currentCharIndex: Math.max(0, prev.currentCharIndex - 1), isError: false }));
+    }, []);
 
     const resetDrill = useCallback(() => {
         resetTimer();
@@ -191,7 +189,9 @@ export const useWordDrill = (initialDrills: Drill[], accuracyGoal: number) => {
         timeLeft,
         totalCharsTyped,
         erredCharacters,
-        handleKeyPress,
+        handleInputChange,
+        handleSpace,
+        handleBackspace,
         resetDrill,
         startCustomDrill,
         currentDrill,

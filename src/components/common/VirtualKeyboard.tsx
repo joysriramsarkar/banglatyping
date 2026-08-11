@@ -104,8 +104,8 @@ const Key = ({ data, isHighlighted, needsShift }: { data: KeyLayoutData, isHighl
     );
 }
 
-export const SimplifiedKeyboard = ({ highlightKeyCode, needsShift, layout = 'avro' }: { highlightKeyCode?: string, needsShift: boolean, layout?: KeyboardLayoutKey | string }) => {
-    const layoutConfig = getKeyboardLayoutConfig(layout);
+export const SimplifiedKeyboard = ({ highlightKeyCode, needsShift }: { highlightKeyCode?: string, needsShift: boolean }) => {
+    const layoutConfig = getKeyboardLayoutConfig();
     const rows = {
         top: layoutConfig.top as KeyLayoutData[],
         home: layoutConfig.home as KeyLayoutData[],

@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { useRouter } from 'next/navigation';
 import type { Drill, ErredCharacter } from "@/lib/types";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
-import { getKeyboardLayoutConfig } from "@/lib/keyboard-layouts";
 import { DrillProgress } from "./DrillProgress";
 import { useWordDrill } from "./use-word-drill";
 import { useAuth } from '@/hooks/use-auth';
@@ -34,7 +33,6 @@ const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; is
 export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
     const { user } = useAuth();
-    const selectedLayout = user?.user_metadata?.keyboard_layout || 'avro';
     const {
         drills,
         currentDrillIndex,
@@ -50,7 +48,9 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
         timeLeft,
         totalCharsTyped,
         erredCharacters,
-        handleKeyPress,
+        handleInputChange,
+        handleSpace,
+        handleBackspace,
         resetDrill,
         startCustomDrill,
         currentDrill,
@@ -89,32 +89,26 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                        ))}
                        <Input
                         type="text"
-                        className="absolute w-0 h-0 p-0 m-0 border-0"
-                        onKeyDown={handleKeyPress}
+                        className="absolute w-0 h-0 p-0 m-0 border-0 opacity-0"
+                        value={userInput}
+                        onChange={(e) => handleInputChange(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === ' ') { e.preventDefault(); handleSpace(); }
+                            if (e.key === 'Backspace') handleBackspace();
+                        }}
                         autoFocus
                         onBlur={(e) => e.target.focus()}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
                        />
                     </div>
-                     {/* Virtual Keyboard */}
-                    {(() => {
-                        let displayKeyCode = currentDrill?.steps[currentCharIndex]?.keyCode;
-                        let displayShift = !!currentDrill?.steps[currentCharIndex]?.shift;
-                        
-                        const step = currentDrill?.steps[currentCharIndex];
-                        if (step && step.key !== ' ') {
-                            const layoutConfig = getKeyboardLayoutConfig(selectedLayout);
-                            const rows = [...layoutConfig.top, ...layoutConfig.home, ...layoutConfig.bottom, ...layoutConfig.space];
-                            const targetChar = step.display;
-                            const keyData = rows.find(k => k.bn === targetChar || k.bnShift === targetChar || k.bnExtra === targetChar || k.bnShiftExtra === targetChar);
-                            
-                            if (keyData) {
-                                displayKeyCode = keyData.keyCode;
-                                displayShift = keyData.bnShift === targetChar || keyData.bnShiftExtra === targetChar;
-                            }
-                        }
-                        
-                        return <SimplifiedKeyboard highlightKeyCode={displayKeyCode} needsShift={displayShift} layout={selectedLayout} />;
-                    })()}
+                    {/* Virtual Keyboard */}
+                    <SimplifiedKeyboard
+                        highlightKeyCode={currentDrill?.steps[currentCharIndex]?.keyCode}
+                        needsShift={!!currentDrill?.steps[currentCharIndex]?.shift}
+                    />
                  </div>
 
                  <div className="w-full md:w-1/3 space-y-4">

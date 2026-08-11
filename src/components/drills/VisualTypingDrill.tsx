@@ -11,7 +11,6 @@ import { generateDrills as generateDrillsFromLib } from "@/lib/lessons";
 import { useRouter } from 'next/navigation';
 import type { Drill, ErredCharacter } from "@/lib/types";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
-import { getKeyboardLayoutConfig } from "@/lib/keyboard-layouts";
 import { useAuth } from '@/hooks/use-auth';
 import { DrillProgress } from "./DrillProgress";
 import { DrillPromptDisplay } from "./DrillPromptDisplay";
@@ -19,7 +18,6 @@ import { DrillPromptDisplay } from "./DrillPromptDisplay";
 export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
     const { user } = useAuth();
-    const selectedLayout = user?.user_metadata?.keyboard_layout || 'avro';
     const [drills, setDrills] = useState<Drill[]>(initialDrills);
     const [drillState, setDrillState] = useState({
         currentDrillIndex: 0,
@@ -112,7 +110,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     }, [isActive, isPaused, pause]);
 
 
-     const handleKeyPress = useCallback((event: KeyboardEvent) => {
+     const handleKeyPress = useCallback((inputChar: string) => {
         if (isFinished) return;
 
         if (!isActive) {
@@ -122,18 +120,6 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         }
 
         resetInactivityTimer();
-
-        const modifierKeys = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'Escape', 'Dead'];
-        if (modifierKeys.includes(event.key)) return;
-
-        if (event.key === 'Enter') {
-           if(isSessionOver) {
-                // This logic is for test results page, can be handled there
-           }
-           return;
-        }
-
-        event.preventDefault();
 
         if (statusTimeoutRef.current) {
             clearTimeout(statusTimeoutRef.current);
@@ -161,70 +147,85 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
             return;
         }
 
-        const { key: expectedKey } = currentDrillStep;
-
-        let isCorrect = false;
-
-        let expectedCode = '';
-        let targetExpectedShift = false;
-
-        if (expectedKey === ' ') {
-            expectedCode = 'Space';
-            isCorrect = event.code === 'Space';
-        } else {
-            const layoutConfig = getKeyboardLayoutConfig(selectedLayout);
-            const rows = [...layoutConfig.top, ...layoutConfig.home, ...layoutConfig.bottom, ...layoutConfig.space];
-            const targetChar = currentDrillStep.display;
-
-            const keyData = rows.find(k => k.bn === targetChar || k.bnShift === targetChar || k.bnExtra === targetChar || k.bnShiftExtra === targetChar);
-
-            if (keyData) {
-                expectedCode = keyData.keyCode;
-                targetExpectedShift = keyData.bnShift === targetChar || keyData.bnShiftExtra === targetChar;
+        // Space drill
+        if (currentDrillStep.key === ' ') {
+            const isCorrect = inputChar === ' ';
+            if (isCorrect) {
+                setTotalCharsTyped(prev => prev + 1);
+                setDrillState(prev => {
+                    const nextDrillIndex = (prev.currentDrillIndex + 1) % drills.length;
+                    return { ...prev, currentDrillIndex: nextDrillIndex, currentStepIndex: 0, status: 'pending' };
+                });
             } else {
-                expectedCode = currentDrillStep.keyCode;
-                targetExpectedShift = currentDrillStep.shift;
+                handleIncorrect();
             }
-
-            isCorrect = event.code === expectedCode && event.shiftKey === targetExpectedShift;
+            return;
         }
+
+        // হসন্ত (্) is a dead key in BanglaWord — it combines invisibly with the next character.
+        // When current step is ্, we skip it and check the NEXT step's character instead.
+        // If the next character matches, we accept both ্ and the next step together.
+        const HASANTA = '\u09CD';
+        if (currentDrillStep.display === HASANTA) {
+            const nextStep = currentDrill.steps[currentStepIndex + 1];
+            if (nextStep && inputChar === nextStep.display) {
+                // Accept ্ + next char together
+                setTotalCharsTyped(prev => prev + 2);
+                setDrillState(prev => {
+                    const newStepIndex = prev.currentStepIndex + 2;
+                    const isLastStep = newStepIndex >= drills[prev.currentDrillIndex].steps.length;
+                    if (isLastStep) {
+                        const nextDrillIndex = (prev.currentDrillIndex + 1) % drills.length;
+                        return { ...prev, currentDrillIndex: nextDrillIndex, currentStepIndex: 0, status: 'pending' };
+                    }
+                    return { ...prev, currentStepIndex: newStepIndex, status: 'pending' };
+                });
+            } else if (!nextStep && inputChar === ' ') {
+                // ্ is the last step — space makes it visible, accept it
+                setTotalCharsTyped(prev => prev + 1);
+                setDrillState(prev => {
+                    const nextDrillIndex = (prev.currentDrillIndex + 1) % drills.length;
+                    return { ...prev, currentDrillIndex: nextDrillIndex, currentStepIndex: 0, status: 'pending' };
+                });
+            } else {
+                handleIncorrect();
+            }
+            return;
+        }
+
+        // Compare IME output directly with expected Bengali character
+        const expectedChar = currentDrillStep.display;
+        const isCorrect = inputChar === expectedChar;
 
         if (isCorrect) {
             setTotalCharsTyped(prev => prev + 1);
             setDrillState(prev => {
-                const isLastStepInDrill = prev.currentStepIndex >= (drills[prev.currentDrillIndex].steps.length - 1);
-
-                if (isLastStepInDrill) {
-                    let nextDrillIndex = prev.currentDrillIndex + 1;
-                    if (nextDrillIndex >= drills.length) {
-                       nextDrillIndex = 0; // Loop back to the beginning
-                    }
-                    return {
-                        ...prev,
-                        currentDrillIndex: nextDrillIndex,
-                        currentStepIndex: 0,
-                        status: 'pending',
-                    };
-                } else {
-                    return {
-                        ...prev,
-                        currentStepIndex: prev.currentStepIndex + 1,
-                        status: 'pending',
-                    };
+                const isLastStep = prev.currentStepIndex >= (drills[prev.currentDrillIndex].steps.length - 1);
+                if (isLastStep) {
+                    const nextDrillIndex = (prev.currentDrillIndex + 1) % drills.length;
+                    return { ...prev, currentDrillIndex: nextDrillIndex, currentStepIndex: 0, status: 'pending' };
                 }
+                return { ...prev, currentStepIndex: prev.currentStepIndex + 1, status: 'pending' };
             });
         } else {
             handleIncorrect();
         }
     }, [isSessionOver, isFinished, drills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, startDrill, resetInactivityTimer]);
 
+    const hiddenInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        window.addEventListener('keydown', handleKeyPress);
-        return () => {
-            window.removeEventListener('keydown', handleKeyPress);
-            if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
-        };
+        hiddenInputRef.current?.focus();
+    }, [isFinished]);
+
+    const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        const skip = ['Shift','Control','Alt','Meta','CapsLock','Tab','Escape','Dead',
+                      'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',
+                      'Backspace','Delete','Home','End','PageUp','PageDown','F1','F2',
+                      'F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
+        if (skip.includes(e.key)) return;
+        e.preventDefault();
+        handleKeyPress(e.key);
     }, [handleKeyPress]);
 
 
@@ -275,28 +276,26 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-full mx-auto">
             <div className="flex flex-col md:flex-row gap-8">
                 <div className="w-full md:w-2/3 space-y-4">
+                    {/* Hidden input for IME Bengali input capture */}
+                    <input
+                        ref={hiddenInputRef}
+                        type="text"
+                        className="absolute w-0 h-0 opacity-0 pointer-events-none"
+                        onKeyDown={onKeyDown}
+                        onBlur={() => hiddenInputRef.current?.focus()}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck={false}
+                    />
                     {/* Prompt Display */}
                     <DrillPromptDisplay drills={drills} currentDrillIndex={currentDrillIndex} status={status} />
 
                     {/* Virtual Keyboard */}
-                    {(() => {
-                        let displayKeyCode = currentDrillStep?.keyCode;
-                        let displayShift = !!currentDrillStep?.shift;
-                        
-                        if (currentDrillStep && currentDrillStep.key !== ' ') {
-                            const layoutConfig = getKeyboardLayoutConfig(selectedLayout);
-                            const rows = [...layoutConfig.top, ...layoutConfig.home, ...layoutConfig.bottom, ...layoutConfig.space];
-                            const targetChar = currentDrillStep.display;
-                            const keyData = rows.find(k => k.bn === targetChar || k.bnShift === targetChar || k.bnExtra === targetChar || k.bnShiftExtra === targetChar);
-                            
-                            if (keyData) {
-                                displayKeyCode = keyData.keyCode;
-                                displayShift = keyData.bnShift === targetChar || keyData.bnShiftExtra === targetChar;
-                            }
-                        }
-                        
-                        return <SimplifiedKeyboard highlightKeyCode={displayKeyCode} needsShift={displayShift} layout={selectedLayout} />;
-                    })()}
+                    <SimplifiedKeyboard
+                        highlightKeyCode={currentDrillStep?.keyCode}
+                        needsShift={!!currentDrillStep?.shift}
+                    />
 
                 </div>
                 <div className="w-full md:w-1/3 space-y-4">
