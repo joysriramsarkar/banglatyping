@@ -142,10 +142,6 @@ export default function TypingPractice({
 
       // Handle Backspace
       if (key === 'Backspace') {
-        // Let the OS IME handle backspace if the user is in the middle of a composition
-        if (e.isComposing) {
-          return;
-        }
         e.preventDefault();
         handleBackspace(ctrl);
         return;
@@ -153,10 +149,6 @@ export default function TypingPractice({
 
       // Handle Space
       if (key === ' ') {
-        // Let the OS IME handle the space if the user is in the middle of a composition (like typing Hasanta)
-        if (e.isComposing) {
-          return;
-        }
         e.preventDefault();
         handleSpace();
         return;
@@ -308,15 +300,15 @@ export default function TypingPractice({
           if (!isActive && !isPaused) start();
           else if (isPaused && isActive) resume();
           resetInactivityTimer();
-          
-          const val = e.target.value;
-          // If the OS IME resolves a dead key (like Hasanta) with a Space, it bypasses keydown preventDefault
-          // and appears here in the onChange event. We should commit the word and handle the space.
-          if (val.endsWith(' ')) {
-            setCurrentInput(val.trimEnd());
-            handleSpace();
-          } else {
-            setCurrentInput(val);
+          setCurrentInput(e.target.value);
+        }}
+        onCompositionEnd={(e) => {
+          // When IME resolves a dead key (like Hasanta ্), it fires compositionend.
+          // If the final composed text ends with a space, the space was used to commit
+          // the character (BanglaWord dead key behaviour), so we strip the trailing space.
+          const data = e.data;
+          if (data && data.endsWith(' ')) {
+            setCurrentInput((normalizedInput + data).trimEnd());
           }
         }}
         autoComplete="off"
