@@ -143,13 +143,18 @@ const layouts: Record<KeyboardLayoutKey, KeyboardLayoutConfig> = {
   banglaword: banglaWordLayout,
 };
 
-export function normalizeKeyboardLayout(_value?: string): KeyboardLayoutKey {
-  // Only BanglaWord layout is active
-  return 'banglaword';
+export function normalizeKeyboardLayout(value?: string): KeyboardLayoutKey {
+  if (!value) return 'banglaword';
+  const lower = value.toLowerCase();
+  if (lower.includes('avro')) return 'avro';
+  if (lower.includes('bijoy')) return 'bijoy';
+  if (lower.includes('banglaword')) return 'banglaword';
+  return 'avro'; // Fallback for unknown
 }
 
-export function getKeyboardLayoutConfig(_layout?: string): KeyboardLayoutConfig {
-  return banglaWordLayout;
+export function getKeyboardLayoutConfig(layout?: string): KeyboardLayoutConfig {
+  const normalized = normalizeKeyboardLayout(layout);
+  return layouts[normalized] || banglaWordLayout;
 }
 
 export function getKeyboardLayoutOptions() {
