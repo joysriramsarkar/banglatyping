@@ -142,6 +142,10 @@ export default function TypingPractice({
 
       // Handle Backspace
       if (key === 'Backspace') {
+        // Let the OS IME handle backspace if the user is in the middle of a composition
+        if (e.isComposing) {
+          return;
+        }
         e.preventDefault();
         handleBackspace(ctrl);
         return;
@@ -149,6 +153,10 @@ export default function TypingPractice({
 
       // Handle Space
       if (key === ' ') {
+        // Let the OS IME handle the space if the user is in the middle of a composition (like typing Hasanta)
+        if (e.isComposing) {
+          return;
+        }
         e.preventDefault();
         handleSpace();
         return;
@@ -300,7 +308,16 @@ export default function TypingPractice({
           if (!isActive && !isPaused) start();
           else if (isPaused && isActive) resume();
           resetInactivityTimer();
-          setCurrentInput(e.target.value);
+          
+          const val = e.target.value;
+          // If the OS IME resolves a dead key (like Hasanta) with a Space, it bypasses keydown preventDefault
+          // and appears here in the onChange event. We should commit the word and handle the space.
+          if (val.endsWith(' ')) {
+            setCurrentInput(val.trimEnd());
+            handleSpace();
+          } else {
+            setCurrentInput(val);
+          }
         }}
         autoComplete="off"
         autoCorrect="off"

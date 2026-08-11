@@ -224,6 +224,12 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                       'Backspace','Delete','Home','End','PageUp','PageDown','F1','F2',
                       'F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
         if (skip.includes(e.key)) return;
+
+        // Let the OS IME handle Space if the user is in the middle of a composition (like typing Hasanta)
+        if (e.key === ' ' && e.isComposing) {
+            return;
+        }
+
         e.preventDefault();
         handleKeyPress(e.key);
     }, [handleKeyPress]);

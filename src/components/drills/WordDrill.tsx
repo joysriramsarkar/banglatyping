@@ -91,10 +91,25 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                         type="text"
                         className="absolute w-0 h-0 p-0 m-0 border-0 opacity-0"
                         value={userInput}
-                        onChange={(e) => handleInputChange(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            if (val.endsWith(' ')) {
+                                handleInputChange(val.trimEnd());
+                                handleSpace();
+                            } else {
+                                handleInputChange(val);
+                            }
+                        }}
                         onKeyDown={(e) => {
-                            if (e.key === ' ') { e.preventDefault(); handleSpace(); }
-                            if (e.key === 'Backspace') handleBackspace();
+                            if (e.key === ' ') { 
+                                if (e.isComposing) return;
+                                e.preventDefault(); 
+                                handleSpace(); 
+                            }
+                            if (e.key === 'Backspace') {
+                                if (e.isComposing) return;
+                                handleBackspace();
+                            }
                         }}
                         autoFocus
                         onBlur={(e) => e.target.focus()}
