@@ -11,6 +11,7 @@ import { generateDrills as generateDrillsFromLib } from "@/lib/lessons";
 import { useRouter } from 'next/navigation';
 import type { Drill, ErredCharacter } from "@/lib/types";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
+import { getKeyboardLayoutConfig } from "@/lib/keyboard-layouts";
 import { useAuth } from '@/hooks/use-auth';
 import { DrillProgress } from "./DrillProgress";
 import { DrillPromptDisplay } from "./DrillPromptDisplay";
@@ -162,14 +163,28 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
             return;
         }
 
-        // হসন্ত (্) is a dead key in BanglaWord — it combines invisibly with the next character.
-        // When current step is ্, we skip it and check the NEXT step's character instead.
-        // If the next character matches, we accept both ্ and the next step together.
+        // হসন্ত (্) handling for BanglaWord layout.
+        // BanglaWord uses ্ as a dead key that can either:
+        //   A) be typed directly (if layout maps the key to ্ directly)
+        //   B) be combined silently with the next consonant
+        // We accept all three valid scenarios:
         const HASANTA = '\u09CD';
         if (currentDrillStep.display === HASANTA) {
             const nextStep = currentDrill.steps[currentStepIndex + 1];
-            if (nextStep && inputChar === nextStep.display) {
-                // Accept ্ + next char together
+            if (inputChar === HASANTA) {
+                // Case A: User typed হসন্ত directly — accept and advance one step
+                setTotalCharsTyped(prev => prev + 1);
+                setDrillState(prev => {
+                    const newStepIndex = prev.currentStepIndex + 1;
+                    const isLastStep = newStepIndex >= drills[prev.currentDrillIndex].steps.length;
+                    if (isLastStep) {
+                        const nextDrillIndex = (prev.currentDrillIndex + 1) % drills.length;
+                        return { ...prev, currentDrillIndex: nextDrillIndex, currentStepIndex: 0, status: 'pending' };
+                    }
+                    return { ...prev, currentStepIndex: newStepIndex, status: 'pending' };
+                });
+            } else if (nextStep && inputChar === nextStep.display) {
+                // Case B: BanglaWord silently combined ্ with next char — accept both
                 setTotalCharsTyped(prev => prev + 2);
                 setDrillState(prev => {
                     const newStepIndex = prev.currentStepIndex + 2;
@@ -181,7 +196,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                     return { ...prev, currentStepIndex: newStepIndex, status: 'pending' };
                 });
             } else if (!nextStep && inputChar === ' ') {
-                // ্ is the last step — space makes it visible, accept it
+                // Case C: ্ is the last step — space makes it visible, accept it
                 setTotalCharsTyped(prev => prev + 1);
                 setDrillState(prev => {
                     const nextDrillIndex = (prev.currentDrillIndex + 1) % drills.length;
@@ -219,13 +234,33 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     }, [isFinished]);
 
     const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-        const skip = ['Shift','Control','Alt','Meta','CapsLock','Tab','Escape','Dead',
-                      'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',
-                      'Backspace','Delete','Home','End','PageUp','PageDown','F1','F2',
-                      'F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
-        if (skip.includes(e.key)) return;
+        const skipKeys = ['Shift','Control','Alt','Meta','CapsLock','Tab','Escape',
+                          'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',
+                          'Backspace','Delete','Home','End','PageUp','PageDown',
+                          'F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
+        if (skipKeys.includes(e.key)) return;
         e.preventDefault();
-        handleKeyPress(e.key);
+
+        // e.key from keydown can be the Latin key name ('H', 'k') when BanglaWord
+        // operates via the Windows IME layer. Instead, we look up the physical key
+        // (e.code + e.shiftKey) in our own BanglaWord layout config to reliably
+        // obtain the correct Bengali character.
+        const layout = getKeyboardLayoutConfig('BanglaWord');
+        const allKeys = [...layout.top, ...layout.home, ...layout.bottom, ...layout.space];
+        const keyEntry = allKeys.find(k => k.keyCode === e.code);
+
+        let bengaliChar: string;
+        if (keyEntry) {
+            // Use layout config to get the Bengali character for this physical key
+            bengaliChar = e.shiftKey ? (keyEntry.bnShift ?? keyEntry.bn) : keyEntry.bn;
+        } else if (e.key === ' ') {
+            bengaliChar = ' ';
+        } else {
+            // Unknown key — fall back to e.key (works for direct-layout setups)
+            bengaliChar = e.key;
+        }
+
+        handleKeyPress(bengaliChar);
     }, [handleKeyPress]);
 
 
