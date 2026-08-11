@@ -234,27 +234,33 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     }, [isFinished]);
 
     const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-        const skipKeys = ['Shift','Control','Alt','Meta','CapsLock','Tab','Escape',
+        const skipKeys = ['Shift','Control','Alt','Meta','CapsLock','Tab','Escape','Dead',
                           'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',
                           'Backspace','Delete','Home','End','PageUp','PageDown',
                           'F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'];
         if (skipKeys.includes(e.key)) return;
         e.preventDefault();
 
+        // Handle space separately — the layout config has bn='Space' (string) for spacebar,
+        // which would produce the wrong value if we went through the lookup path.
+        if (e.key === ' ') {
+            handleKeyPress(' ');
+            return;
+        }
+
         // e.key from keydown can be the Latin key name ('H', 'k') when BanglaWord
         // operates via the Windows IME layer. Instead, we look up the physical key
         // (e.code + e.shiftKey) in our own BanglaWord layout config to reliably
         // obtain the correct Bengali character.
+        // Note: layout.space is excluded intentionally (handled above).
         const layout = getKeyboardLayoutConfig('BanglaWord');
-        const allKeys = [...layout.top, ...layout.home, ...layout.bottom, ...layout.space];
+        const allKeys = [...layout.top, ...layout.home, ...layout.bottom];
         const keyEntry = allKeys.find(k => k.keyCode === e.code);
 
         let bengaliChar: string;
         if (keyEntry) {
             // Use layout config to get the Bengali character for this physical key
             bengaliChar = e.shiftKey ? (keyEntry.bnShift ?? keyEntry.bn) : keyEntry.bn;
-        } else if (e.key === ' ') {
-            bengaliChar = ' ';
         } else {
             // Unknown key — fall back to e.key (works for direct-layout setups)
             bengaliChar = e.key;
