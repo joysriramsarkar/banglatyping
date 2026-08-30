@@ -39,14 +39,14 @@ cp .env.local.example .env.local
 ## 4️⃣ Install Supabase Library (1 minute)
 
 ```bash
-npm install @supabase/supabase-js
+pnpm add @supabase/supabase-js
 ```
 
 ## 5️⃣ Seed Lesson Data (2 minutes)
 
 ```bash
 # This imports all 43 lessons from lessons.ts into database
-npx ts-node db/seeds/seed-lessons.ts
+pnpm dlx ts-node db/seeds/seed-lessons.ts
 ```
 
 ✅ Lessons now in database!
@@ -79,16 +79,16 @@ See `docs/IMPLEMENTATION_GUIDE.md` for detailed examples:
 
 ```bash
 # Start development server
-npm run dev
+pnpm dev
 
 # Run database migration
 # (Go to Supabase SQL Editor and paste from db/migrations/001_initial_schema.sql)
 
 # Seed initial lessons
-npx ts-node db/seeds/seed-lessons.ts
+pnpm dlx ts-node db/seeds/seed-lessons.ts
 
 # Run TypeScript check
-npm run typecheck
+pnpm typecheck
 ```
 
 ## 📊 Verify Setup

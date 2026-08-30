@@ -21,17 +21,17 @@ Bangla Typing Master is a modern typing practice platform for Bengali learners. 
 ## Local Development
 
 1. Install dependencies
-   - npm install
+   - pnpm install
 2. Configure environment variables
    - Add your Supabase settings to a local `.env.local` file.
 3. Run the app
-   - npm run dev
+   - pnpm dev
 
 ## Quality Checks
 
-- npm run typecheck
-- npm test
-- npm run lint
+- pnpm typecheck
+- pnpm test
+- pnpm lint
 
 ## Deployment
 

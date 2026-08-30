@@ -201,7 +201,7 @@ SUPABASE_SERVICE_KEY=your_service_key
 #    Copy content of db/migrations/001_initial_schema.sql
 
 # 4. Initialize lesson data
-npm install  # if @supabase/supabase-js not installed
+pnpm install  # if @supabase/supabase-js not installed
 npx ts-node db/seeds/seed-lessons.ts
 ```
 

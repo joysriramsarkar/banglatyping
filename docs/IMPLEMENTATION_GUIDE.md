@@ -100,7 +100,7 @@ SUPABASE_SERVICE_KEY=your_service_key
 ### Step 2: Install Dependencies
 
 ```bash
-npm install @supabase/supabase-js
+pnpm add @supabase/supabase-js
 ```
 
 ### Step 3: Seed Initial Lesson Data
