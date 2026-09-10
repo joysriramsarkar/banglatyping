@@ -1,194 +1,534 @@
-// Bengali Unicode constants
+import { renderHook, act } from '@testing-library/react';
+import { useTypingPractice } from '@/hooks/use-typing-practice';
+
+// Bengali Unicode fixtures
 const AMAR = '\u0986\u09AE\u09BE\u09B0'; // আমার
 const SONAR = '\u09B8\u09CB\u09A8\u09BE\u09B0'; // সোনার
 const BANGLA = '\u09AC\u09BE\u0982\u09B2\u09BE'; // বাংলা
-const HASANTA = '\u09CD'; // ্ Bengali
+const KSSA = '\u0995\u09CD\u09B7'; // ক্ষ - single grapheme cluster, 3 code points
+const HASANTA = '\u09CD'; // ্
+const KA = '\u0995'; // ক
+const SSA = '\u09B7'; // ষ
 
-describe('Typing Practice Logic', () => {
-  describe('Input handling', () => {
-    it('builds input correctly character by character', () => {
-      const currentInput = '';
-      const newInput = (currentInput + '\u0986').normalize('NFC'); // আ
-      expect(newInput).toBe('\u0986');
+const THREE_WORDS = `${AMAR} ${SONAR} ${BANGLA}`;
+
+function setup(initialText: string, isPracticeDrill = false) {
+  return renderHook(
+    ({ text, drill }) => useTypingPractice({ initialText: text, isPracticeDrill: drill }),
+    { initialProps: { text: initialText, drill: isPracticeDrill } }
+  );
+}
+
+type HookResult = ReturnType<typeof setup>['result'];
+
+/** Types a string one character at a time through the real hook. */
+function typeWord(result: HookResult, word: string, maxLength = 100) {
+  for (const ch of Array.from(word)) {
+    act(() => {
+      result.current.inputChar(ch, maxLength);
+    });
+  }
+}
+
+describe('useTypingPractice', () => {
+  describe('initialization', () => {
+    it('splits the initial text into words on mount', () => {
+      const { result } = setup(THREE_WORDS);
+
+      expect(result.current.state.words).toEqual([AMAR, SONAR, BANGLA]);
+      expect(result.current.state.textToType).toBe(THREE_WORDS);
+      expect(result.current.state.currentWordIndex).toBe(0);
+      expect(result.current.state.charInputPerWord).toEqual({});
+      expect(result.current.state.isFinished).toBe(false);
     });
 
-    it('respects maxLength limit', () => {
-      const expectedWord = AMAR;
-      const maxLength = Math.max(expectedWord.length + 5, 30);
-      expect(maxLength).toBeGreaterThanOrEqual(expectedWord.length);
+    it('starts with neutral stats', () => {
+      const { result } = setup(THREE_WORDS);
+
+      expect(result.current.state.accuracy).toBe(100);
+      expect(result.current.state.wpm).toBe(0);
+      expect(result.current.state.totalErrors).toBe(0);
+      expect(result.current.state.totalChars).toBe(0);
     });
 
-    it('normalizes NFC on input', () => {
-      const input = AMAR;
-      const normalized = input.normalize('NFC');
-      expect(normalized).toBe(AMAR);
-    });
-  });
+    it('drops empty segments produced by repeated spaces', () => {
+      const { result } = setup('hello   world');
 
-  describe('Backspace handling', () => {
-    it('removes last character', () => {
-      const input = '\u0986\u09AE\u09BE'; // আমা (3 codepoints but 2 graphemes: আ + মা)
-      const segmenter = new Intl.Segmenter('bn', { granularity: 'grapheme' });
-      const segments = Array.from(segmenter.segment(input));
-      const newInput = segments.slice(0, -1).map((s: Intl.SegmentData) => s.segment).join('');
-      expect(newInput).toBe('\u0986'); // আ (first grapheme only)
+      expect(result.current.state.words).toEqual(['hello', 'world']);
     });
 
-    it('handles empty input gracefully', () => {
-      const input = '';
-      const segmenter = new Intl.Segmenter('bn', { granularity: 'grapheme' });
-      const segments = Array.from(segmenter.segment(input));
-      const newInput = segments.slice(0, -1).map((s: Intl.SegmentData) => s.segment).join('');
-      expect(newInput).toBe('');
+    it('produces no words for empty text', () => {
+      const { result } = setup('');
+
+      expect(result.current.state.words).toEqual([]);
     });
 
-    it('correctly removes Bengali conjunct as one grapheme', () => {
-      const input = '\u0995\u09CD\u09B7'; // ক্ষ - should be one grapheme
-      const segmenter = new Intl.Segmenter('bn', { granularity: 'grapheme' });
-      const segments = Array.from(segmenter.segment(input));
-      expect(segments.length).toBe(1);
-      const newInput = segments.slice(0, -1).map((s: Intl.SegmentData) => s.segment).join('');
-      expect(newInput).toBe('');
-    });
-  });
+    it('re-initializes when the initial text changes', () => {
+      const { result, rerender } = setup(THREE_WORDS);
 
-  describe('Space / word navigation', () => {
-    const words = [AMAR, SONAR, BANGLA];
+      rerender({ text: 'hello world', drill: false });
 
-    it('advances to next word on space when input is non-empty', () => {
-      const currentWordIndex = 0;
-      const currentInput = AMAR;
-      const canAdvance = currentInput.trim().length > 0 && currentWordIndex < words.length - 1;
-      expect(canAdvance).toBe(true);
-    });
-
-    it('does not advance on space when input is empty', () => {
-      const currentInput = '';
-      const canAdvance = currentInput.trim().length > 0;
-      expect(canAdvance).toBe(false);
-    });
-
-    it('does not advance past last word', () => {
-      const currentWordIndex = 2;
-      const canAdvance = currentWordIndex < words.length - 1;
-      expect(canAdvance).toBe(false);
+      expect(result.current.state.words).toEqual(['hello', 'world']);
+      expect(result.current.state.currentWordIndex).toBe(0);
     });
   });
 
-  describe('Navigation', () => {
-    const words = [AMAR, SONAR, BANGLA];
+  describe('practice drill mode', () => {
+    it('repeats the base words until the drill is long enough', () => {
+      const { result } = setup(`${KA} \u0996 \u0997`, true);
 
-    it('navigates forward', () => {
-      const currentWordIndex = 0;
-      const newIndex = currentWordIndex + 1;
-      expect(newIndex >= 0 && newIndex < words.length).toBe(true);
-    });
-
-    it('navigates backward', () => {
-      const currentWordIndex = 1;
-      const newIndex = currentWordIndex - 1;
-      expect(newIndex >= 0 && newIndex < words.length).toBe(true);
-    });
-
-    it('does not navigate below 0', () => {
-      const currentWordIndex = 0;
-      const newIndex = currentWordIndex - 1;
-      expect(newIndex < 0).toBe(true);
+      expect(result.current.state.words.length).toBeGreaterThan(1000);
+      expect(result.current.state.words.every((w) => [KA, '\u0996', '\u0997'].includes(w))).toBe(true);
     });
   });
 
-  describe('Error detection', () => {
-    it('detects error when input does not match word start', () => {
-      const currentWord = AMAR; // আমার
-      const input = '\u0986\u09AC'; // আব - wrong second char
-      const isError = input.length > 0 && !currentWord.startsWith(input);
-      expect(isError).toBe(true);
+  describe('character input', () => {
+    it('builds input character by character', () => {
+      const { result } = setup('hello world');
+
+      expect(result.current.getCurrentInput()).toBe('');
+
+      typeWord(result, 'hel');
+
+      expect(result.current.getCurrentInput()).toBe('hel');
+      expect(result.current.state.charInputPerWord[0]).toBe('hel');
     });
 
-    it('no error when input matches word start', () => {
-      const currentWord = AMAR; // আমার
-      const input = '\u0986\u09AE'; // আম
-      const isError = input.length > 0 && !currentWord.startsWith(input);
-      expect(isError).toBe(false);
+    it('respects the maxLength limit', () => {
+      const { result } = setup('hello world');
+
+      act(() => {
+        result.current.inputChar('a', 2);
+      });
+      act(() => {
+        result.current.inputChar('b', 2);
+      });
+      act(() => {
+        result.current.inputChar('c', 2);
+      });
+
+      expect(result.current.getCurrentInput()).toBe('ab');
     });
 
-    it('no error on empty input', () => {
-      const currentWord = AMAR;
-      const input = '';
-      const isError = input.length > 0 && !currentWord.startsWith(input);
-      expect(isError).toBe(false);
-    });
-  });
+    it('normalizes composed input to NFC', () => {
+      const { result } = setup('hello world');
 
-  describe('Stats calculation', () => {
-    it('calculates accuracy as 100 when no chars typed', () => {
-      const totalCharsTyped = 0;
-      const uncorrectedErrors = 0;
-      const accuracy = totalCharsTyped > 0
-        ? Math.round(((totalCharsTyped - uncorrectedErrors) / totalCharsTyped) * 100)
-        : 100;
-      expect(accuracy).toBe(100);
-    });
+      act(() => {
+        result.current.inputChar('e', 100);
+      });
+      act(() => {
+        result.current.inputChar('\u0301', 100);
+      });
 
-    it('calculates accuracy correctly', () => {
-      const totalCharsTyped = 10;
-      const uncorrectedErrors = 2;
-      const accuracy = Math.round(((totalCharsTyped - uncorrectedErrors) / totalCharsTyped) * 100);
-      expect(accuracy).toBe(80);
-    });
-
-    it('calculates WPM correctly', () => {
-      const totalKeystrokes = 50;
-      const timeInMinutes = 1;
-      const grossWpm = (totalKeystrokes / 5) / timeInMinutes;
-      expect(grossWpm).toBe(10);
-    });
-
-    it('returns 0 WPM when time is 0', () => {
-      const totalKeystrokes = 50;
-      const timeInMinutes = 0;
-      const grossWpm = timeInMinutes > 0 ? (totalKeystrokes / 5) / timeInMinutes : 0;
-      expect(grossWpm).toBe(0);
-    });
-
-    it('net WPM is never negative', () => {
-      const grossWpm = 5;
-      const uncorrectedErrors = 10;
-      const timeInMinutes = 1;
-      const netWpm = Math.max(0, grossWpm - (uncorrectedErrors / timeInMinutes));
-      expect(netWpm).toBe(0);
+      // 'e' + combining acute must collapse to a single precomposed character
+      expect(result.current.getCurrentInput()).toBe('\u00E9');
+      expect(result.current.getCurrentInput().length).toBe(1);
     });
   });
 
-  describe('Visible words virtualization', () => {
-    const words = ['\u098F\u0995', '\u09A6\u09C1\u0987', '\u09A4\u09BF\u09A8', '\u099A\u09BE\u09B0', '\u09AA\u09BE\u0981\u099A'];
+  describe('setCurrentInput', () => {
+    it('accepts input within the derived limit', () => {
+      const { result } = setup('hello world');
 
-    it('returns correct window of words', () => {
-      const currentWordIndex = 2;
-      const bufferSize = 2;
-      const startIndex = Math.max(0, currentWordIndex - bufferSize);
-      const endIndex = Math.min(words.length - 1, currentWordIndex + bufferSize);
-      const visible = [];
-      for (let i = startIndex; i <= endIndex; i++) {
-        visible.push({ word: words[i], index: i });
-      }
-      expect(visible.length).toBe(5);
-      expect(visible[0].index).toBe(0);
-      expect(visible[4].index).toBe(4);
+      act(() => {
+        result.current.setCurrentInput('hel');
+      });
+
+      expect(result.current.getCurrentInput()).toBe('hel');
     });
 
-    it('clamps to start of array', () => {
-      const currentWordIndex = 0;
-      const bufferSize = 2;
-      const startIndex = Math.max(0, currentWordIndex - bufferSize);
-      expect(startIndex).toBe(0);
+    it('rejects input longer than max(word length + 5, 30)', () => {
+      const { result } = setup('hello world');
+
+      act(() => {
+        result.current.setCurrentInput('x'.repeat(31));
+      });
+
+      expect(result.current.getCurrentInput()).toBe('');
+
+      act(() => {
+        result.current.setCurrentInput('x'.repeat(30));
+      });
+
+      expect(result.current.getCurrentInput()).toBe('x'.repeat(30));
+    });
+  });
+
+  describe('backspace', () => {
+    it('removes a whole Bengali grapheme cluster in one press', () => {
+      const { result } = setup(`${KSSA} ${SONAR}`);
+
+      typeWord(result, KA);
+      act(() => {
+        result.current.inputChar(HASANTA, 100);
+      });
+      act(() => {
+        result.current.inputChar(SSA, 100);
+      });
+      expect(result.current.getCurrentInput()).toBe(KSSA);
+
+      act(() => {
+        result.current.handleBackspace();
+      });
+
+      expect(result.current.getCurrentInput()).toBe('');
     });
 
-    it('clamps to end of array', () => {
-      const currentWordIndex = 4;
-      const bufferSize = 2;
-      const endIndex = Math.min(words.length - 1, currentWordIndex + bufferSize);
-      expect(endIndex).toBe(4);
+    it('moves to the previous word when the current input is empty', () => {
+      const { result } = setup(THREE_WORDS);
+
+      typeWord(result, AMAR);
+      act(() => {
+        result.current.handleSpace();
+      });
+      expect(result.current.state.currentWordIndex).toBe(1);
+
+      act(() => {
+        result.current.handleBackspace();
+      });
+
+      expect(result.current.state.currentWordIndex).toBe(0);
+    });
+
+    it('stays on the first word when there is nothing to delete', () => {
+      const { result } = setup(THREE_WORDS);
+
+      act(() => {
+        result.current.handleBackspace();
+      });
+
+      expect(result.current.state.currentWordIndex).toBe(0);
+      expect(result.current.getCurrentInput()).toBe('');
+    });
+
+    it('clears the whole word on ctrl+backspace', () => {
+      const { result } = setup(THREE_WORDS);
+
+      typeWord(result, AMAR);
+      expect(result.current.getCurrentInput()).toBe(AMAR);
+
+      act(() => {
+        result.current.handleBackspace(true);
+      });
+
+      expect(result.current.getCurrentInput()).toBe('');
+    });
+  });
+
+  describe('space / word navigation', () => {
+    it('advances to the next word when the input is non-empty', () => {
+      const { result } = setup(THREE_WORDS);
+
+      typeWord(result, AMAR);
+      act(() => {
+        result.current.handleSpace();
+      });
+
+      expect(result.current.state.currentWordIndex).toBe(1);
+    });
+
+    it('does not advance when the input is empty', () => {
+      const { result } = setup(THREE_WORDS);
+
+      act(() => {
+        result.current.handleSpace();
+      });
+
+      expect(result.current.state.currentWordIndex).toBe(0);
+    });
+
+    it('does not advance past the last word', () => {
+      const { result } = setup(`${AMAR} ${SONAR}`);
+
+      typeWord(result, AMAR);
+      act(() => {
+        result.current.handleSpace();
+      });
+      typeWord(result, SONAR);
+      act(() => {
+        result.current.handleSpace();
+      });
+
+      expect(result.current.state.currentWordIndex).toBe(1);
+    });
+
+    it('navigates forward and backward within bounds', () => {
+      const { result } = setup(THREE_WORDS);
+
+      act(() => {
+        result.current.navigate(1);
+      });
+      expect(result.current.state.currentWordIndex).toBe(1);
+
+      act(() => {
+        result.current.navigate(-1);
+      });
+      expect(result.current.state.currentWordIndex).toBe(0);
+    });
+
+    it('clamps navigation at both ends', () => {
+      const { result } = setup(THREE_WORDS);
+
+      act(() => {
+        result.current.navigate(-1);
+      });
+      expect(result.current.state.currentWordIndex).toBe(0);
+
+      act(() => {
+        result.current.navigate(1);
+      });
+      act(() => {
+        result.current.navigate(1);
+      });
+      act(() => {
+        result.current.navigate(1);
+      });
+      expect(result.current.state.currentWordIndex).toBe(2);
+    });
+  });
+
+  describe('error detection and word classes', () => {
+    it('flags input that does not match the start of the current word', () => {
+      const { result } = setup(THREE_WORDS);
+
+      act(() => {
+        result.current.inputChar(AMAR[0], 100);
+      });
+      expect(result.current.isError()).toBe(false);
+
+      act(() => {
+        result.current.inputChar('\u09AC', 100); // ব - wrong second character
+      });
+      expect(result.current.isError()).toBe(true);
+    });
+
+    it('reports no error for an empty input', () => {
+      const { result } = setup(THREE_WORDS);
+
+      expect(result.current.isError()).toBe(false);
+    });
+
+    it('styles completed, current and upcoming words differently', () => {
+      const { result } = setup(THREE_WORDS);
+
+      typeWord(result, AMAR);
+      act(() => {
+        result.current.handleSpace();
+      });
+
+      expect(result.current.getWordClass(0)).toBe('text-green-500');
+      expect(result.current.getWordClass(1)).toBe('text-primary');
+      expect(result.current.getWordClass(2)).toBe('text-muted-foreground');
+    });
+
+    it('marks a mistyped completed word as an error', () => {
+      const { result } = setup(THREE_WORDS);
+
+      act(() => {
+        result.current.inputChar('\u09AC', 100);
+      });
+      act(() => {
+        result.current.handleSpace();
+      });
+
+      expect(result.current.getWordClass(0)).toBe('text-red-500 line-through');
+    });
+  });
+
+  describe('stats calculation', () => {
+    it('keeps accuracy at 100 when nothing has been typed', () => {
+      const { result } = setup(THREE_WORDS);
+
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.accuracy).toBe(100);
+      expect(result.current.state.wpm).toBe(0);
+    });
+
+    it('reports perfect accuracy for a correct word', () => {
+      const { result } = setup('hello world');
+
+      typeWord(result, 'hello');
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.totalErrors).toBe(0);
+      expect(result.current.state.accuracy).toBe(100);
+      expect(result.current.state.totalChars).toBe('hello'.length);
+    });
+
+    it('counts uncorrected errors and lowers accuracy', () => {
+      const { result } = setup('hello world');
+
+      typeWord(result, 'hxllo');
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.totalErrors).toBe(1);
+      expect(result.current.state.accuracy).toBe(80);
+    });
+
+    it('counts the space between completed words as a keystroke', () => {
+      const { result } = setup('ab cd');
+
+      typeWord(result, 'ab');
+      act(() => {
+        result.current.handleSpace();
+      });
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      // 2 typed characters + 1 space
+      expect(result.current.state.totalChars).toBe(3);
+      // The current word has not been started, so both of its expected
+      // characters ('c' and 'd') are counted as uncorrected errors.
+      expect(result.current.state.totalErrors).toBe(2);
+    });
+
+    it('calculates net WPM from keystrokes over time', () => {
+      const { result } = setup('abcdefghij other');
+
+      typeWord(result, 'abcdefghij'); // 10 keystrokes
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      // (10 / 5) per minute, no errors => 2 WPM
+      expect(result.current.state.wpm).toBe(2);
+    });
+
+    it('never reports a negative WPM', () => {
+      const { result } = setup('hello world');
+
+      typeWord(result, 'xxxxx'); // 5 keystrokes, 5 errors
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      // gross 1 WPM minus 5 errors per minute would be negative
+      expect(result.current.state.wpm).toBe(0);
+    });
+
+    it('caches word stats and skips redundant state updates', () => {
+      const { result } = setup('hello world');
+
+      typeWord(result, 'hello');
+      act(() => {
+        result.current.calculateStats(60);
+      });
+      const stateAfterFirstCalc = result.current.state;
+
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state).toBe(stateAfterFirstCalc);
+    });
+  });
+
+  describe('finish and reset', () => {
+    it('freezes the state once finished', () => {
+      const { result } = setup('hello world');
+
+      typeWord(result, 'hello');
+      act(() => {
+        result.current.finish();
+      });
+      expect(result.current.state.isFinished).toBe(true);
+
+      act(() => {
+        result.current.inputChar('z', 100);
+      });
+      act(() => {
+        result.current.handleSpace();
+      });
+      act(() => {
+        result.current.navigate(1);
+      });
+
+      expect(result.current.getCurrentInput()).toBe('hello');
+      expect(result.current.state.currentWordIndex).toBe(0);
+    });
+
+    it('clears progress on reset', () => {
+      const { result } = setup(THREE_WORDS);
+
+      typeWord(result, AMAR);
+      act(() => {
+        result.current.handleSpace();
+      });
+      act(() => {
+        result.current.reset('hello world again');
+      });
+
+      expect(result.current.state.words).toEqual(['hello', 'world', 'again']);
+      expect(result.current.state.currentWordIndex).toBe(0);
+      expect(result.current.state.charInputPerWord).toEqual({});
+      expect(result.current.state.isFinished).toBe(false);
+    });
+  });
+
+  describe('visible word window', () => {
+    const NUMBERS = ['one', 'two', 'three', 'four', 'five'];
+
+    it('returns a window around the current word', () => {
+      const { result } = setup(NUMBERS.join(' '));
+
+      act(() => {
+        result.current.navigate(1);
+      });
+      act(() => {
+        result.current.navigate(1);
+      });
+
+      const visible = result.current.getVisibleWords(2);
+
+      expect(visible).toEqual([
+        { word: 'one', index: 0 },
+        { word: 'two', index: 1 },
+        { word: 'three', index: 2 },
+        { word: 'four', index: 3 },
+        { word: 'five', index: 4 },
+      ]);
+    });
+
+    it('clamps the window at the start of the list', () => {
+      const { result } = setup(NUMBERS.join(' '));
+
+      const visible = result.current.getVisibleWords(2);
+
+      expect(visible.map((w) => w.index)).toEqual([0, 1, 2]);
+    });
+
+    it('honours a custom buffer size', () => {
+      const { result } = setup(NUMBERS.join(' '));
+
+      act(() => {
+        result.current.navigate(1);
+      });
+
+      const visible = result.current.getVisibleWords(1);
+
+      expect(visible.map((w) => w.index)).toEqual([0, 1, 2]);
+    });
+  });
+
+  describe('unknown actions', () => {
+    it('leaves the state untouched', () => {
+      const { result } = setup(THREE_WORDS);
+      const before = result.current.state;
+
+      act(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result.current.dispatch({ type: 'NOT_A_REAL_ACTION' } as any);
+      });
+
+      expect(result.current.state).toBe(before);
     });
   });
 });

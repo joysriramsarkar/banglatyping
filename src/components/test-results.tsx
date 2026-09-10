@@ -16,6 +16,7 @@ import { lessons } from "@/lib/lessons";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { apiFetch } from "@/lib/api-client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 
@@ -61,7 +62,7 @@ export default function TestResults({ stats, onRestart, lessonId, isDrill = fals
       if (user && !hasSavedResult.current) {
         hasSavedResult.current = true;
         try {
-          const response = await fetch('/api/user-progress', {
+          const response = await apiFetch('/api/user-progress', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

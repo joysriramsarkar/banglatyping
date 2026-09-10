@@ -1,5 +1,5 @@
 // Dynamic custom drill generator based on weak characters
-import { supabase } from './db';
+import { createRequestClient } from './db';
 import { generateDrills } from './lessons';
 import type { Drill, CustomDrill, WeakCharacterView } from './types';
 
@@ -9,13 +9,16 @@ import type { Drill, CustomDrill, WeakCharacterView } from './types';
 export async function generateCustomDrill(
   userId: string,
   weakCharacters: WeakCharacterView[],
-  drillCount: number = 100
+  drillCount: number = 100,
+  accessToken?: string | null
 ): Promise<CustomDrill | null> {
   try {
     if (weakCharacters.length === 0) {
       console.warn('No weak characters found for custom drill generation');
       return null;
     }
+
+    const db = createRequestClient(accessToken);
 
     // Extract characters and focus on the weakest characters in a single pass
     const { characterList, focusCharacters } = weakCharacters.reduce(
@@ -41,7 +44,7 @@ export async function generateCustomDrill(
       generated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (db as any)
       .from('custom_drills')
       .insert(customDrill)
       .select()
@@ -64,10 +67,12 @@ export async function generateCustomDrill(
  */
 export async function getUserCustomDrills(
   userId: string,
-  limit: number = 10
+  limit: number = 10,
+  accessToken?: string | null
 ): Promise<CustomDrill[]> {
   try {
-    const { data, error } = await supabase
+    const db = createRequestClient(accessToken);
+    const { data, error } = await db
       .from('custom_drills')
       .select('*')
       .eq('user_id', userId)
@@ -89,9 +94,14 @@ export async function getUserCustomDrills(
 /**
  * Get a specific custom drill by ID
  */
-export async function getCustomDrill(drillId: string, userId?: string): Promise<CustomDrill | null> {
+export async function getCustomDrill(
+  drillId: string,
+  userId?: string,
+  accessToken?: string | null
+): Promise<CustomDrill | null> {
   try {
-    const query = supabase
+    const db = createRequestClient(accessToken);
+    const query = db
       .from('custom_drills')
       .select('*')
       .eq('id', drillId);
@@ -117,13 +127,18 @@ export async function getCustomDrill(drillId: string, userId?: string): Promise<
 /**
  * Update custom drill usage statistics
  */
-export async function updateCustomDrillUsage(drillId: string, userId?: string): Promise<boolean> {
+export async function updateCustomDrillUsage(
+  drillId: string,
+  userId?: string,
+  accessToken?: string | null
+): Promise<boolean> {
   try {
+    const db = createRequestClient(accessToken);
     if (!userId) {
       return false;
     }
 
-    const { data: current, error: fetchError } = await supabase
+    const { data: current, error: fetchError } = await db
       .from('custom_drills')
       .select('usage_count')
       .eq('id', drillId)
@@ -135,7 +150,7 @@ export async function updateCustomDrillUsage(drillId: string, userId?: string): 
       return false;
     }
 
-    const { error } = await (supabase as any)
+    const { error } = await (db as any)
       .from('custom_drills')
       .update({
         usage_count: (current?.usage_count || 0) + 1,
@@ -159,9 +174,14 @@ export async function updateCustomDrillUsage(drillId: string, userId?: string): 
 /**
  * Delete a custom drill
  */
-export async function deleteCustomDrill(drillId: string, userId?: string): Promise<boolean> {
+export async function deleteCustomDrill(
+  drillId: string,
+  userId?: string,
+  accessToken?: string | null
+): Promise<boolean> {
   try {
-    const query = supabase
+    const db = createRequestClient(accessToken);
+    const query = db
       .from('custom_drills')
       .delete()
       .eq('id', drillId);
@@ -193,11 +213,13 @@ export async function createWeakCharacterDrill(
   threshold: number = 85, // Only include characters with accuracy below this
   minCharacters: number = 5,
   maxCharacters: number = 20,
-  drillCount: number = 100
+  drillCount: number = 100,
+  accessToken?: string | null
 ): Promise<CustomDrill | null> {
   try {
+    const db = createRequestClient(accessToken);
     // Fetch weak characters from database view
-    const { data: weakChars, error } = await supabase
+    const { data: weakChars, error } = await db
       .from('user_weak_characters')
       .select('*')
       .eq('user_id', userId)
@@ -218,7 +240,7 @@ export async function createWeakCharacterDrill(
     }
 
     // Generate custom drill
-    return await generateCustomDrill(userId, characters, drillCount);
+    return await generateCustomDrill(userId, characters, drillCount, accessToken);
   } catch (err) {
     console.error('Exception creating weak character drill:', err);
     return null;
@@ -228,19 +250,20 @@ export async function createWeakCharacterDrill(
 /**
  * Get recommendations for the user based on their weak areas
  */
-export async function getDrillRecommendations(userId: string): Promise<{
+export async function getDrillRecommendations(userId: string, accessToken?: string | null): Promise<{
   shouldCreateCustomDrill: boolean;
   weakCharacterCount: number;
   avgWeakCharAccuracy: number;
 }> {
   try {
-    const { data: stats } = await supabase
+    const db = createRequestClient(accessToken);
+    const { data: stats } = await db
       .from('user_statistics')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    const { data: weakChars } = await supabase
+    const { data: weakChars } = await db
       .from('user_weak_characters')
       .select('*')
       .eq('user_id', userId)

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveTypingSession, updateLessonCompletion } from '@/lib/user-progress';
 import type { ErredCharacter } from '@/lib/types';
+import { authenticate, isOwnResource } from '@/lib/api-auth';
 
 interface SaveProgressRequest {
   userId: string;
@@ -15,15 +16,25 @@ interface SaveProgressRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Progress is always written against the verified caller, never against a
+    // user id supplied in the request body.
+    const auth = await authenticate(request);
+
+    if (!auth) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const body: SaveProgressRequest = await request.json();
 
     const { userId, lessonId, wpm, accuracy, errors, timeElapsed, erredCharacters } = body;
 
-    // Validate required fields
-    if (!userId) {
+    if (userId && userId !== auth.user.id) {
       return NextResponse.json(
-        { success: false, error: 'userId and lessonId are required' },
-        { status: 400 }
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
       );
     }
 
@@ -33,13 +44,14 @@ export async function POST(request: NextRequest) {
 
     // Save the typing session
     const progress = await saveTypingSession(
-      userId,
+      auth.user.id,
       validLessonId,
       wpm,
       accuracy,
       errors,
       timeElapsed,
-      erredCharacters || []
+      erredCharacters || [],
+      auth.accessToken
     );
 
     if (!progress) {
@@ -51,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // Update lesson completion stats
     const completionUpdated = validLessonId
-      ? await updateLessonCompletion(userId, validLessonId, accuracy, wpm)
+      ? await updateLessonCompletion(auth.user.id, validLessonId, accuracy, wpm, auth.accessToken)
       : false;
 
     return NextResponse.json({
@@ -81,6 +93,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'userId is required' },
         { status: 400 }
+      );
+    }
+
+    const auth = await authenticate(request);
+
+    if (!auth) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!isOwnResource(auth.user, userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
       );
     }
 

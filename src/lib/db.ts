@@ -20,6 +20,31 @@ export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
   get: (_, prop) => getSupabase()[prop as keyof ReturnType<typeof createClient>],
 });
 
+/**
+ * A Supabase client that acts as a specific signed-in user.
+ *
+ * Server code holds only the public anon key, so on its own it has no identity
+ * and Row Level Security policies that compare against auth.uid() match nothing.
+ * Forwarding the caller's access token is what gives the request an identity.
+ *
+ * Pass no token (seeds, scripts, tests) and you get the shared anon client back.
+ */
+export function createRequestClient(accessToken?: string | null): ReturnType<typeof createClient> {
+  if (!accessToken) {
+    return getSupabase();
+  }
+
+  return createClient(supabaseUrl, supabaseKey, {
+    global: {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
 // Type definitions
 export interface Lesson {
   id: string;

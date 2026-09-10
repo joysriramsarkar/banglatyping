@@ -17,36 +17,38 @@ Follow these steps to get the database-backed Banglatyping running:
 
 ## 2️⃣ Configure Environment Variables (2 minutes)
 
-1. Copy `.env.local.example` to `.env.local`
-2. Fill in Supabase credentials
-3. Keep your existing Firebase credentials
+1. Copy `.env.example` to `.env.local`
+2. Fill in your Supabase credentials
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env.local
 # Edit .env.local with your credentials
 ```
 
 ## 3️⃣ Create Database Schema (3 minutes)
 
-1. In Supabase Dashboard, go to **SQL Editor**
-2. Click **New Query**
-3. Paste entire contents of `db/migrations/001_initial_schema.sql`
-4. Click **Run**
-5. Wait for success message
+Run both migrations, in order, in the Supabase **SQL Editor** (or any Postgres
+client):
+
+1. `db/migrations/001_initial_schema.sql` — tables, indexes, views, triggers
+2. `db/migrations/002_rls_policies.sql` — Row Level Security policies
+
+⚠️ Do not skip migration 002. Migration 001 never enables RLS, so without it the
+public `anon` key can read and write every row of every table.
 
 ✅ Database schema complete!
 
-## 4️⃣ Install Supabase Library (1 minute)
+## 4️⃣ Install Dependencies (1 minute)
 
 ```bash
-pnpm add @supabase/supabase-js
+pnpm install
 ```
 
 ## 5️⃣ Seed Lesson Data (2 minutes)
 
 ```bash
-# This imports all 43 lessons from lessons.ts into database
-pnpm dlx ts-node db/seeds/seed-lessons.ts
+# Imports all lessons from src/lib/lessons.ts into the database
+pnpm db:seed
 ```
 
 ✅ Lessons now in database!
@@ -78,17 +80,12 @@ See `docs/IMPLEMENTATION_GUIDE.md` for detailed examples:
 ## 🚀 Quick Commands
 
 ```bash
-# Start development server
-pnpm dev
-
-# Run database migration
-# (Go to Supabase SQL Editor and paste from db/migrations/001_initial_schema.sql)
-
-# Seed initial lessons
-pnpm dlx ts-node db/seeds/seed-lessons.ts
-
-# Run TypeScript check
-pnpm typecheck
+pnpm dev            # start the development server
+pnpm db:seed        # seed initial lessons
+pnpm db:check       # print the lesson count
+pnpm db:check-rls   # compare what the service and anon keys can read
+pnpm typecheck      # run the TypeScript check
+pnpm test:ci        # tests + coverage, exactly as CI runs them
 ```
 
 ## 📊 Verify Setup
@@ -109,6 +106,9 @@ Check Supabase Dashboard:
 
 **Issue**: Seed script fails
 - **Fix**: Make sure database schema is created first (Step 3)
+
+**Issue**: The anon key can read other users' progress rows
+- **Fix**: Run `db/migrations/002_rls_policies.sql`, then confirm with `pnpm db:check-rls`
 
 ## 📚 Next Steps
 

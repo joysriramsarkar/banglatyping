@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="bn" suppressHydrationWarning>
       <body className={cn("font-body antialiased", inter.variable, noto_sans_bengali.variable, hind_siliguri.variable)}>
         <AuthProvider>
           {children}

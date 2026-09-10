@@ -11,14 +11,21 @@ const config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: [
-    'src/lib/utils.ts',
-    'src/lib/bengali-grapheme.ts',
-    'src/lib/lessons.ts',
-    'src/hooks/use-timer.ts',
-    'src/hooks/use-typing-practice.ts',
+    'src/lib/**/*.ts',
+    'src/hooks/**/*.ts',
+    'src/hooks/**/*.tsx',
   ],
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/__tests__/',
+    // type-only module: it compiles to no runtime code
+    'src/lib/types.ts',
+  ],
+  // Honest floor. Coverage is measured across every file in src/lib and
+  // src/hooks rather than a hand-picked list, so this number is the real one.
+  // Raise it as tests are added; do not lower it.
   coverageThreshold: {
-    global: { lines: 70 },
+    global: { lines: 45 },
   },
 };
 

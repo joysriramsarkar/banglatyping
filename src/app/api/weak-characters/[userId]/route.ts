@@ -1,6 +1,7 @@
 // API endpoint to get user's weak characters
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserWeakCharacters } from '@/lib/user-progress';
+import { authenticate, isOwnResource } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +18,24 @@ export async function GET(
       );
     }
 
-    const weakCharacters = await getUserWeakCharacters(userId, threshold);
+    // Only the owner may read these weak characters.
+    const auth = await authenticate(request);
+
+    if (!auth) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!isOwnResource(auth.user, userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    const weakCharacters = await getUserWeakCharacters(userId, threshold, auth.accessToken);
 
     return NextResponse.json({
       success: true,
