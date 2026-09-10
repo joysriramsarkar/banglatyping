@@ -21,37 +21,36 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key-placeholder
       SUPABASE_SERVICE_KEY: ci-service-key-placeholder
-      # Corepack otherwise prompts before downloading pnpm, which fails on a
-      # non-interactive runner.
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: 0
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Node 22 is the minimum for this repo: pnpm 11 uses node:sqlite and
+      # refuses to run on Node 20. Keep this in sync with "engines" in
+      # package.json.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      # pnpm is driven through corepack, which ships with Node, and every step
-      # calls `corepack pnpm` explicitly. This avoids depending on a separate
-      # setup action leaving a pnpm binary on PATH for later steps, and on
-      # setup-node's `cache: pnpm`, both of which failed on the runner.
-      - name: Activate pnpm
-        run: corepack prepare pnpm@11.24.0 --activate
+      # Version is read from the "packageManager" field in package.json
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
+      # No dependency caching. An uncached install takes ~15s, which is not
+      # worth the extra failure modes of caching the pnpm store.
       - name: Install dependencies
-        run: corepack pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        run: corepack pnpm run typecheck
+        run: pnpm run typecheck
 
       - name: Lint
-        run: corepack pnpm run lint
+        run: pnpm run lint
 
       - name: Unit tests
-        run: corepack pnpm run test:ci
+        run: pnpm run test:ci
 
       - name: Build
-        run: corepack pnpm run build
+        run: pnpm run build
