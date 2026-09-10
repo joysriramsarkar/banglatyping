@@ -1,6 +1,6 @@
 // Hook for managing lessons from database
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/db';
+import { apiFetch } from '@/lib/api-client';
 import type { Lesson, Drill } from '@/lib/types';
 
 interface UseLessonsOptions {
@@ -119,7 +119,7 @@ export function useUserStatistics(userId: string | null) {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/user-statistics/${userId}`);
+        const response = await apiFetch(`/api/user-statistics/${userId}`);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch statistics: ${response.statusText}`);
@@ -167,7 +167,7 @@ export function useWeakCharacters(userId: string | null, threshold: number = 95)
       try {
         setLoading(true);
         const url = `/api/weak-characters/${userId}?threshold=${threshold}`;
-        const response = await fetch(url);
+        const response = await apiFetch(url);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch weak characters: ${response.statusText}`);
@@ -216,13 +216,8 @@ export function useCustomDrills(userId: string | null) {
 
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
       const url = `/api/custom-drills?userId=${userId}`;
-      const response = await fetch(url, {
-        headers: {
-          'x-supabase-access-token': session?.access_token || '',
-        },
-      });
+      const response = await apiFetch(url);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch custom drills: ${response.statusText}`);
@@ -247,13 +242,9 @@ export function useCustomDrills(userId: string | null) {
     if (!userId) return null;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch('/api/custom-drills', {
+      const response = await apiFetch('/api/custom-drills', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-supabase-access-token': session?.access_token || '',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
           threshold: threshold || 85,
@@ -299,7 +290,7 @@ export function useSaveProgress() {
   ) => {
     try {
       setSaving(true);
-      const response = await fetch('/api/user-progress', {
+      const response = await apiFetch('/api/user-progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

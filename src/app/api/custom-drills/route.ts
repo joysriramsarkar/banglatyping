@@ -1,5 +1,4 @@
 // API endpoint to manage custom drills
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { 
   createWeakCharacterDrill, 
@@ -8,40 +7,14 @@ import {
   deleteCustomDrill,
   getDrillRecommendations
 } from '@/lib/custom-drill-generator';
-
-async function getAuthenticatedUser(request: NextRequest) {
-  const authHeader = request.headers.get('x-supabase-access-token');
-
-  if (!authHeader) {
-    return null;
-  }
-
-  const supabaseClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }
-  );
-
-  const { data: { user }, error } = await supabaseClient.auth.getUser(authHeader);
-
-  if (error || !user) {
-    return null;
-  }
-
-  return user;
-}
+import { authenticate, isOwnResource } from '@/lib/api-auth';
 
 // GET: Retrieve custom drills for a user or recommendations
 export async function GET(request: NextRequest) {
   try {
-    const authenticatedUser = await getAuthenticatedUser(request);
+    const auth = await authenticate(request);
 
-    if (!authenticatedUser) {
+    if (!auth) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -50,9 +23,9 @@ export async function GET(request: NextRequest) {
 
     const requestedUserId = request.nextUrl.searchParams.get('userId');
     const action = request.nextUrl.searchParams.get('action'); // 'list', 'recommendations'
-    const userId = authenticatedUser.id;
+    const userId = auth.user.id;
 
-    if (requestedUserId && requestedUserId !== userId) {
+    if (requestedUserId && !isOwnResource(auth.user, requestedUserId)) {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: 403 }
@@ -60,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (action === 'recommendations') {
-      const recommendations = await getDrillRecommendations(userId);
+      const recommendations = await getDrillRecommendations(userId, auth.accessToken);
       return NextResponse.json({
         success: true,
         data: recommendations,
@@ -68,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Default: List custom drills
-    const customDrills = await getUserCustomDrills(userId);
+    const customDrills = await getUserCustomDrills(userId, 10, auth.accessToken);
 
     return NextResponse.json({
       success: true,
@@ -87,9 +60,9 @@ export async function GET(request: NextRequest) {
 // POST: Create a new custom drill
 export async function POST(request: NextRequest) {
   try {
-    const authenticatedUser = await getAuthenticatedUser(request);
+    const auth = await authenticate(request);
 
-    if (!authenticatedUser) {
+    if (!auth) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -97,22 +70,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, threshold = 85, minCharacters = 5, maxCharacters = 20, drillCount = 100 } = body;
-    const resolvedUserId = userId && userId !== authenticatedUser.id ? authenticatedUser.id : authenticatedUser.id;
+    const { threshold = 85, minCharacters = 5, maxCharacters = 20, drillCount = 100 } = body;
 
-    if (!resolvedUserId) {
-      return NextResponse.json(
-        { success: false, error: 'userId is required' },
-        { status: 400 }
-      );
-    }
+    // Drills are always created for the verified caller.
+    const resolvedUserId = auth.user.id;
 
     const customDrill = await createWeakCharacterDrill(
       resolvedUserId,
       threshold,
       minCharacters,
       maxCharacters,
-      drillCount
+      drillCount,
+      auth.accessToken
     );
 
     if (!customDrill) {
@@ -142,9 +111,9 @@ export async function POST(request: NextRequest) {
 // PATCH: Update custom drill usage
 export async function PATCH(request: NextRequest) {
   try {
-    const authenticatedUser = await getAuthenticatedUser(request);
+    const auth = await authenticate(request);
 
-    if (!authenticatedUser) {
+    if (!auth) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -162,7 +131,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === 'recordUsage') {
-      const updated = await updateCustomDrillUsage(drillId, authenticatedUser.id);
+      const updated = await updateCustomDrillUsage(drillId, auth.user.id, auth.accessToken);
       
       return NextResponse.json({
         success: updated,
@@ -186,9 +155,9 @@ export async function PATCH(request: NextRequest) {
 // DELETE: Delete a custom drill
 export async function DELETE(request: NextRequest) {
   try {
-    const authenticatedUser = await getAuthenticatedUser(request);
+    const auth = await authenticate(request);
 
-    if (!authenticatedUser) {
+    if (!auth) {
       return NextResponse.json(
         { success: false, error: 'Authentication required' },
         { status: 401 }
@@ -204,7 +173,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const deleted = await deleteCustomDrill(drillId, authenticatedUser.id);
+    const deleted = await deleteCustomDrill(drillId, auth.user.id, auth.accessToken);
 
     if (!deleted) {
       return NextResponse.json(

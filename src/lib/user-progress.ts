@@ -1,9 +1,10 @@
 // User progress tracking service
-import { supabase } from './db';
+import { createRequestClient } from './db';
 import type { UserProgress, CharacterError, WeakCharacterView, UserStatistics, ErredCharacter } from './types';
 
 /**
  * Save a typing session to the database
+ * @param accessToken The caller's Supabase access token, so RLS applies
  */
 export async function saveTypingSession(
   userId: string,
@@ -12,16 +13,18 @@ export async function saveTypingSession(
   accuracy: number,
   errors: number,
   timeElapsed: number,
-  erredCharacters: ErredCharacter[]
+  erredCharacters: ErredCharacter[],
+  accessToken?: string | null
 ): Promise<UserProgress | null> {
   try {
+    const db = createRequestClient(accessToken);
     // Format erred characters for storage
     const formattedErrors = erredCharacters.map(item => ({
       char: item.char,
       count: item.count
     }));
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (db as any)
       .from('user_progress')
       .insert({
         user_id: userId,
@@ -49,16 +52,19 @@ export async function saveTypingSession(
 
 /**
  * Get user's weak characters (characters with low accuracy)
- * @param userId Firebase UID
+ * @param userId Supabase auth user id
  * @param threshold Accuracy threshold (0-100). Only returns chars below this
+ * @param accessToken The caller's Supabase access token, so RLS applies
  * @returns Array of weak characters sorted by accuracy
  */
 export async function getUserWeakCharacters(
   userId: string,
-  threshold: number = 95
+  threshold: number = 95,
+  accessToken?: string | null
 ): Promise<WeakCharacterView[]> {
   try {
-    const { data, error } = await supabase
+    const db = createRequestClient(accessToken);
+    const { data, error } = await db
       .from('user_weak_characters')
       .select('*')
       .eq('user_id', userId)
@@ -81,9 +87,13 @@ export async function getUserWeakCharacters(
 /**
  * Get user's overall statistics
  */
-export async function getUserStatistics(userId: string): Promise<UserStatistics | null> {
+export async function getUserStatistics(
+  userId: string,
+  accessToken?: string | null
+): Promise<UserStatistics | null> {
   try {
-    const { data, error } = await supabase
+    const db = createRequestClient(accessToken);
+    const { data, error } = await db
       .from('user_statistics')
       .select('*')
       .eq('user_id', userId)
@@ -118,10 +128,12 @@ export async function getUserStatistics(userId: string): Promise<UserStatistics 
  */
 export async function getCharacterError(
   userId: string,
-  character: string
+  character: string,
+  accessToken?: string | null
 ): Promise<CharacterError | null> {
   try {
-    const { data, error } = await supabase
+    const db = createRequestClient(accessToken);
+    const { data, error } = await db
       .from('character_errors')
       .select('*')
       .eq('user_id', userId)
@@ -146,10 +158,12 @@ export async function getCharacterError(
  */
 export async function getUserLessonProgress(
   userId: string,
-  lessonId: string
+  lessonId: string,
+  accessToken?: string | null
 ): Promise<UserProgress[] | null> {
   try {
-    const { data, error } = await supabase
+    const db = createRequestClient(accessToken);
+    const { data, error } = await db
       .from('user_progress')
       .select('*')
       .eq('user_id', userId)
@@ -174,11 +188,13 @@ export async function getUserLessonProgress(
 export async function getUserProgressHistory(
   userId: string,
   limit: number = 50,
-  offset: number = 0
+  offset: number = 0,
+  accessToken?: string | null
 ): Promise<{ data: UserProgress[] | null; total: number }> {
   try {
+    const db = createRequestClient(accessToken);
     // Get total count
-    const { count, error: countError } = await supabase
+    const { count, error: countError } = await db
       .from('user_progress')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId);
@@ -189,7 +205,7 @@ export async function getUserProgressHistory(
     }
 
     // Get paginated data
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('user_progress')
       .select('*')
       .eq('user_id', userId)
@@ -215,10 +231,12 @@ export async function updateLessonCompletion(
   userId: string,
   lessonId: string,
   accuracy: number,
-  wpm: number
+  wpm: number,
+  accessToken?: string | null
 ): Promise<boolean> {
   try {
-    const { error } = await (supabase as any)
+    const db = createRequestClient(accessToken);
+    const { error } = await (db as any)
       .from('user_lesson_completion')
       .upsert(
         {
@@ -249,9 +267,9 @@ export async function updateLessonCompletion(
 /**
  * Analyze user's typing errors and identify patterns
  */
-export async function analyzeUserErrors(userId: string) {
+export async function analyzeUserErrors(userId: string, accessToken?: string | null) {
   try {
-    const errors = await getUserWeakCharacters(userId);
+    const errors = await getUserWeakCharacters(userId, 95, accessToken);
     
     const veryWeak: WeakCharacterView[] = [];
     const weak: WeakCharacterView[] = [];

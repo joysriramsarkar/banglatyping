@@ -1,6 +1,7 @@
 // API endpoint to get user statistics
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserStatistics, analyzeUserErrors } from '@/lib/user-progress';
+import { authenticate, isOwnResource } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +18,24 @@ export async function GET(
       );
     }
 
-    const stats = await getUserStatistics(userId);
+    // Only the owner may read these statistics.
+    const auth = await authenticate(request);
+
+    if (!auth) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (!isOwnResource(auth.user, userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    const stats = await getUserStatistics(userId, auth.accessToken);
 
     if (!stats) {
       return NextResponse.json(
@@ -33,7 +51,7 @@ export async function GET(
 
     // Optionally include error analysis
     if (includeAnalysis) {
-      const analysis = await analyzeUserErrors(userId);
+      const analysis = await analyzeUserErrors(userId, auth.accessToken);
       response.analysis = analysis;
     }
 

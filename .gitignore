@@ -38,3 +38,9 @@ yarn-error.log*
 # Temporary files
 *.tmp
 Thumbs.db
+
+# Visual Studio / IDE local state
+.vs/
+
+# Local scratch markers
+.modified
