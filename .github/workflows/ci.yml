@@ -35,25 +35,9 @@ jobs:
         with:
           node-version: 20
 
-      # Deliberately not using setup-node's `cache: pnpm`: it resolves the store
-      # path before anything is installed, and fails on a fresh runner where that
-      # directory does not exist yet. Cache it explicitly instead, creating the
-      # directory first so the cache step always has a valid path.
-      - name: Resolve pnpm store path
-        shell: bash
-        run: |
-          STORE_PATH="$(pnpm store path)"
-          mkdir -p "$STORE_PATH"
-          echo "PNPM_STORE_PATH=$STORE_PATH" >> "$GITHUB_ENV"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.PNPM_STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
-
+      # No dependency caching: an uncached install takes ~15s, and both
+      # setup-node's `cache: pnpm` and an explicit actions/cache step on the
+      # pnpm store failed on the runner. Not worth blocking the pipeline on.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
