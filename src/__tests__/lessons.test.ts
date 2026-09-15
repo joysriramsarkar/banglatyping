@@ -131,16 +131,34 @@ describe('lessons', () => {
     });
   });
 
-  it('has home-row lesson', () => {
-    expect(lessons.some(l => l.id === 'home-row-chars')).toBe(true);
+  it('has structured micro-lessons for home row (hr-01 through hr-07)', () => {
+    ['hr-01', 'hr-02', 'hr-03', 'hr-04', 'hr-05', 'hr-06', 'hr-07'].forEach(id => {
+      expect(lessons.some(l => l.id === id)).toBe(true);
+    });
   });
 
-  it('has top-row lesson', () => {
-    expect(lessons.some(l => l.id === 'top-row-chars')).toBe(true);
+  it('has structured micro-lessons for top row (tr-01 through tr-07)', () => {
+    ['tr-01', 'tr-02', 'tr-03', 'tr-04', 'tr-05', 'tr-06', 'tr-07'].forEach(id => {
+      expect(lessons.some(l => l.id === id)).toBe(true);
+    });
   });
 
-  it('has bottom-row lesson', () => {
-    expect(lessons.some(l => l.id === 'bottom-row-chars')).toBe(true);
+  it('has structured micro-lessons for bottom row (br-01 through br-07)', () => {
+    ['br-01', 'br-02', 'br-03', 'br-04', 'br-05', 'br-06', 'br-07'].forEach(id => {
+      expect(lessons.some(l => l.id === id)).toBe(true);
+    });
+  });
+
+  it('has row mixing lessons (mr-01 through mr-05)', () => {
+    ['mr-01', 'mr-02', 'mr-03', 'mr-04', 'mr-05'].forEach(id => {
+      expect(lessons.some(l => l.id === id)).toBe(true);
+    });
+  });
+
+  it('has kar lessons', () => {
+    ['kar-stage-a-01', 'kar-stage-b-mixed', 'kar-stage-c-words'].forEach(id => {
+      expect(lessons.some(l => l.id === id)).toBe(true);
+    });
   });
 
   it('all lesson IDs are unique', () => {
@@ -157,8 +175,9 @@ describe('lessons', () => {
 });
 
 describe('rowCategories', () => {
-  it('has 4 row categories', () => {
-    expect(rowCategories.length).toBe(4);
+  it('has 5 row categories including mixed-row', () => {
+    expect(rowCategories.length).toBe(5);
+    expect(rowCategories.some(c => c.id === 'mixed-row')).toBe(true);
   });
 
   it('has home-row category', () => {

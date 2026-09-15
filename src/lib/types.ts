@@ -6,7 +6,7 @@ export interface Lesson {
   level: "Beginner" | "Intermediate" | "Advanced";
   text?: string;
   drills?: Drill[];
-  row?: 'home-row' | 'top-row' | 'bottom-row' | 'kar-row';
+  row?: 'home-row' | 'top-row' | 'bottom-row' | 'mixed-row' | 'kar-row';
   isWordDrill?: boolean;
 }
 
@@ -38,7 +38,7 @@ export interface Drill {
 }
 
 export type RowDrillCategory = {
-    id: 'home-row' | 'top-row' | 'bottom-row' | 'kar-row';
+    id: 'home-row' | 'top-row' | 'bottom-row' | 'mixed-row' | 'kar-row';
     name: string;
     description: string;
 }
