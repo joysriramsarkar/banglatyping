@@ -231,6 +231,15 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         }
     }
 
+    // Case 5: Multi-grapheme sequence or word passed to getStepsForChar
+    const subGraphemes = bengaliSegmenter.segmentString(normalizedChar);
+    if (subGraphemes.length > 1) {
+        const multiSteps = subGraphemes.flatMap(g => getStepsForChar(g));
+        if (multiSteps.length > 0) {
+            return multiSteps;
+        }
+    }
+
     // Fallback for complex cases not handled
     console.warn("Could not determine steps for character:", normalizedChar, "graphemes:", bengaliSegmenter.segmentString(normalizedChar));
     return [];
@@ -274,6 +283,46 @@ const getStepsForWord = (word: string): SingleDrill[] => {
     // Use grapheme-aware segmentation instead of naive split
     const graphemes = bengaliSegmenter.segmentString(word);
     return graphemes.flatMap(char => getStepsForChar(char));
+};
+
+export const generateCuratedDrills = (items: string[]): Drill[] => {
+    const drills: Drill[] = [];
+    for (const item of items) {
+        if (item === ' ') {
+            drills.push({
+                prompt: ' ',
+                steps: [{ key: ' ', keyCode: 'Space', shift: false, display: ' ', fingerPosition: 0, fingerName: 'Pinky' }]
+            });
+            continue;
+        }
+
+        if (item.includes(' ')) {
+            const parts = item.split(' ');
+            const phraseSteps: SingleDrill[] = [];
+            for (let p = 0; p < parts.length; p++) {
+                if (p > 0) {
+                    phraseSteps.push({ key: ' ', keyCode: 'Space', shift: false, display: ' ', fingerPosition: 0, fingerName: 'Pinky' });
+                }
+                const subSteps = getStepsForWord(parts[p]);
+                phraseSteps.push(...subSteps);
+            }
+            if (phraseSteps.length > 0) {
+                drills.push({
+                    prompt: item,
+                    steps: phraseSteps
+                });
+            }
+        } else {
+            const steps = getStepsForWord(item);
+            if (steps.length > 0) {
+                drills.push({
+                    prompt: item,
+                    steps: steps
+                });
+            }
+        }
+    }
+    return drills;
 };
 
 export const generateWordDrills = (words: string[]): Drill[] => {
@@ -390,56 +439,433 @@ const bottomRowChars = ['্য', 'ত', 'চ', 'দ', 'ব', 'ন', 'ম', 'ং
 
 
 export const lessons: Lesson[] = [
-  // --- HOME ROW ---
+  // --- HOME ROW MICRO-LESSONS (HR-01 to HR-07) ---
+  {
+    id: "hr-01",
+    title: "HR-01 — প্রথম হাতের অক্ষর (া স ড ফ)",
+    level: "Beginner",
+    row: "home-row",
+    drills: generateCuratedDrills([
+      "া", "স", "ড", "ফ",
+      "া", "স", "া", "ফ",
+      "স", "ড", "স", "ফ",
+      "ফ", "ড", "স", "া",
+      "া", "স", "ড", "ফ", "স", "া", "ফ"
+    ])
+  },
+  {
+    id: "hr-02",
+    title: "HR-02 — ডান হাতের অক্ষর (গ ্ জ ক ল)",
+    level: "Beginner",
+    row: "home-row",
+    drills: generateCuratedDrills([
+      "গ", "্", "জ", "ক", "ল",
+      "গ", "জ", "ক", "ল",
+      "ক", "ল", "জ", "গ",
+      "গ", "ক", "ল", "জ", "্",
+      "ক", "গ", "ল", "জ", "ক"
+    ])
+  },
+  {
+    id: "hr-03",
+    title: "HR-03 — Home Row Balanced Combination",
+    level: "Beginner",
+    row: "home-row",
+    drills: generateCuratedDrills([
+      "স", "স", "গ", "গ",
+      "ফ", "ফ", "ড", "ড", "জ",
+      "া", "স", "ড", "ফ", "গ",
+      "্", "জ", "ক", "ল",
+      "ক", "ল", "স", "া", "গ", "ফ"
+    ])
+  },
+  {
+    id: "hr-04",
+    title: "HR-04 — দুই অক্ষরের Combination",
+    level: "Beginner",
+    row: "home-row",
+    drills: generateCuratedDrills([
+      "সা", "দা", "গা", "জা", "কা", "লা",
+      "ফা", "দগ", "সক", "লগ", "জক",
+      "সা", "দা", "গা", "কা", "লা"
+    ])
+  },
+  {
+    id: "hr-05",
+    title: "HR-05 — তিন ও চার অক্ষরের Combination (Word Feel)",
+    level: "Beginner",
+    row: "home-row",
+    drills: generateCuratedDrills([
+      "সাদা", "গাদা", "জালা", "দাদা", "ফালা",
+      "সাদা", "দাদা", "গাদা", "ফালা", "জালা"
+    ])
+  },
+  {
+    id: "hr-06",
+    title: "HR-06 — বাস্তব শব্দ অনুশীলন (Tiered Words)",
+    level: "Beginner",
+    row: "home-row",
+    isWordDrill: true,
+    drills: generateCuratedDrills([
+      "জল", "ফল", "গল", "জগ", "গজ", "সাজ", "ঢল", "ঝল", "হল",
+      "জালা", "ফালা", "গালা", "ডালা", "সাজা", "ঢাল", "গলা", "ঝাল",
+      "সফল", "ফসল", "গজল", "জঙ্গল", "জলসা", "সহসা", "অলস"
+    ])
+  },
+  {
+    id: "hr-07",
+    title: "HR-07 — Home Row Mastery Test",
+    level: "Beginner",
+    row: "home-row",
+    drills: generateCuratedDrills([
+      "া", "স", "ড", "ফ", "গ", "জ", "ক", "ল",
+      "সা", "দা", "গা", "কা", "লা",
+      "জল", "ফল", "গল", "সাদা", "গাদা", "জালা", "দাদা", "ফালা",
+      "সফল", "ফসল", "জঙ্গল", "জলসা", "অলস", "জগৎ"
+    ])
+  },
+
+  // Legacy fallback Home Row IDs for compatibility
   {
     id: "home-row-chars",
-    title: "হোম রো - অক্ষর অনুশীলন",
+    title: "হোম রো - অক্ষর অনুশীলন (কম্প্রিহেনসিভ)",
     level: "Beginner",
     row: "home-row",
     drills: generateDrills(homeRowChars, 100)
   },
   {
     id: "home-row-word-drill",
-    title: "হোম রো - শব্দ অনুশীলন",
+    title: "হোম রো - শব্দ অনুশীলন (কম্প্রিহেনসিভ)",
     level: "Beginner",
     row: "home-row",
     text: homeRowWords.join(' '),
     isWordDrill: true,
   },
-  
-  // --- TOP ROW ---
+
+  // --- TOP ROW MICRO-LESSONS (TR-01 to TR-07) ---
+  {
+    id: "tr-01",
+    title: "TR-01 — প্রথম টপ রো অক্ষর (ঙ র ট ে)",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateCuratedDrills([
+      "ঙ", "র", "ট", "ে",
+      "ঙ", "র", "ট", "ে",
+      "র", "ট", "ে", "ঙ",
+      "ে", "ট", "র", "ঙ",
+      "ঙ", "র", "ট", "ে", "র"
+    ])
+  },
+  {
+    id: "tr-02",
+    title: "TR-02 — দ্বিতীয় টপ রো অক্ষর (য ু ি ো প)",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateCuratedDrills([
+      "য", "ু", "ি", "ো", "প",
+      "য", "ু", "ি", "ো", "প",
+      "প", "ো", "ি", "ু", "য",
+      "ু", "ি", "ো", "প", "য"
+    ])
+  },
+  {
+    id: "tr-03",
+    title: "TR-03 — বিশেষ ও বিরল বর্ণ (ঁ ঃ ৈ ূ ী ৌ ৃ ড় ঢ় য় ঞ)",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateCuratedDrills([
+      "ঁ", "ঃ", "ৈ", "ূ", "ী", "ৌ", "ৃ",
+      "ড়", "ঢ়", "য়", "ঞ",
+      "ঁ", "ঃ", "ৈ", "ূ", "ী", "ৌ", "ৃ", "ড়", "ঢ়", "য়", "ঞ"
+    ])
+  },
+  {
+    id: "tr-04",
+    title: "TR-04 — Home + Top Mixed Combinations",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateCuratedDrills([
+      "সা", "রি", "গো", "টি", "রে",
+      "পি", "টু", "রে", "গো", "সা",
+      "টি", "রি", "গো", "রে", "সা"
+    ])
+  },
+  {
+    id: "tr-05",
+    title: "TR-05 — Top Row Words Practice",
+    level: "Beginner",
+    row: "top-row",
+    isWordDrill: true,
+    drills: generateCuratedDrills([
+      "রুটি", "পিঠ", "পুঁই", "ক্ষীর", "পৈতে",
+      "পর", "পট", "পিঠ", "পুড়", "পুর", "পীর", "টুপ", "টিপ",
+      "রূপ", "রীতি", "রুই", "রুটি", "পুঁই", "পিঁড়ি"
+    ])
+  },
+  {
+    id: "tr-06",
+    title: "TR-06 — Home + Top Sentences (বাক্যংশ)",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateCuratedDrills([
+      "পরের জায়গা", "রুটি খাই", "পিঠ চাপড়ে দাও",
+      "পুকুরে মাছ", "এক ফোঁটা জল", "আজ রোদ উঠেছে"
+    ])
+  },
+  {
+    id: "tr-07",
+    title: "TR-07 — Top Row Mastery Test",
+    level: "Beginner",
+    row: "top-row",
+    drills: generateCuratedDrills([
+      "ঙ", "র", "ট", "ে", "য", "ু", "ি", "ো", "প",
+      "সা", "রি", "গো", "টি", "রে",
+      "রুটি", "পিঠ", "পুঁই", "ক্ষীর", "পৈতে", "রূপ", "রীতি"
+    ])
+  },
+
+  // Legacy fallback Top Row IDs for compatibility
   {
     id: "top-row-chars",
-    title: "টপ রো - অক্ষর অনুশীলন",
+    title: "টপ রো - অক্ষর অনুশীলন (কম্প্রিহেনসিভ)",
     level: "Beginner",
     row: "top-row",
     drills: generateDrills(topRowChars, 100)
   },
   {
     id: "top-row-word-drill",
-    title: "টপ রো - শব্দ অনুশীলন",
+    title: "টপ রো - শব্দ অনুশীলন (কম্প্রিহেনসিভ)",
     level: "Beginner",
     row: "top-row",
     text: topRowWords.join(' '),
     isWordDrill: true,
   },
 
-  // --- BOTTOM ROW ---
+  // --- BOTTOM ROW MICRO-LESSONS (BR-01 to BR-07) ---
+  {
+    id: "br-01",
+    title: "BR-01 — প্রথম বটম রো অক্ষর (ত চ দ)",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: generateCuratedDrills([
+      "ত", "চ", "দ",
+      "ত", "চ", "দ", "ত",
+      "দ", "চ", "ত", "দ",
+      "ত", "ত", "চ", "চ", "দ", "দ"
+    ])
+  },
+  {
+    id: "br-02",
+    title: "BR-02 — দ্বিতীয় বটম রো অক্ষর (ব ন ম)",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: generateCuratedDrills([
+      "ব", "ন", "ম",
+      "ব", "ন", "ম", "ব",
+      "ম", "ন", "ব", "ম",
+      "ব", "ব", "ন", "ন", "ম", "ম"
+    ])
+  },
+  {
+    id: "br-03",
+    title: "BR-03 — অতিরিক্ত বটম রো অক্ষর (থ ছ ধ ভ ণ ং ্য)",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: generateCuratedDrills([
+      "থ", "ছ", "ধ", "ভ", "ণ", "ং", "্য",
+      "থ", "ছ", "ধ", "ভ", "ণ",
+      "ং", "্য", "থ", "ছ", "ধ"
+    ])
+  },
+  {
+    id: "br-04",
+    title: "BR-04 — Home + Top + Bottom Combinations",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: generateCuratedDrills([
+      "সাদা", "বাংলা", "মানুষ", "জীবন",
+      "বাংলা", "মানুষ", "জীবন", "সাদা"
+    ])
+  },
+  {
+    id: "br-05",
+    title: "BR-05 — Bottom-Heavy Words Practice",
+    level: "Beginner",
+    row: "bottom-row",
+    isWordDrill: true,
+    drills: generateCuratedDrills([
+      "তথ্য", "তব", "বদ", "মন", "বন", "ভব", "ধন", "নদ", "দম", "নব", "মদ", "বধ",
+      "ছন্দ", "বন্ধ", "মধ্য", "ভবন", "দম্ভ", "দ্বন্দ্ব", "চন্দন", "মন্থন"
+    ])
+  },
+  {
+    id: "br-06",
+    title: "BR-06 — Mixed Short Paragraph (বটম রো সমৃদ্ধ)",
+    level: "Beginner",
+    row: "bottom-row",
+    text: "বনের কাছে নদী চলে। নদীতে জলের ঢেউ নাচে। মানুষ ও বন একত্রে বাঁচে। সত্য ও সুন্দর জীবন গড়ি।"
+  },
+  {
+    id: "br-07",
+    title: "BR-07 — Bottom Row Mastery Test",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: generateCuratedDrills([
+      "ত", "চ", "দ", "ব", "ন", "ম", "থ", "ছ", "ধ", "ভ", "ণ",
+      "তথ্য", "তব", "বদ", "মন", "বন", "ভব", "ধন", "ছন্দ", "বন্ধ", "ভবন",
+      "সাদা", "বাংলা", "মানুষ", "জীবন"
+    ])
+  },
+
+  // Legacy fallback Bottom Row IDs for compatibility
   {
     id: "bottom-row-chars",
-    title: "বটম রো - অক্ষর অনুশীলন",
+    title: "বটম রো - অক্ষর অনুশীলন (কম্প্রিহেনসিভ)",
     level: "Beginner",
     row: "bottom-row",
     drills: generateDrills(bottomRowChars, 100)
   },
-   {
+  {
     id: "bottom-row-word-drill",
-    title: "বটম রো - শব্দ অনুশীলন",
+    title: "বটম রো - শব্দ অনুশীলন (কম্প্রিহেনসিভ)",
     level: "Beginner",
     row: "bottom-row",
     text: bottomRowWords.join(' '),
     isWordDrill: true,
   },
+
+  // --- MIXED ROW LESSONS (MR-01 to MR-05) ---
+  {
+    id: "mr-01",
+    title: "MR-01 — Home Row Only Refresher",
+    level: "Beginner",
+    row: "mixed-row",
+    drills: generateCuratedDrills([
+      "া", "স", "ড", "ফ", "গ", "জ", "ক", "ল",
+      "সাদা", "গাদা", "জালা", "দাদা", "সফল", "ফসল"
+    ])
+  },
+  {
+    id: "mr-02",
+    title: "MR-02 — Home + Top Rows Transition",
+    level: "Beginner",
+    row: "mixed-row",
+    drills: generateCuratedDrills([
+      "সারি", "গোটি", "রেখা", "পুকুর", "রুটি", "পিঠ", "ক্ষীর"
+    ])
+  },
+  {
+    id: "mr-03",
+    title: "MR-03 — Home + Bottom Rows Transition",
+    level: "Beginner",
+    row: "mixed-row",
+    drills: generateCuratedDrills([
+      "সদাই", "কদম", "জলবন", "চন্দন", "মনন", "দমন", "বচন"
+    ])
+  },
+  {
+    id: "mr-04",
+    title: "MR-04 — Top + Bottom Rows Transition",
+    level: "Beginner",
+    row: "mixed-row",
+    drills: generateCuratedDrills([
+      "উত্তর", "প্রবীন", "জীবন", "পবন", "রতন", "ভ্রমণ", "রুপম"
+    ])
+  },
+  {
+    id: "mr-05",
+    title: "MR-05 — All Rows Mixed Challenge",
+    level: "Beginner",
+    row: "mixed-row",
+    drills: generateCuratedDrills([
+      "বাংলা আমাদের মাতৃভাষা।", "আমরা প্রতিদিন নতুন কিছু শিখি।",
+      "টাইপিং নিয়মিত অনুশীলন করলে গতি বাড়ে।", "সঠিক আঙুল ব্যবহারে নির্ভুলতা আসে।"
+    ])
+  },
+
+  // --- KAR LESSONS (Stage A: Individual Kar, Stage B: Mixed Kar, Stage C: Kar + Words) ---
+  {
+    id: "kar-stage-a-01",
+    title: "KAR-01 — আ-কার (া) অনুশীলন",
+    level: "Beginner",
+    row: "kar-row",
+    drills: generateCuratedDrills([
+      "কা", "খা", "গা", "ঘা", "চা", "ছা", "জা", "ঝা", "টা", "ঠা", "ডা", "ঢা", "তা", "থা", "দা", "ধা", "না", "পা", "ফা", "বা", "ভা", "মা", "রা", "লা", "সা", "হা"
+    ])
+  },
+  {
+    id: "kar-stage-a-02",
+    title: "KAR-02 — ই-কার (ি) অনুশীলন",
+    level: "Beginner",
+    row: "kar-row",
+    drills: generateCuratedDrills([
+      "কি", "গি", "চি", "জি", "টি", "দি", "নি", "পি", "বি", "মি", "রি", "লি", "সি", "হি"
+    ])
+  },
+  {
+    id: "kar-stage-a-03",
+    title: "KAR-03 — ঈ-কার (ী) অনুশীলন",
+    level: "Beginner",
+    row: "kar-row",
+    drills: generateCuratedDrills([
+      "কী", "গী", "চী", "জী", "টী", "দী", "নী", "পী", "বী", "মী", "রী", "লী", "সী", "হী"
+    ])
+  },
+  {
+    id: "kar-stage-a-04",
+    title: "KAR-04 — উ-কার (ু) ও ঊ-কার (ূ) অনুশীলন",
+    level: "Beginner",
+    row: "kar-row",
+    drills: generateCuratedDrills([
+      "কু", "খু", "গু", "ঘুর", "চু", "জু", "টু", "দু", "নু", "পু", "ফু", "বু", "মু", "রু", "লু", "সু",
+      "কূ", "গূ", "দূ", "পূ", "ভূ", "মূ", "রূপ"
+    ])
+  },
+  {
+    id: "kar-stage-a-05",
+    title: "KAR-05 — এ-কার (ে), ঐ-কার (ৈ), ও-কার (ো), ঔ-কার (ৌ) অনুশীলন",
+    level: "Beginner",
+    row: "kar-row",
+    drills: generateCuratedDrills([
+      "কে", "খে", "গে", "ঘে", "চে", "জে", "টে", "দে", "নে", "পে", "ফে", "বে", "মে", "রে", "লে", "সে",
+      "কৈ", "গৈ", "দৈ", "নৈ", "পৈ", "বৈ", "মৈ",
+      "কো", "গো", "চো", "জো", "টো", "দো", "নো", "পো", "ফো", "বো", "মো", "রো", "লো", "সো",
+      "কৌ", "গৌ", "দৌ", "নৌ", "পৌ", "মৌ"
+    ])
+  },
+  {
+    id: "kar-stage-b-mixed",
+    title: "KAR-06 — কার-চিহ্ন Mixed Sequential Combinations",
+    level: "Beginner",
+    row: "kar-row",
+    drills: generateCuratedDrills([
+      "কা", "কি", "কী", "কু", "কূ", "কৃ", "কে", "কৈ", "কো", "কৌ",
+      "গা", "গি", "গী", "গু", "গূ", "গে", "গৈ", "গো", "গৌ",
+      "কা", "গি", "রু", "সে", "মো", "নৌ", "পৈ", "দী"
+    ])
+  },
+  {
+    id: "kar-stage-c-words",
+    title: "KAR-07 — কার-যুক্ত বাস্তব শব্দ অনুশীলন",
+    level: "Beginner",
+    row: "kar-row",
+    isWordDrill: true,
+    drills: generateCuratedDrills([
+      "দিন", "মাটি", "নদী", "বিজয়", "খুশি", "ফুল", "নতুন", "মেঘ", "আলো", "নৌকা",
+      "সকাল", "আকাশ", "বাতাস", "জীবন", "মাথা", "পাখি", "মাছ", "পানি"
+    ])
+  },
+
+  // Legacy fallback Kar ID
+  {
+    id: "kar-row",
+    title: "কার-চিহ্ন কম্প্রিহেনসিভ অনুশীলন",
+    level: "Beginner",
+    row: "kar-row",
+    drills: consonants.flatMap(c => generateKarDrillsForConsonant(c)).slice(0, 100)
+  },
+
+  // GAME & OTHER BEGINNER/INTERMEDIATE/ADVANCED LESSONS
   {
     id: "game-easy",
     title: "গেম - সহজ শব্দ",
@@ -447,17 +873,6 @@ export const lessons: Lesson[] = [
     text: gameWords.join(' '),
     isWordDrill: true,
   },
-  
-  // --- Kar Row ---
-  ...consonants.map(consonant => ({
-    id: `kar-drill-${consonant.en}`,
-    title: `${consonant.bn}-এর সাথে কার-চিহ্ন অনুশীলন`,
-    level: 'Beginner' as const,
-    row: 'kar-row' as const,
-    drills: generateKarDrillsForConsonant(consonant),
-  })),
-  
-  // Other Beginner Lessons
   {
     id: "char-practice-1",
     title: "বর্ণমালা অনুশীলন",
@@ -589,21 +1004,26 @@ export const rowCategories: RowDrillCategory[] = [
   { 
     id: 'home-row', 
     name: 'হোম রো', 
-    description: 'কীবোর্ডের মাঝের সারি, টাইপিংয়ের ভিত্তি।'
+    description: 'কীবোর্ডের মাঝের সারি — প্রথম ৪ কি থেকে ৭টি ধাপে মাস্টার করুন।'
   },
   { 
     id: 'top-row', 
     name: 'টপ রো',
-    description: 'হোম রো-এর উপরের সারি।'
-   },
+    description: 'হোম রো-এর উপরের সারি — অক্ষর, যুক্তবর্ণ ও শব্দাবলি।'
+  },
   { 
     id: 'bottom-row', 
     name: 'বটম রো',
-    description: 'হোম রো-এর নিচের সারি।'
+    description: 'হোম রো-এর নিচের সারি — ত, চ, দ, ব, ন, ম সহ বিশেষ বর্ণ।'
+  },
+  {
+    id: 'mixed-row',
+    name: 'রো মিক্সিং (Row Mixing)',
+    description: 'Home, Top ও Bottom রো মিলিয়ে বাস্তবিক টাইপিং অনুশীলন।'
   },
   {
     id: 'kar-row',
     name: 'কার-চিহ্ন অনুশীলন',
-    description: 'ব্যঞ্জনবর্ণের সাথে স্বরবর্ণের চিহ্ন অনুশীলন।'
+    description: 'স্বতন্ত্র কার, প্যাটার্ন ও কার-যুক্ত শব্দের ধাপভিত্তিক পাঠ।'
   }
 ];
