@@ -41,14 +41,14 @@ public `anon` key can read and write every row of every table.
 ## 4️⃣ Install Dependencies (1 minute)
 
 ```bash
-pnpm install
+npm install
 ```
 
 ## 5️⃣ Seed Lesson Data (2 minutes)
 
 ```bash
 # Imports all lessons from src/lib/lessons.ts into the database
-pnpm db:seed
+npm run db:seed
 ```
 
 ✅ Lessons now in database!
@@ -80,12 +80,12 @@ See `docs/IMPLEMENTATION_GUIDE.md` for detailed examples:
 ## 🚀 Quick Commands
 
 ```bash
-pnpm dev            # start the development server
-pnpm db:seed        # seed initial lessons
-pnpm db:check       # print the lesson count
-pnpm db:check-rls   # compare what the service and anon keys can read
-pnpm typecheck      # run the TypeScript check
-pnpm test:ci        # tests + coverage, exactly as CI runs them
+npm run dev            # start the development server
+npm run db:seed        # seed initial lessons
+npm run db:check       # print the lesson count
+npm run db:check-rls   # compare what the service and anon keys can read
+npm run typecheck      # run the TypeScript check
+npm run test:ci        # tests + coverage, exactly as CI runs them
 ```
 
 ## 📊 Verify Setup

@@ -1,7 +1,7 @@
 // Dynamic custom drill generator based on weak characters
 import { createRequestClient } from './db';
 import { generateDrills } from './lessons';
-import type { Drill, CustomDrill, WeakCharacterView } from './types';
+import type { CustomDrill, WeakCharacterView } from './types';
 
 /**
  * Generate a custom drill focused on user's weak characters
@@ -257,12 +257,6 @@ export async function getDrillRecommendations(userId: string, accessToken?: stri
 }> {
   try {
     const db = createRequestClient(accessToken);
-    const { data: stats } = await db
-      .from('user_statistics')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
     const { data: weakChars } = await db
       .from('user_weak_characters')
       .select('*')

@@ -1,4 +1,5 @@
-import { useReducer, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useReducer, useCallback, useEffect } from 'react';
+import { composeBengaliKeystroke, isValidBengaliTypingPrefix } from '@/lib/bengali-grapheme';
 
 /**
  * Custom Hook: useTypingPractice - Optimized for Performance
@@ -34,7 +35,7 @@ type TypingAction =
   | { type: 'SPACE' }
   | { type: 'NAVIGATE'; payload: { direction: -1 | 1 } }
   | { type: 'CALCULATE_STATS'; payload: { time: number } }
-  | { type: 'FINISH' }
+  | { type: 'FINISH'; payload?: { time?: number } }
   | { type: 'RESET'; payload: { text: string; isPracticeDrill: boolean } };
 
 const initialTypingState: TypingState = {
@@ -158,7 +159,7 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
       if (state.isFinished) return state;
       const { key, maxLength } = action.payload;
       const currentInput = (state.charInputPerWord[state.currentWordIndex] || '').normalize('NFC');
-      const newInput = (currentInput + key).normalize('NFC');
+      const newInput = composeBengaliKeystroke(currentInput, key).normalize('NFC');
       
       if (newInput.length <= maxLength) {
         return {
@@ -256,9 +257,20 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
       }
       return state;
     }
-    case 'FINISH':
+    case 'FINISH': {
       if (state.isFinished) return state;
-      return { ...state, isFinished: true };
+      const finalTime = action.payload?.time ?? 0;
+      const stats = calculateStatsHelper(state.words, state.charInputPerWord, state.currentWordIndex, finalTime, state.wordStatsCache);
+      return {
+        ...state,
+        totalChars: stats.totalCharsTyped,
+        totalErrors: stats.errors,
+        accuracy: stats.accuracy,
+        wpm: stats.wpm,
+        wordStatsCache: stats.newCache || state.wordStatsCache,
+        isFinished: true,
+      };
+    }
     default:
       return state;
   }
@@ -283,7 +295,7 @@ interface UseTypingPracticeReturn {
   handleSpace: () => void;
   navigate: (direction: -1 | 1) => void;
   calculateStats: (time: number) => void;
-  finish: () => void;
+  finish: (time?: number) => void;
   reset: (text: string) => void;
   
   // Derived values
@@ -309,7 +321,6 @@ interface UseTypingPracticeReturn {
 export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingPracticeReturn {
   const { initialText, isPracticeDrill } = options;
   const [state, dispatch] = useReducer(typingReducer, initialTypingState);
-  const prevStatsRef = useRef({ wpm: 0, accuracy: 100, errors: 0, chars: 0 });
 
   // Initialize on mount or when text changes
   useEffect(() => {
@@ -341,8 +352,8 @@ export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingP
     dispatch({ type: 'CALCULATE_STATS', payload: { time } });
   }, []);
 
-  const finish = useCallback(() => {
-    dispatch({ type: 'FINISH' });
+  const finish = useCallback((time?: number) => {
+    dispatch({ type: 'FINISH', payload: { time } });
   }, []);
 
   const reset = useCallback((text: string) => {
@@ -371,7 +382,7 @@ export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingP
   const isError = useCallback(() => {
     const normalizedInput = getCurrentInput();
     const currentWord = getCurrentWord();
-    return normalizedInput.length > 0 && !currentWord.startsWith(normalizedInput);
+    return normalizedInput.length > 0 && !isValidBengaliTypingPrefix(normalizedInput, currentWord);
   }, [getCurrentInput, getCurrentWord]);
 
   // Virtualization support: Returns only visible words to prevent DOM overload
@@ -390,7 +401,7 @@ export function useTypingPractice(options: UseTypingPracticeOptions): UseTypingP
     }
     
     return visibleWords;
-  }, [state.currentWordIndex, state.words.length]);
+  }, [state.currentWordIndex, state.words]);
 
   return {
     state,

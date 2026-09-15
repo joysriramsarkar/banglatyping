@@ -1,7 +1,7 @@
 import { generateDrills, keyMap, lessons, rowCategories, practiceParagraphs } from '@/lib/lessons';
 
 const HASANTA = '\u09CD';       // ্ Bengali hasanta
-const DEVANAGARI = /[\u0900-\u097F]/;
+const _DEVANAGARI = /[\u0900-\u097F]/;
 const BENGALI = /[\u0980-\u09FF]/;
 
 describe('keyMap', () => {
@@ -81,13 +81,39 @@ describe('generateDrills', () => {
   });
 
   it('generates drills for vowel signs', () => {
-    const drills = generateDrills(['\u09BE', '\u09BF', '\u09C1'], 10); // া, ি, ু
+    const drills = generateDrills(['\u09BE', '\u09BF', '\u09C1', '\u09C3'], 10); // া, ি, ু, ৃ
     expect(drills.length).toBeGreaterThan(0);
   });
 
   it('generates drills for hasanta', () => {
     const drills = generateDrills([HASANTA], 5);
     expect(drills.length).toBeGreaterThan(0);
+  });
+
+  it('generates 2 steps for consonant + kar combinations like কৃ', () => {
+    const drills = generateDrills(['কৃ'], 5);
+    const nonSpaceDrills = drills.filter(d => d.prompt !== ' ');
+    expect(nonSpaceDrills.length).toBeGreaterThan(0);
+    nonSpaceDrills.forEach(drill => {
+      expect(drill.prompt).toBe('কৃ');
+      expect(drill.steps.length).toBe(2);
+      expect(drill.steps[0].display).toBe('ক');
+      expect(drill.steps[0].keyCode).toBe('KeyK');
+      expect(drill.steps[1].display).toBe('ৃ');
+      expect(drill.steps[1].keyCode).toBe('Backslash');
+    });
+  });
+
+  it('generates steps for standalone vowel ঋ', () => {
+    const drills = generateDrills(['ঋ'], 5);
+    const nonSpaceDrills = drills.filter(d => d.prompt !== ' ');
+    expect(nonSpaceDrills.length).toBeGreaterThan(0);
+    nonSpaceDrills.forEach(drill => {
+      expect(drill.prompt).toBe('ঋ');
+      expect(drill.steps.length).toBe(2);
+      expect(drill.steps[0].display).toBe('্');
+      expect(drill.steps[1].display).toBe('ৃ');
+    });
   });
 });
 

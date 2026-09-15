@@ -1,11 +1,9 @@
-﻿import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
+import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
 import { 
   bengaliSegmenter, 
   isConjunct, 
   parseConjunct,
   isBengaliVowelSign,
-  isBengaliConsonant,
-  isHalant,
   normalizeBengaliString 
 } from "./bengali-grapheme";
 
@@ -206,17 +204,17 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         }
     }
 
-    // Case 4: Is it a consonant + vowel sign combination?
-    const graphemes = bengaliSegmenter.segmentString(normalizedChar);
-    if (graphemes.length > 0) {
-        const lastGrapheme = graphemes[graphemes.length - 1];
-        const isKar = isBengaliVowelSign(lastGrapheme);
+    // Case 4: Is it a base (consonant/conjunct) + vowel sign combination?
+    const codePoints = Array.from(normalizedChar);
+    if (codePoints.length > 1) {
+        const lastChar = codePoints[codePoints.length - 1];
+        const isKar = isBengaliVowelSign(lastChar);
         
-        if (isKar && graphemes.length > 1) {
+        if (isKar) {
             // Reconstruct base without final kar
-            const baseChar = graphemes.slice(0, -1).join('');
-            const baseSteps = getStepsForChar(baseChar); // Recursively get steps for base (could be conjunct)
-            const karKey = findKey(lastGrapheme);
+            const baseChar = codePoints.slice(0, -1).join('');
+            const baseSteps = getStepsForChar(baseChar); // Recursively get steps for base (could be consonant or conjunct)
+            const karKey = findKey(lastChar);
             
             if (baseSteps.length > 0 && karKey) {
                 steps.push(...baseSteps);
@@ -225,8 +223,8 @@ const getStepsForChar = (char: string): SingleDrill[] => {
                     keyCode: karKey.keyCode,
                     fingerPosition: karKey.fingerPosition,
                     fingerName: karKey.fingerName,
-                    shift: karKey.bnShift === lastGrapheme, 
-                    display: lastGrapheme 
+                    shift: !!karKey.bnShift && karKey.bnShift === lastChar, 
+                    display: lastChar 
                 });
                 return steps;
             }
@@ -278,7 +276,7 @@ const getStepsForWord = (word: string): SingleDrill[] => {
     return graphemes.flatMap(char => getStepsForChar(char));
 };
 
-const generateWordDrills = (words: string[]): Drill[] => {
+export const generateWordDrills = (words: string[]): Drill[] => {
     const drills: Drill[] = [];
     const wordPool = [...words];
 

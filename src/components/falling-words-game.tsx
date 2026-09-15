@@ -116,7 +116,7 @@ export default function FallingWordsGame() {
             g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + c.duration);
             o.start(ctx.currentTime);
             o.stop(ctx.currentTime + c.duration);
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
     }, []);
 
     const pauseGame = useCallback(() => {

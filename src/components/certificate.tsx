@@ -2,25 +2,39 @@
 
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Logo } from "./logo";
-import { Award, Download } from "lucide-react";
+import { Award, Download, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { toBengaliNumber } from "@/lib/utils";
 
 interface CertificateProps {
   name: string;
   wpm: number;
   accuracy: number;
+  verificationId?: string;
+  date?: string;
 }
 
-const toBengaliNumber = (num: number | string) => {
-    const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
-    return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
-};
-
-export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
+export default function Certificate({
+  name,
+  wpm,
+  accuracy,
+  verificationId,
+  date,
+}: CertificateProps) {
   const certificateRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Generate deterministic or random verification code if not provided
+  const certId = useMemo(() => {
+    if (verificationId) return verificationId;
+    const rand = Math.floor(100000 + Math.random() * 900000);
+    return `BTP-2026-${rand}`;
+  }, [verificationId]);
+
+  const certDate = date || new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const handleDownload = async () => {
     if (!certificateRef.current) return;
@@ -28,7 +42,7 @@ export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
     try {
       setIsGenerating(true);
       const canvas = await html2canvas(certificateRef.current, {
-        scale: 2, // Higher resolution
+        scale: 2, // Higher resolution for crisp print quality
         useCORS: true,
       });
 
@@ -40,7 +54,7 @@ export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
       });
 
       pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(`${name.replace(/\s+/g, "-") || "certificate"}-certificate.pdf`);
+      pdf.save(`${name.replace(/\s+/g, "-") || "certificate"}-${certId}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
     } finally {
@@ -49,50 +63,87 @@ export default function Certificate({ name, wpm, accuracy }: CertificateProps) {
   };
 
   return (
-    <div className="bg-white text-black p-8 relative">
-        <div ref={certificateRef} className="border-4 border-yellow-500 p-8 space-y-6 relative bg-white">
-            <div className="absolute inset-0 bg-secondary/20 m-2 rounded-lg -z-10"
-                style={{
-                    backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23dcb14a\' fill-opacity=\'0.1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'
-                }}>
-            </div>
+    <div className="bg-white text-black p-4 sm:p-8 relative rounded-xl shadow-lg">
+      <div ref={certificateRef} className="border-8 border-double border-yellow-600 p-6 sm:p-10 space-y-6 relative bg-white rounded-lg">
+        {/* Decorative Background Pattern */}
+        <div
+          className="absolute inset-0 m-2 rounded-lg -z-10 opacity-30 pointer-events-none"
+          style={{
+            backgroundImage:
+              'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23dcb14a\' fill-opacity=\'0.2\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+          }}
+        />
 
-            <div className="text-center space-y-2">
-                <Logo className="justify-center text-3xl" />
-                <h1 className="text-5xl font-bold font-headline text-yellow-600 tracking-wider">সাফল্যের সনদপত্র</h1>
-                <p className="text-lg text-gray-600">CERTIFICATE OF ACHIEVEMENT</p>
-            </div>
-
-            <div className="text-center">
-                <p className="text-lg">এই সনদপত্রটি প্রদান করা হচ্ছে</p>
-                <p className="text-4xl font-semibold font-headline my-4 text-primary">{name}</p>
-            </div>
-            
-            <div className="text-center text-lg">
-                <p>বাংলা টাইপিং এ অসাধারণ দক্ষতা প্রদর্শনের জন্য।</p>
-                <p className="mt-2">তিনি সফলভাবে <span className="font-bold">{toBengaliNumber(wpm)} শব্দ প্রতি মিনিট</span> গতি এবং <span className="font-bold">{toBengaliNumber(accuracy)}% নির্ভুলতা</span> অর্জন করেছেন।</p>
-            </div>
-
-            <div className="flex justify-between items-end pt-8">
-                <div className="text-center">
-                    <p className="border-t-2 border-gray-400 pt-2 font-semibold">তারিখ</p>
-                    <p>{new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                </div>
-                <div className="text-center">
-                   <Award className="h-16 w-16 text-yellow-500 mx-auto" />
-                </div>
-                <div className="text-center">
-                    <p className="border-t-2 border-gray-400 pt-2 font-semibold">কর্তৃপক্ষের স্বাক্ষর</p>
-                    <p className="font-serif italic">Bangla Typing Master</p>
-                </div>
-            </div>
+        {/* Certificate Header */}
+        <div className="text-center space-y-2">
+          <Logo className="justify-center text-3xl" />
+          <h1 className="text-4xl sm:text-5xl font-extrabold font-headline text-yellow-700 tracking-wider">
+            সাফল্যের সনদপত্র
+          </h1>
+          <p className="text-xs sm:text-sm font-semibold tracking-widest text-gray-500 uppercase">
+            CERTIFICATE OF TYPING PROFICIENCY & MASTERY
+          </p>
         </div>
-        <Button id="print-button" onClick={handleDownload} disabled={isGenerating} className="absolute bottom-4 right-4 print:hidden">
-            <Download className="mr-2 h-4 w-4" />
-            {isGenerating ? "ডাউনলোড হচ্ছে..." : "ডাউনলোড (PDF)"}
+
+        {/* Recipient */}
+        <div className="text-center py-2">
+          <p className="text-base text-gray-600">এই সনদপত্রটি সগৌরবে প্রদান করা হচ্ছে</p>
+          <p className="text-3xl sm:text-4xl font-bold font-headline my-3 text-primary border-b-2 border-primary/30 inline-block px-8 pb-1">
+            {name}
+          </p>
+        </div>
+        
+        {/* Body Text */}
+        <div className="text-center text-base sm:text-lg text-gray-800 max-w-2xl mx-auto leading-relaxed">
+          <p>
+            বাংলা কীবোর্ড টাইপিংয়ে অসাধারণ দক্ষতা ও নির্ভুলতার স্বীকৃতিস্বরূপ। তিনি সফলভাবে
+            <span className="font-bold text-gray-950 mx-1.5">{toBengaliNumber(wpm)} WPM</span> গতি এবং
+            <span className="font-bold text-gray-950 mx-1.5">{toBengaliNumber(accuracy)}%</span> নির্ভুলতা অর্জন করেছেন।
+          </p>
+        </div>
+
+        {/* Verification and Signatures Footer */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-6 pt-6 border-t border-gray-200">
+          <div className="text-center sm:text-left space-y-1">
+            <p className="text-xs text-gray-500 font-medium">সনদ আইডি (Verification ID):</p>
+            <p className="font-mono font-bold text-sm text-yellow-800">{certId}</p>
+            <p className="text-xs text-gray-500">তারিখ: {certDate}</p>
+          </div>
+
+          <div className="text-center">
+            <Award className="h-16 w-16 text-yellow-600 mx-auto drop-shadow-sm" />
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mt-1">
+              OFFICIAL VERIFIED
+            </span>
+          </div>
+
+          <div className="text-center sm:text-right space-y-1">
+            <p className="font-serif italic text-lg text-gray-900 border-b border-gray-400 pb-1">Bangla Typing Master</p>
+            <p className="text-xs text-gray-500 font-medium">অনুমোদিত পরীক্ষা কর্তৃপক্ষ</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Bar */}
+      <div className="flex justify-between items-center pt-4 print:hidden">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <ShieldCheck className="h-4 w-4 text-green-600" />
+          <span>যাচাইকরণ লিংক: </span>
+          <Link href={`/verify/${certId}`} className="text-primary underline font-mono">
+            /verify/{certId}
+          </Link>
+        </div>
+
+        <Button
+          id="print-button"
+          onClick={handleDownload}
+          disabled={isGenerating}
+          className="bg-yellow-600 hover:bg-yellow-700 text-white gap-2 font-bold shadow-sm"
+        >
+          <Download className="h-4 w-4" />
+          {isGenerating ? "তৈরি হচ্ছে..." : "ডাউনলোড সনদ (PDF)"}
         </Button>
+      </div>
     </div>
   );
 }
-
-    

@@ -218,7 +218,7 @@ describe('POST /api/user-progress', () => {
 
   it('still saves when the client omits the userId entirely', async () => {
     signedInAs(OWNER);
-    const { userId, ...withoutUserId } = progressBody(OWNER);
+    const { userId: _userId, ...withoutUserId } = progressBody(OWNER);
 
     const res: any = await saveProgress(
       request('http://localhost/api/user-progress', { token: 'owner-token', body: withoutUserId })

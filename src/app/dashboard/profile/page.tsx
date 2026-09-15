@@ -41,30 +41,10 @@ function ProfilePageContent() {
       if (error) throw error;
       
       toast({ title: "সাফল্য!", description: "আপনার প্রোফাইল তথ্য সংরক্ষণ করা হয়েছে।" });
-    } catch (error) {
+    } catch {
       toast({ variant: "destructive", title: "ত্রুটি", description: "প্রোফাইল তথ্য সংরক্ষণ করা যায়নি।" });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleSettingsSave = async () => {
-    if (!user) return;
-    setIsSaving(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          keyboard_layout: keyboardLayout,
-        }
-      });
-
-      if (error) throw error;
-      
-      toast({ title: "সাফল্য!", description: "আপনার কীবোর্ড সেটিংস সংরক্ষণ করা হয়েছে।" });
-    } catch (error) {
-       toast({ variant: "destructive", title: "ত্রুটি", description: "সেটিংস সংরক্ষণ করা যায়নি।" });
-    } finally {
-        setIsSaving(false);
     }
   };
 

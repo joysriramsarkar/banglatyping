@@ -5,20 +5,17 @@ import * as React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useTimer } from "@/hooks/use-timer";
-import { cn } from "@/lib/utils";
 import TestResults from "@/components/test-results";
 import { generateDrills as generateDrillsFromLib } from "@/lib/lessons";
 import { useRouter } from 'next/navigation';
 import type { Drill, ErredCharacter } from "@/lib/types";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
-import { getKeyboardLayoutConfig } from "@/lib/keyboard-layouts";
-import { useAuth } from '@/hooks/use-auth';
+import { getKeyboardLayoutConfig, findKeyInfoForChar } from "@/lib/keyboard-layouts";
 import { DrillProgress } from "./DrillProgress";
 import { DrillPromptDisplay } from "./DrillPromptDisplay";
 
 export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
-    const { user } = useAuth();
     const [drills, setDrills] = useState<Drill[]>(initialDrills);
     const [drillState, setDrillState] = useState({
         currentDrillIndex: 0,
@@ -169,9 +166,13 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         //   B) be combined silently with the next consonant
         // We accept all three valid scenarios:
         const HASANTA = '\u09CD';
-        if (currentDrillStep.display === HASANTA) {
+        const normInput = (inputChar || '').normalize('NFC');
+        const normStep = (currentDrillStep.display || '').normalize('NFC');
+
+        if (normStep === HASANTA) {
             const nextStep = currentDrill.steps[currentStepIndex + 1];
-            if (inputChar === HASANTA) {
+            const normNext = nextStep ? nextStep.display.normalize('NFC') : null;
+            if (normInput === HASANTA) {
                 // Case A: User typed হসন্ত directly — accept and advance one step
                 setTotalCharsTyped(prev => prev + 1);
                 setDrillState(prev => {
@@ -183,7 +184,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                     }
                     return { ...prev, currentStepIndex: newStepIndex, status: 'pending' };
                 });
-            } else if (nextStep && inputChar === nextStep.display) {
+            } else if (normNext && normInput === normNext) {
                 // Case B: BanglaWord silently combined ্ with next char — accept both
                 setTotalCharsTyped(prev => prev + 2);
                 setDrillState(prev => {
@@ -195,7 +196,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                     }
                     return { ...prev, currentStepIndex: newStepIndex, status: 'pending' };
                 });
-            } else if (!nextStep && inputChar === ' ') {
+            } else if (!normNext && normInput === ' ') {
                 // Case C: ্ is the last step — space makes it visible, accept it
                 setTotalCharsTyped(prev => prev + 1);
                 setDrillState(prev => {
@@ -209,8 +210,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         }
 
         // Compare IME output directly with expected Bengali character
-        const expectedChar = currentDrillStep.display;
-        const isCorrect = inputChar === expectedChar;
+        const isCorrect = normInput === normStep;
 
         if (isCorrect) {
             setTotalCharsTyped(prev => prev + 1);
@@ -225,7 +225,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         } else {
             handleIncorrect();
         }
-    }, [isSessionOver, isFinished, drills, drillState, currentDrill, currentDrillStep, erredCharacters, isActive, isPaused, pause, resume, startDrill, resetInactivityTimer]);
+    }, [isFinished, drills, currentDrill, currentDrillStep, currentStepIndex, erredCharacters, isActive, isPaused, resume, startDrill, resetInactivityTimer]);
 
     const hiddenInputRef = useRef<HTMLInputElement>(null);
 
@@ -234,6 +234,19 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     }, [isFinished]);
 
     const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Special handling for Hasanta (্) / Reph / Conjuncts
+        const isExpectingHasanta = currentDrillStep?.display === '্' || currentDrillStep?.key === '্';
+        const isHasantaKey =
+            e.key === '্' ||
+            (e.code === 'KeyH' && !e.shiftKey) ||
+            (e.key === 'Dead' && e.code === 'KeyH');
+
+        if (isExpectingHasanta && isHasantaKey) {
+            e.preventDefault();
+            handleKeyPress('্');
+            return;
+        }
+
         const skipKeys = ['Shift','Control','Alt','Meta','CapsLock','Tab','Escape','Dead',
                           'ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',
                           'Backspace','Delete','Home','End','PageUp','PageDown',
@@ -248,26 +261,25 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
             return;
         }
 
-        // e.key from keydown can be the Latin key name ('H', 'k') when BanglaWord
-        // operates via the Windows IME layer. Instead, we look up the physical key
-        // (e.code + e.shiftKey) in our own BanglaWord layout config to reliably
-        // obtain the correct Bengali character.
-        // Note: layout.space is excluded intentionally (handled above).
-        const layout = getKeyboardLayoutConfig('BanglaWord');
-        const allKeys = [...layout.top, ...layout.home, ...layout.bottom];
-        const keyEntry = allKeys.find(k => k.keyCode === e.code);
-
+        // Check if e.key is already a direct Bengali character (from OS IME / Avro / Bijoy / etc.)
         let bengaliChar: string;
-        if (keyEntry) {
-            // Use layout config to get the Bengali character for this physical key
-            bengaliChar = e.shiftKey ? (keyEntry.bnShift ?? keyEntry.bn) : keyEntry.bn;
-        } else {
-            // Unknown key — fall back to e.key (works for direct-layout setups)
+        if (e.key && e.key.length === 1 && e.key >= '\u0980' && e.key <= '\u09FF') {
             bengaliChar = e.key;
+        } else {
+            // Otherwise translate from physical key (e.code + e.shiftKey) in our layout config
+            const layout = getKeyboardLayoutConfig('BanglaWord');
+            const allKeys = [...layout.top, ...layout.home, ...layout.bottom];
+            const keyEntry = allKeys.find(k => k.keyCode === e.code);
+
+            if (keyEntry) {
+                bengaliChar = e.shiftKey ? (keyEntry.bnShift ?? keyEntry.bn) : keyEntry.bn;
+            } else {
+                bengaliChar = e.key;
+            }
         }
 
         handleKeyPress(bengaliChar);
-    }, [handleKeyPress]);
+    }, [handleKeyPress, currentDrillStep]);
 
 
     const resetDrill = useCallback(() => {
@@ -314,9 +326,9 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     }
 
     return (
-        <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-full mx-auto">
-            <div className="flex flex-col md:flex-row gap-8">
-                <div className="w-full md:w-2/3 space-y-4">
+        <div className="p-4 sm:p-6 md:p-8 rounded-2xl bg-secondary/30 border w-full mx-auto shadow-xs">
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+                <div className="flex-1 w-full min-w-0 space-y-5">
                     {/* Hidden input for IME Bengali input capture */}
                     <input
                         ref={hiddenInputRef}
@@ -336,10 +348,12 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                     <SimplifiedKeyboard
                         highlightKeyCode={currentDrillStep?.keyCode}
                         needsShift={!!currentDrillStep?.shift}
+                        resolvedKeyInfo={currentDrillStep?.display ? findKeyInfoForChar(currentDrillStep.display) : null}
+                        showFingerGuide={true}
                     />
 
                 </div>
-                <div className="w-full md:w-1/3 space-y-4">
+                <div className="w-full lg:w-80 xl:w-88 shrink-0 space-y-4">
                     <DrillProgress
                         wpmHistory={wpmHistory}
                         timeLeft={timeLeft}
@@ -347,7 +361,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                         currentAccuracy={totalCharsTyped > 0 ? Math.round(((totalCharsTyped - totalErrors) / totalCharsTyped) * 100) : 100}
                     />
                      <div className="flex justify-end gap-2 mt-4">
-                        <Button onClick={() => router.push('/dashboard/lessons')} variant="destructive">অনুশীলন বাতিল করুন</Button>
+                        <Button onClick={() => router.push('/dashboard/lessons')} variant="destructive" className="w-full sm:w-auto">অনুশীলন বাতিল করুন</Button>
                     </div>
                 </div>
             </div>

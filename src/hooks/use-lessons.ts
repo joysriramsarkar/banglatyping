@@ -1,5 +1,4 @@
-// Hook for managing lessons from database
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api-client';
 import type { Lesson, Drill } from '@/lib/types';
 
@@ -207,7 +206,7 @@ export function useCustomDrills(userId: string | null) {
   const [loading, setLoading] = useState(!!userId);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCustomDrills = async () => {
+  const fetchCustomDrills = useCallback(async () => {
     if (!userId) {
       setDrills([]);
       setLoading(false);
@@ -232,11 +231,11 @@ export function useCustomDrills(userId: string | null) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     fetchCustomDrills();
-  }, [userId]);
+  }, [fetchCustomDrills]);
 
   const generateCustomDrill = async (threshold?: number) => {
     if (!userId) return null;

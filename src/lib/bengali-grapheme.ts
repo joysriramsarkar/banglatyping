@@ -249,3 +249,140 @@ export const COMPLEX_CONJUNCT_MAP: Record<string, { components: string[]; descri
   'স্ট': { components: ['স', '্', 'ট'], description: 'Sa-Ta conjunct' },
   'স্থ': { components: ['স', '্', 'থ'], description: 'Sa-Tha conjunct' },
 };
+
+/**
+ * Vowel to Kar mapping for independent vowels formed with hasant (্) in BanglaWord / Bijoy
+ */
+export const VOWEL_TO_KAR_MAP: Record<string, string> = {
+  'আ': 'া',
+  'ই': 'ি',
+  'ঈ': 'ী',
+  'উ': 'ু',
+  'ঊ': 'ূ',
+  'ঋ': 'ৃ',
+  'এ': 'ে',
+  'ঐ': 'ৈ',
+  'ও': 'ো',
+  'ঔ': 'ৌ',
+};
+
+/**
+ * Kar to Independent Vowel mapping when preceded by hasant (্)
+ */
+export const KAR_TO_VOWEL_MAP: Record<string, string> = {
+  'া': 'আ',
+  'ি': 'ই',
+  'ী': 'ঈ',
+  'ু': 'উ',
+  'ূ': 'ঊ',
+  'ৃ': 'ঋ',
+  'ে': 'এ',
+  'ৈ': 'ঐ',
+  'ো': 'ও',
+  'ৌ': 'ঔ',
+};
+
+/**
+ * Short to Long vowel mapping for repeated Kar / vowel extension in BanglaWord
+ * e.g. 'ই' + 'ি' / 'ী' -> 'ঈ', 'উ' + 'ু' / 'ূ' -> 'ঊ', 'এ' + 'ে' / 'ৈ' -> 'ঐ', 'ও' + 'ো' / 'ৌ' -> 'ঔ'
+ */
+export const SHORT_TO_LONG_VOWEL_MAP: Record<string, { kars: string[]; longVowel: string }> = {
+  'ই': { kars: ['ি', 'ী'], longVowel: 'ঈ' },
+  'উ': { kars: ['ু', 'ূ'], longVowel: 'ঊ' },
+  'এ': { kars: ['ে', 'ৈ'], longVowel: 'ঐ' },
+  'ও': { kars: ['ো', 'ৌ'], longVowel: 'ঔ' },
+};
+
+/**
+ * Compose incoming keystroke with the current typing buffer according to direct character input.
+ * Supports BanglaWord Hasanta (্) + Kar -> Independent Vowel composition, and short-to-long vowel extensions.
+ */
+export function composeBengaliKeystroke(currentBuffer: string, newChar: string): string {
+  if (!newChar) return currentBuffer;
+
+  // Case 1: Buffer is '্' (or ends with space + '্') and user typed a Kar (া, ি, ী, ু, ূ, ৃ, ে, ৈ, ো, ৌ)
+  // In BanglaWord, '্' + Kar transforms into an independent vowel
+  if (
+    (currentBuffer === '্' || currentBuffer.endsWith(' ্')) &&
+    KAR_TO_VOWEL_MAP[newChar]
+  ) {
+    const prefix = currentBuffer.slice(0, -1);
+    return (prefix + KAR_TO_VOWEL_MAP[newChar]).normalize('NFC');
+  }
+
+  // Case 2: Buffer ends with '্' and newChar is an independent vowel (from OS dead-key completion)
+  if (
+    (currentBuffer === '্' || currentBuffer.endsWith(' ্')) &&
+    isBengaliVowel(newChar)
+  ) {
+    const prefix = currentBuffer.slice(0, -1);
+    return (prefix + newChar).normalize('NFC');
+  }
+
+  // Case 3: Short to long vowel extension (e.g. 'ই' + 'ি'/'ী' -> 'ঈ', 'উ' + 'ু'/'ূ' -> 'ঊ')
+  if (currentBuffer.length > 0) {
+    const lastChar = currentBuffer[currentBuffer.length - 1];
+    const mapping = SHORT_TO_LONG_VOWEL_MAP[lastChar];
+    if (mapping && mapping.kars.includes(newChar)) {
+      return (currentBuffer.slice(0, -1) + mapping.longVowel).normalize('NFC');
+    }
+  }
+
+  return (currentBuffer + newChar).normalize('NFC');
+}
+
+/**
+ * Check if the current typed buffer is a valid prefix of the target string.
+ * Supports pending Hasanta (্) when next target character is an independent vowel in BanglaWord.
+ */
+export function isValidBengaliTypingPrefix(buffer: string, target: string): boolean {
+  if (!buffer) return true;
+  if (!target) return false;
+
+  const normBuffer = normalizeBengaliString(buffer);
+  const normTarget = normalizeBengaliString(target);
+
+  if (normTarget.startsWith(normBuffer)) {
+    return true;
+  }
+
+  // If buffer ends with '্' at word/buffer start, check if target has an independent vowel that starts with '্'
+  if (normBuffer === '্' || normBuffer.endsWith(' ্')) {
+    const prefix = normBuffer.slice(0, -1);
+    if (normTarget.startsWith(prefix)) {
+      const nextCharInTarget = normTarget.slice(prefix.length, prefix.length + 1);
+      if (VOWEL_TO_KAR_MAP[nextCharInTarget]) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Determine the next expected single Bengali character in the target string.
+ */
+export function getNextExpectedKeyChar(buffer: string, target: string): string {
+  if (!target) return '';
+  if (buffer === target) return '';
+
+  const normBuffer = normalizeBengaliString(buffer);
+  const normTarget = normalizeBengaliString(target);
+
+  if (normTarget.startsWith(normBuffer)) {
+    return normTarget.slice(normBuffer.length, normBuffer.length + 1) || '';
+  }
+
+  // If buffer is '্' and target starts with an independent vowel
+  if (normBuffer === '্' || normBuffer.endsWith(' ্')) {
+    const prefix = normBuffer.slice(0, -1);
+    if (normTarget.startsWith(prefix)) {
+      const nextCharInTarget = normTarget.slice(prefix.length, prefix.length + 1);
+      return VOWEL_TO_KAR_MAP[nextCharInTarget] || nextCharInTarget;
+    }
+  }
+
+  return normTarget[0] || '';
+}
+

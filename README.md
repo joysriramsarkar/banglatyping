@@ -10,14 +10,14 @@ Supabase.
 ## Getting started
 
 ```bash
-# 1. Install (the repo is pinned to pnpm via the "packageManager" field)
-pnpm install
+# 1. Install dependencies
+npm install
 
 # 2. Configure credentials
 cp .env.example .env.local     # then fill in your Supabase values
 
 # 3. Run
-pnpm dev                       # http://localhost:9002
+npm run dev                    # http://localhost:3000
 ```
 
 `.env.example` documents the three variables the app needs. The two
@@ -41,27 +41,27 @@ those policies.
 Then seed the lesson content:
 
 ```bash
-pnpm db:seed        # imports the lessons from src/lib/lessons.ts
-pnpm db:check       # sanity check: prints the lesson count
-pnpm db:check-rls   # confirms what the anon key can and cannot read
+npm run db:seed        # imports the lessons from src/lib/lessons.ts
+npm run db:check       # sanity check: prints the lesson count
+npm run db:check-rls   # confirms what the anon key can and cannot read
 ```
 
 ## Scripts
 
 | Command | What it does |
 | --- | --- |
-| `pnpm dev` | Dev server on port 9002 |
-| `pnpm build` | Production build |
-| `pnpm start` | Serve the production build |
-| `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm lint` | ESLint |
-| `pnpm lint:fix` | ESLint with autofix |
-| `pnpm test` | Jest |
-| `pnpm test:coverage` | Jest with a coverage report |
-| `pnpm test:ci` | What CI runs: tests + coverage against the threshold |
-| `pnpm db:seed` | Seed lesson data |
-| `pnpm db:check` | Print the lesson count from the database |
-| `pnpm db:check-rls` | Compare what the service and anon keys can read |
+| `npm run dev` | Dev server on port 3000 |
+| `npm run build` | Production build |
+| `npm run start` | Serve the production build on port 3000 |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run lint:fix` | ESLint with autofix |
+| `npm test` | Jest |
+| `npm run test:coverage` | Jest with a coverage report |
+| `npm run test:ci` | What CI runs: tests + coverage against the threshold |
+| `npm run db:seed` | Seed lesson data |
+| `npm run db:check` | Print the lesson count from the database |
+| `npm run db:check-rls` | Compare what the service and anon keys can read |
 
 ## How API authentication works
 

@@ -8,8 +8,7 @@ import { PlayCircle, ArrowLeft } from 'lucide-react';
 import type { Lesson } from '@/lib/types';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+import { cn, toBengaliNumber } from '@/lib/utils';
 
 
 const accuracyLevels = [
@@ -66,7 +65,7 @@ export default function RowDrillPage() {
                                      )}
                                 >
                                     <span className="text-xl font-bold">{level.label}</span>
-                                    <span className="text-sm text-muted-foreground">{level.value}%</span>
+                                    <span className="text-sm font-semibold text-primary">{toBengaliNumber(level.value)}%</span>
                                     <span className="text-xs text-muted-foreground text-center mt-2">{level.description}</span>
                                 </div>
                             ))}

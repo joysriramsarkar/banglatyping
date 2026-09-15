@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -11,24 +10,25 @@ import { Logo } from "@/components/logo";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/db";
+import { ArrowLeft, PlayCircle } from "lucide-react";
 
 const GoogleIcon = () => (
-    <svg className="h-5 w-5" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-        <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-67.7 67.7C314.6 114.5 283.5 104 248 104c-73.8 0-134.3 60.3-134.3 134.3s60.5 134.3 134.3 134.3c81.5 0 115.7-60.2 120.3-91.2H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path>
-    </svg>
+  <svg className="h-5 w-5" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+    <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-67.7 67.7C314.6 114.5 283.5 104 248 104c-73.8 0-134.3 60.3-134.3 134.3s60.5 134.3 134.3 134.3c81.5 0 115.7-60.2 120.3-91.2H248v-85.3h236.1c2.3 12.7 3.9 26.9 3.9 41.4z"></path>
+  </svg>
 );
 
 const FacebookIcon = () => (
-    <svg className="h-5 w-5" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-        <path fill="currentColor" d="M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z"></path>
-    </svg>
+  <svg className="h-5 w-5" aria-hidden="true" focusable="false" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <path fill="currentColor" d="M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z"></path>
+  </svg>
 );
 
 const MicrosoftIcon = () => (
-    <svg className="h-5 w-5" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <title>Microsoft</title>
-      <path fill="currentColor" d="M11.4 22.2h-10v-10h10v10zm0-11.6h-10v-10h10v10zm11.2 11.6h-10v-10h10v10zm0-11.6h-10v-10h10v10z"/>
-    </svg>
+  <svg className="h-5 w-5" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <title>Microsoft</title>
+    <path fill="currentColor" d="M11.4 22.2h-10v-10h10v10zm0-11.6h-10v-10h10v10zm11.2 11.6h-10v-10h10v10zm0-11.6h-10v-10h10v10z" />
+  </svg>
 );
 
 export default function LoginPage() {
@@ -45,9 +45,9 @@ export default function LoginPage() {
     const password = formData.get("password") as string;
 
     if (!email || !password) {
-        toast({ variant: "destructive", title: "ত্রুটি", description: "অনুগ্রহ করে ইমেল এবং পাসওয়ার্ড দিন।" });
-        setIsLoading(false);
-        return;
+      toast({ variant: "destructive", title: "ত্রুটি", description: "অনুগ্রহ করে ইমেল এবং পাসওয়ার্ড দিন।" });
+      setIsLoading(false);
+      return;
     }
 
     try {
@@ -78,7 +78,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleOAuthLogin = async (providerName: 'google' | 'facebook' | 'azure') => {
+  const handleOAuthLogin = async (providerName: "google" | "facebook" | "azure") => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -96,49 +96,68 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary/50 p-4">
-      <Card className="w-full max-w-sm mx-auto">
-        <CardHeader className="text-center">
-          <Logo className="justify-center mb-2"/>
-          <CardTitle className="text-2xl">স্বাগতম!</CardTitle>
-          <CardDescription>আপনার অ্যাকাউন্টে লগইন করুন</CardDescription>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-secondary/30 p-4 relative">
+      {/* Top Back Button */}
+      <div className="absolute top-6 left-6">
+        <Button asChild variant="ghost" size="sm" className="gap-2 font-semibold text-muted-foreground hover:text-foreground">
+          <Link href="/">
+            <ArrowLeft className="h-4 w-4" /> হোমে ফিরে যান
+          </Link>
+        </Button>
+      </div>
+
+      <Card className="w-full max-w-sm mx-auto shadow-md border bg-card">
+        <CardHeader className="text-center pb-4">
+          <Logo className="justify-center mb-2" />
+          <CardTitle className="text-2xl font-bold font-headline">লগইন করুন</CardTitle>
+          <CardDescription className="text-xs">আপনার অগ্রগতির হিসাব রাখতে অ্যাকাউন্টে প্রবেশ করুন</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">ইমেল</Label>
+        <CardContent className="space-y-4">
+          <form onSubmit={handleLogin} className="grid gap-3.5">
+            <div className="grid gap-1.5 text-left">
+              <Label htmlFor="email" className="text-xs font-semibold">ইমেল</Label>
               <Input id="email" name="email" type="email" placeholder="email@example.com" required disabled={isLoading} />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">পাসওয়ার্ড</Label>
+            <div className="grid gap-1.5 text-left">
+              <Label htmlFor="password" className="text-xs font-semibold">পাসওয়ার্ড</Label>
               <Input id="password" name="password" type="password" required disabled={isLoading} />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-primary text-primary-foreground font-bold mt-1" disabled={isLoading}>
               {isLoading ? "লোড হচ্ছে..." : "লগইন করুন"}
             </Button>
-            <div className="relative">
+            <div className="relative my-1">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">অথবা</span>
+                <span className="bg-card px-2 text-muted-foreground">অথবা</span>
               </div>
             </div>
-            <div className="flex justify-center gap-4">
-              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('google')} disabled={isLoading} aria-label="Google দিয়ে লগইন করুন">
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin("google")} disabled={isLoading} aria-label="Google দিয়ে লগইন করুন">
                 <GoogleIcon />
               </Button>
-              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('facebook')} disabled={isLoading} aria-label="Facebook দিয়ে লগইন করুন">
+              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin("facebook")} disabled={isLoading} aria-label="Facebook দিয়ে লগইন করুন">
                 <FacebookIcon />
               </Button>
-              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin('azure')} disabled={isLoading} aria-label="Microsoft দিয়ে লগইন করুন">
+              <Button variant="outline" type="button" size="icon" onClick={() => handleOAuthLogin("azure")} disabled={isLoading} aria-label="Microsoft দিয়ে লগইন করুন">
                 <MicrosoftIcon />
               </Button>
             </div>
           </form>
-          <div className="mt-4 text-center text-sm">
+
+          {/* Guest Direct Practice option */}
+          <div className="pt-2 border-t space-y-2">
+            <Button asChild variant="secondary" className="w-full text-xs font-bold gap-2">
+              <Link href="/dashboard/lessons">
+                <PlayCircle className="h-4 w-4 text-primary" /> লগইন ছাড়া গেস্ট হিসেবে অনুশীলন করুন
+              </Link>
+            </Button>
+          </div>
+
+          <div className="text-center text-xs text-muted-foreground pt-1">
             কোনো অ্যাকাউন্ট নেই?{" "}
-            <Link href="/signup" className="underline">
+            <Link href="/signup" className="underline font-bold text-primary">
               সাইন আপ করুন
             </Link>
           </div>

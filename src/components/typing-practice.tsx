@@ -11,7 +11,6 @@ import { cn, toBengaliNumber } from "@/lib/utils";
 import TestResults from "./test-results";
 import { practiceParagraphs } from "@/lib/lessons";
 import { useRouter } from 'next/navigation';
-import type { Drill } from "@/lib/types";
 import VirtualizedWordDisplay from "@/components/VirtualizedWordDisplay";
 
 // Import Refactored Components
@@ -50,7 +49,7 @@ export default function TypingPractice({
   accuracyGoal = 95,
 }: TypingPracticeProps) {
   // Use the centralized typing state management hook
-  const { state, handleBackspace, handleSpace, navigate, calculateStats, finish, reset, getCurrentInput, getCurrentWord, getWordClass, isError, inputChar, setCurrentInput, getVisibleWords } = useTypingPractice({
+  const { state, handleBackspace, handleSpace, navigate, calculateStats, finish, reset, getCurrentInput, getCurrentWord, getWordClass, isError, setCurrentInput, getVisibleWords } = useTypingPractice({
     initialText,
     isPracticeDrill,
   });
@@ -89,8 +88,9 @@ export default function TypingPractice({
 
   const finishSession = useCallback(() => {
     if (state.isFinished) return;
-    finish();
-    calculateStats(time);
+    const finalTime = Math.max(time, 1);
+    calculateStats(finalTime);
+    finish(finalTime);
     pause();
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
@@ -130,8 +130,9 @@ export default function TypingPractice({
       if (state.isFinished) return;
 
       // Start timer if not active
-      if (!isActive && !isPaused) start();
-      if (isPaused && isActive) {
+      if (!isActive) {
+        start();
+      } else if (isPaused) {
         resume();
       }
 
@@ -275,9 +276,21 @@ export default function TypingPractice({
   const isInputError = useMemo(() => isError(), [isError]);
 
   if (state.isFinished) {
+    const timeElapsed = Math.max(time, 1);
+    const grossWpm = Math.round(((state.totalChars / 5) / (timeElapsed / 60)));
+    const cpm = Math.round((state.totalChars / (timeElapsed / 60)));
+
     return (
       <TestResults
-        stats={{ wpm: state.wpm, accuracy: state.accuracy, errors: state.totalErrors, timeElapsed: time }}
+        stats={{
+          wpm: state.wpm,
+          accuracy: state.accuracy,
+          errors: state.totalErrors,
+          timeElapsed: time,
+          grossWpm,
+          cpm,
+          uncorrectedErrors: state.totalErrors,
+        }}
         onRestart={() => resetTest(!timeLimit)}
         lessonId={lessonId}
         isDrill={isPracticeDrill}
@@ -289,7 +302,7 @@ export default function TypingPractice({
   const textDisplayFontSize = 'text-3xl';
 
   return (
-    <div className="space-y-6 flex flex-col items-center w-full max-w-4xl mx-auto">
+    <div className="space-y-6 flex flex-col items-center w-full max-w-6xl 2xl:max-w-7xl mx-auto">
       {/* Hidden input for capturing keystrokes */}
       <input
         ref={hiddenInputRef}
@@ -297,8 +310,11 @@ export default function TypingPractice({
         className="absolute -left-full"
         value={normalizedInput}
         onChange={(e) => {
-          if (!isActive && !isPaused) start();
-          else if (isPaused && isActive) resume();
+          if (!isActive) {
+            start();
+          } else if (isPaused) {
+            resume();
+          }
           resetInactivityTimer();
           setCurrentInput(e.target.value);
         }}
@@ -321,8 +337,8 @@ export default function TypingPractice({
       {/* Stats Display Card */}
       <Card className="w-full">
         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
-          <StatDisplay icon={Zap} value={state.wpm} label="WPM" />
-          <StatDisplay icon={Target} value={`${state.accuracy}%`} label="নির্ভুলতা" />
+          <StatDisplay icon={Zap} value={toBengaliNumber(state.wpm)} label="WPM" />
+          <StatDisplay icon={Target} value={`${toBengaliNumber(state.accuracy)}%`} label="নির্ভুলতা" />
           <StatDisplay
             icon={Timer}
             value={

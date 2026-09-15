@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTimer } from "@/hooks/use-timer";
-import type { Drill, ErredCharacter } from "@/lib/types";
+import type { Drill } from "@/lib/types";
 import { generateDrills as generateDrillsFromLib } from "@/lib/lessons";
 
 interface DrillState {

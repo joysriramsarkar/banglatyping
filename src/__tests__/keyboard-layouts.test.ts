@@ -11,6 +11,14 @@ describe('keyboard layout helpers', () => {
   it('returns the expected Bengali labels for each layout', () => {
     expect(getKeyboardLayoutConfig('avro').home[0].bn).toBe('া');
     expect(getKeyboardLayoutConfig('bijoy').home[0].bn).toBe('অ');
-    expect(getKeyboardLayoutConfig('banglaword').home[0].bn).toBe('অ');
+    expect(getKeyboardLayoutConfig('banglaword').home[0].bn).toBe('া');
+  });
+
+  it('includes Backslash key mapped to ri-kar (ৃ) in banglaword layout', () => {
+    const layout = getKeyboardLayoutConfig('banglaword');
+    const backslash = layout.top.find(k => k.keyCode === 'Backslash');
+    expect(backslash).toBeDefined();
+    expect(backslash?.bn).toBe('ৃ');
+    expect(backslash?.bnShift).toBe('ঞ');
   });
 });

@@ -85,9 +85,9 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get('userId');
-    const lessonId = request.nextUrl.searchParams.get('lessonId');
-    const limit = parseInt(request.nextUrl.searchParams.get('limit') || '50');
-    const offset = parseInt(request.nextUrl.searchParams.get('offset') || '0');
+    const _lessonId = request.nextUrl.searchParams.get('lessonId');
+    const _limit = parseInt(request.nextUrl.searchParams.get('limit') || '50');
+    const _offset = parseInt(request.nextUrl.searchParams.get('offset') || '0');
 
     if (!userId) {
       return NextResponse.json(

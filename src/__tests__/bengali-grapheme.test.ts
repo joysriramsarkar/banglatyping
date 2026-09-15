@@ -8,18 +8,23 @@ import {
   isConjunct,
   normalizeBengaliString,
   parseConjunct,
+  composeBengaliKeystroke,
+  isValidBengaliTypingPrefix,
+  getNextExpectedKeyChar,
+  VOWEL_TO_KAR_MAP as _VOWEL_TO_KAR_MAP,
+  KAR_TO_VOWEL_MAP as _KAR_TO_VOWEL_MAP,
 } from '@/lib/bengali-grapheme';
 
 // Bengali Unicode constants
 const KA = '\u0995';       // ক
-const SHA = '\u09B7';      // ষ
+const _SHA = '\u09B7';      // ষ
 const KSA = '\u0995\u09CD\u09B7'; // ক্ষ (conjunct)
 const HASANTA = '\u09CD';  // ্ (Bengali)
 const DEVANAGARI_VIRAMA = '\u094D'; // ् (Devanagari - should NOT match)
 const AA_KAR = '\u09BE';   // া
 const I_KAR = '\u09BF';    // ি
-const AA_VOWEL = '\u0986'; // আ
-const KA_AA = '\u0995\u09BE'; // কা
+const _AA_VOWEL = '\u0986'; // আ
+const _KA_AA = '\u0995\u09BE'; // কা
 
 describe('BengaliSegmenter', () => {
   const segmenter = new BengaliSegmenter();
@@ -195,5 +200,94 @@ describe('parseConjunct', () => {
     const result = parseConjunct('');
     expect(result.consonants).toHaveLength(0);
     expect(result.trailingKar).toBeNull();
+  });
+});
+
+describe('composeBengaliKeystroke', () => {
+  it('concatenates and normalizes Bengali characters directly', () => {
+    expect(composeBengaliKeystroke('', 'আ')).toBe('আ');
+    expect(composeBengaliKeystroke('আ', 'ম')).toBe('আম');
+    expect(composeBengaliKeystroke('ক', '্')).toBe('ক্');
+    expect(composeBengaliKeystroke('ক্', 'ত')).toBe('ক্ত');
+    expect(composeBengaliKeystroke('কীর্ত', 'ি')).toBe('কীর্তি');
+  });
+
+  it('composes Hasanta + Kar into independent vowels in BanglaWord', () => {
+    expect(composeBengaliKeystroke('্', 'া')).toBe('আ');
+    expect(composeBengaliKeystroke('্', 'ি')).toBe('ই');
+    expect(composeBengaliKeystroke('্', 'ী')).toBe('ঈ');
+    expect(composeBengaliKeystroke('্', 'ু')).toBe('উ');
+    expect(composeBengaliKeystroke('্', 'ূ')).toBe('ঊ');
+    expect(composeBengaliKeystroke('্', 'ে')).toBe('এ');
+    expect(composeBengaliKeystroke('্', 'ৈ')).toBe('ঐ');
+    expect(composeBengaliKeystroke('্', 'ো')).toBe('ও');
+    expect(composeBengaliKeystroke('্', 'ৌ')).toBe('ঔ');
+  });
+
+  it('handles OS dead-key resolution where Hasanta is followed by independent vowel', () => {
+    expect(composeBengaliKeystroke('্', 'আ')).toBe('আ');
+    expect(composeBengaliKeystroke('্', 'ই')).toBe('ই');
+    expect(composeBengaliKeystroke('্', 'ঈ')).toBe('ঈ');
+  });
+
+  it('handles short-to-long vowel extensions', () => {
+    expect(composeBengaliKeystroke('ই', 'ি')).toBe('ঈ');
+    expect(composeBengaliKeystroke('ই', 'ী')).toBe('ঈ');
+    expect(composeBengaliKeystroke('উ', 'ু')).toBe('ঊ');
+  });
+});
+
+describe('isValidBengaliTypingPrefix', () => {
+  it('accepts valid direct prefixes of targets', () => {
+    expect(isValidBengaliTypingPrefix('আ', 'আ')).toBe(true);
+    expect(isValidBengaliTypingPrefix('ঈ', 'ঈ')).toBe(true);
+    expect(isValidBengaliTypingPrefix('আ', 'আম')).toBe(true);
+    expect(isValidBengaliTypingPrefix('আম', 'আম')).toBe(true);
+    expect(isValidBengaliTypingPrefix('ক', 'কা')).toBe(true);
+    expect(isValidBengaliTypingPrefix('ক', 'ক্ত')).toBe(true);
+    expect(isValidBengaliTypingPrefix('ক্', 'ক্ত')).toBe(true);
+    expect(isValidBengaliTypingPrefix('কীর্', 'কীর্তি')).toBe(true);
+  });
+
+  it('accepts pending Hasanta for independent vowels in BanglaWord', () => {
+    expect(isValidBengaliTypingPrefix('্', 'আ')).toBe(true);
+    expect(isValidBengaliTypingPrefix('্', 'আম')).toBe(true);
+    expect(isValidBengaliTypingPrefix('্', 'ইট')).toBe(true);
+    expect(isValidBengaliTypingPrefix('্', 'ঈদ')).toBe(true);
+    expect(isValidBengaliTypingPrefix('আজকের ্', 'আজকের আলো')).toBe(true);
+  });
+
+  it('rejects mismatching prefixes', () => {
+    expect(isValidBengaliTypingPrefix('খ', 'ক')).toBe(false);
+    expect(isValidBengaliTypingPrefix('ব', 'কলম')).toBe(false);
+    expect(isValidBengaliTypingPrefix('ই', 'ঈ')).toBe(false);
+    expect(isValidBengaliTypingPrefix('্', 'কলম')).toBe(false);
+  });
+});
+
+describe('getNextExpectedKeyChar', () => {
+  it('returns next expected character directly from target string', () => {
+    expect(getNextExpectedKeyChar('', 'ঈ')).toBe('ঈ');
+    expect(getNextExpectedKeyChar('', 'আ')).toBe('আ');
+    expect(getNextExpectedKeyChar('', 'অ')).toBe('অ');
+    expect(getNextExpectedKeyChar('', 'ক')).toBe('ক');
+    expect(getNextExpectedKeyChar('ক', 'কা')).toBe('া');
+    expect(getNextExpectedKeyChar('আ', 'আম')).toBe('ম');
+    expect(getNextExpectedKeyChar('ক', 'ক্ত')).toBe('্');
+    expect(getNextExpectedKeyChar('ক্', 'ক্ত')).toBe('ত');
+    expect(getNextExpectedKeyChar('কীর্', 'কীর্তি')).toBe('ত');
+  });
+
+  it('returns corresponding Kar when buffer has pending Hasanta for independent vowel', () => {
+    expect(getNextExpectedKeyChar('্', 'আ')).toBe('া');
+    expect(getNextExpectedKeyChar('্', 'আম')).toBe('া');
+    expect(getNextExpectedKeyChar('্', 'ইট')).toBe('ি');
+    expect(getNextExpectedKeyChar('্', 'ঈদ')).toBe('ী');
+  });
+
+  it('returns empty string when input is fully matched', () => {
+    expect(getNextExpectedKeyChar('ঈ', 'ঈ')).toBe('');
+    expect(getNextExpectedKeyChar('কা', 'কা')).toBe('');
+    expect(getNextExpectedKeyChar('কীর্তি', 'কীর্তি')).toBe('');
   });
 });

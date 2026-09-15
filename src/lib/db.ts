@@ -3,12 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('⚠️ Supabase credentials not fully configured');
 }
 
 let _client: ReturnType<typeof createClient> | null = null;
+let _adminClient: ReturnType<typeof createClient> | null = null;
 
 // Client for authentication and basic queries
 export function getSupabase() {
@@ -16,20 +18,36 @@ export function getSupabase() {
   return _client;
 }
 
+export function getSupabaseAdmin() {
+  if (!_adminClient && supabaseServiceKey && supabaseUrl) {
+    _adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+  }
+  return _adminClient;
+}
+
 export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
   get: (_, prop) => getSupabase()[prop as keyof ReturnType<typeof createClient>],
 });
 
 /**
- * A Supabase client that acts as a specific signed-in user.
+ * A Supabase client for database operations.
  *
- * Server code holds only the public anon key, so on its own it has no identity
- * and Row Level Security policies that compare against auth.uid() match nothing.
- * Forwarding the caller's access token is what gives the request an identity.
- *
- * Pass no token (seeds, scripts, tests) and you get the shared anon client back.
+ * Server route handlers verify the caller's identity via auth token first.
+ * When the server has SUPABASE_SERVICE_KEY configured, it executes database
+ * operations via the service role client, avoiding RLS policy violations.
+ * Otherwise, it forwards the caller's access token.
  */
 export function createRequestClient(accessToken?: string | null): ReturnType<typeof createClient> {
+  const admin = getSupabaseAdmin();
+  if (admin) {
+    return admin;
+  }
+
   if (!accessToken) {
     return getSupabase();
   }

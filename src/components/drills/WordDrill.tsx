@@ -9,11 +9,9 @@ import type { Drill, ErredCharacter } from "@/lib/types";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { DrillProgress } from "./DrillProgress";
 import { useWordDrill } from "./use-word-drill";
-import { useAuth } from '@/hooks/use-auth';
 
 const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; isCurrent: boolean; userInput: string; isError: boolean }) => {
     if (isCurrent) {
-        const correctPart = word.substring(0, userInput.length);
         const remainingPart = word.substring(userInput.length);
 
         return (
@@ -32,7 +30,6 @@ const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; is
 
 export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();
-    const { user } = useAuth();
     const {
         drills,
         currentDrillIndex,
@@ -73,11 +70,11 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
     }
 
     return (
-        <div className="p-4 md:p-8 rounded-lg bg-secondary/30 border max-w-full mx-auto">
-             <div className="flex flex-col md:flex-row gap-8">
-                 <div className="w-full md:w-2/3 space-y-4">
+        <div className="p-4 sm:p-6 md:p-8 rounded-2xl bg-secondary/30 border w-full mx-auto shadow-xs">
+             <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+                 <div className="flex-1 w-full min-w-0 space-y-5">
                       {/* Word Display */}
-                    <div className="flex items-center justify-center gap-2 bg-background p-4 rounded-lg min-h-[80px] flex-wrap">
+                    <div className="flex items-center justify-center gap-2 bg-background p-4 sm:p-6 rounded-xl min-h-[90px] flex-wrap border shadow-xs">
                        {drills.slice(currentDrillIndex, currentDrillIndex + 4).map((drill, index) => (
                            <WordDisplay
                                 key={`${drill.prompt}-${currentDrillIndex + index}`}
@@ -111,7 +108,7 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                     />
                  </div>
 
-                 <div className="w-full md:w-1/3 space-y-4">
+                 <div className="w-full lg:w-80 xl:w-88 shrink-0 space-y-4">
                     <DrillProgress
                         wpmHistory={wpmHistory}
                         timeLeft={timeLeft}
@@ -119,7 +116,7 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                         currentAccuracy={totalCharsTyped > 0 ? Math.round(((totalCharsTyped - totalErrors) / totalCharsTyped) * 100) : 100}
                     />
                      <div className="flex justify-end gap-2 mt-4">
-                        <Button onClick={() => router.push('/dashboard/lessons')} variant="destructive">অনুশীলন বাতিল করুন</Button>
+                        <Button onClick={() => router.push('/dashboard/lessons')} variant="destructive" className="w-full sm:w-auto">অনুশীলন বাতিল করুন</Button>
                     </div>
                 </div>
              </div>
