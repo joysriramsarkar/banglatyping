@@ -6,10 +6,11 @@ import type { Drill } from "@/lib/types";
 interface DrillPromptDisplayProps {
     drills: Drill[];
     currentDrillIndex: number;
+    currentStepIndex?: number;
     status: 'pending' | 'correct' | 'incorrect';
 }
 
-export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, currentDrillIndex, status }) => {
+export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, currentDrillIndex, currentStepIndex = 0, status }) => {
     const getVisibleDrills = () => {
         const visible: Drill[] = [];
         const startIndex = Math.floor(currentDrillIndex / 10) * 10;
@@ -20,24 +21,77 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
     };
 
     const renderDrillPrompt = (drillData: Drill, isCurrent: boolean, isCompleted: boolean, key: string | number) => {
-        let boxClass = "bg-secondary/60 text-foreground";
-        if (isCurrent && status === 'incorrect') boxClass = "bg-red-100 dark:bg-red-950/50 border-red-500 text-red-600";
-        if (isCurrent && status === 'correct') boxClass = "bg-green-100 dark:bg-green-950/50 border-green-500 text-green-600";
+        let boxClass = "bg-secondary/40 text-foreground border-border";
+        if (isCompleted) boxClass = "bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400";
+        if (isCurrent && status === 'incorrect') boxClass = "bg-red-500/15 border-red-500 text-red-600 ring-4 ring-red-500/30 ring-offset-1";
+        if (isCurrent && status === 'correct') boxClass = "bg-green-500/15 border-green-500 text-green-600 ring-4 ring-green-500/30 ring-offset-1";
+        if (isCurrent && status === 'pending') boxClass = "bg-primary/10 border-primary text-primary ring-4 ring-primary/30 ring-offset-2 scale-105 shadow-md";
 
-        if(drillData.prompt === ' '){
+        // Spacebar prompt
+        if (drillData.prompt === ' ') {
             return (
-                <div key={key} className={cn("flex items-center justify-center h-16 sm:h-20 w-28 sm:w-32 rounded-xl border-2 text-sm sm:text-base font-medium transition-all", boxClass, isCurrent && "ring-4 ring-primary/40 ring-offset-2 scale-105 shadow-md border-primary" )}>
-                     {isCompleted ? <CheckCircle className="h-7 w-7 text-green-600 dark:text-green-400" /> : <span className="text-muted-foreground italic">স্পেস</span>}
+                <div
+                    key={key}
+                    className={cn(
+                        "flex items-center justify-center h-14 sm:h-16 px-4 min-w-[4rem] sm:min-w-[4.5rem] rounded-xl border-2 transition-all select-none",
+                        boxClass,
+                        !isCurrent && !isCompleted && "border-dashed opacity-80"
+                    )}
+                >
+                    {isCompleted ? (
+                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    ) : (
+                        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium">
+                            <span className="font-mono text-base sm:text-lg leading-none">␣</span>
+                            <span className="text-muted-foreground font-semibold">স্পেস</span>
+                        </div>
+                    )}
                 </div>
-            )
+            );
         }
 
+        const isMultiChar = drillData.prompt.length > 2;
+
         return (
-            <div key={key} className={cn("flex items-center justify-center h-16 sm:h-20 w-16 sm:w-20 rounded-xl border-2 text-3xl sm:text-4xl md:text-5xl font-hind font-bold transition-all", boxClass, isCurrent && "ring-4 ring-primary/40 ring-offset-2 scale-105 shadow-md border-primary text-primary")}>
-               {isCompleted ? <CheckCircle className="h-7 w-7 text-green-600 dark:text-green-400" /> : drillData.prompt}
+            <div
+                key={key}
+                className={cn(
+                    "flex items-center justify-center h-14 sm:h-16 rounded-xl border-2 font-hind font-bold transition-all select-none shadow-2xs",
+                    isMultiChar ? "px-5 sm:px-6 min-w-[5.5rem] text-2xl sm:text-3xl whitespace-nowrap" : "px-3 min-w-[3.75rem] sm:min-w-[4.25rem] text-3xl sm:text-4xl",
+                    boxClass
+                )}
+            >
+                {isCompleted ? (
+                    <div className="flex items-center gap-2">
+                        <span>{drillData.prompt}</span>
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                    </div>
+                ) : isCurrent && drillData.steps && drillData.steps.length > 1 ? (
+                    <span className="flex items-center">
+                        {drillData.steps.map((step, sIdx) => {
+                            const isStepDone = sIdx < currentStepIndex;
+                            const isStepCurrent = sIdx === currentStepIndex;
+                            return (
+                                <span
+                                    key={sIdx}
+                                    className={cn(
+                                        "transition-all",
+                                        isStepDone && "text-green-600 dark:text-green-400",
+                                        isStepCurrent && "text-primary underline decoration-primary decoration-4 underline-offset-4 font-extrabold bg-primary/10 rounded px-0.5",
+                                        !isStepDone && !isStepCurrent && "opacity-65"
+                                    )}
+                                >
+                                    {step.display || step.key}
+                                </span>
+                            );
+                        })}
+                    </span>
+                ) : (
+                    <span>{drillData.prompt}</span>
+                )}
             </div>
-        )
-    }
+        );
+    };
 
     const visibleDrills = getVisibleDrills();
     const promptsWithSpacers: (Drill | {isSpacer: true})[] = [];
@@ -50,10 +104,10 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
     });
 
     return (
-        <div className="flex items-center justify-center gap-2 sm:gap-3 bg-card p-4 sm:p-6 rounded-2xl min-h-[100px] flex-wrap border shadow-xs">
+        <div className="flex items-center justify-center gap-3 sm:gap-4 bg-card p-5 sm:p-7 rounded-2xl min-h-[120px] flex-wrap border shadow-xs transition-all">
             {promptsWithSpacers.map((item, index) => {
                  if ('isSpacer' in item) {
-                    return <div key={`spacer-${index}`} className="w-full h-2"></div>
+                    return <div key={`spacer-${index}`} className="w-full h-1.5" />
                 }
                 const originalIndex = drills.indexOf(item);
                 const isCurrent = currentDrillIndex === originalIndex;

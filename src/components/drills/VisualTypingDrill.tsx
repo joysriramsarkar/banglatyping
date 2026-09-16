@@ -342,7 +342,7 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                         spellCheck={false}
                     />
                     {/* Prompt Display */}
-                    <DrillPromptDisplay drills={drills} currentDrillIndex={currentDrillIndex} status={status} />
+                    <DrillPromptDisplay drills={drills} currentDrillIndex={currentDrillIndex} currentStepIndex={currentStepIndex} status={status} />
 
                     {/* Virtual Keyboard */}
                     <SimplifiedKeyboard
