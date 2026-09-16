@@ -1,6 +1,7 @@
 import * as React from "react";
 import { CheckCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, toBengaliNumber } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 import type { Drill } from "@/lib/types";
 
 interface DrillPromptDisplayProps {
@@ -33,13 +34,16 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                 <div
                     key={key}
                     className={cn(
-                        "flex items-center justify-center h-14 sm:h-16 px-4 min-w-[4rem] sm:min-w-[4.5rem] rounded-xl border-2 transition-all select-none",
+                        "flex items-center justify-center h-14 sm:h-16 px-4 min-w-[3.75rem] sm:min-w-[4.25rem] rounded-xl border-2 transition-all select-none",
                         boxClass,
                         !isCurrent && !isCompleted && "border-dashed opacity-80"
                     )}
                 >
                     {isCompleted ? (
-                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400 font-bold text-xs">
+                            <span className="font-mono text-base leading-none">␣</span>
+                            <CheckCircle className="h-4 w-4 shrink-0" />
+                        </div>
                     ) : (
                         <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium">
                             <span className="font-mono text-base sm:text-lg leading-none">␣</span>
@@ -62,9 +66,9 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                 )}
             >
                 {isCompleted ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                         <span>{drillData.prompt}</span>
-                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
                     </div>
                 ) : isCurrent && drillData.steps && drillData.steps.length > 1 ? (
                     <span className="flex items-center">
@@ -103,17 +107,46 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
         }
     });
 
+    const progressPercent = Math.min(100, Math.round((currentDrillIndex / Math.max(1, drills.length)) * 100));
+
     return (
-        <div className="flex items-center justify-center gap-3 sm:gap-4 bg-card p-5 sm:p-7 rounded-2xl min-h-[120px] flex-wrap border shadow-xs transition-all">
-            {promptsWithSpacers.map((item, index) => {
-                 if ('isSpacer' in item) {
-                    return <div key={`spacer-${index}`} className="w-full h-1.5" />
-                }
-                const originalIndex = drills.indexOf(item);
-                const isCurrent = currentDrillIndex === originalIndex;
-                const isCompleted = originalIndex < currentDrillIndex;
-                return renderDrillPrompt(item, isCurrent, isCompleted, `${item.prompt}-${originalIndex}`);
-            })}
+        <div className="space-y-3 bg-card p-5 sm:p-7 rounded-2xl border shadow-xs transition-all">
+            {/* Real-time Progress Bar and Counter Header */}
+            <div className="space-y-1.5 pb-2 border-b">
+                <div className="flex items-center justify-between text-xs sm:text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                        <span className="text-muted-foreground">অগ্রগতি:</span>
+                        <strong className="text-primary font-bold text-sm sm:text-base">
+                            {toBengaliNumber(currentDrillIndex)}
+                        </strong>
+                        <span className="text-muted-foreground">/ {toBengaliNumber(drills.length)} টি আইটেম</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                            {toBengaliNumber(progressPercent)}%
+                        </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                        {currentDrillIndex >= drills.length ? (
+                            <span className="text-green-600 font-bold">সম্পূর্ণ সম্পন্ন!</span>
+                        ) : (
+                            <span>অবশিষ্ট: <strong className="text-foreground">{toBengaliNumber(drills.length - currentDrillIndex)}</strong> টি</span>
+                        )}
+                    </div>
+                </div>
+                <Progress value={progressPercent} className="h-1.5 bg-muted" />
+            </div>
+
+            {/* Prompt Cards */}
+            <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap pt-2">
+                {promptsWithSpacers.map((item, index) => {
+                     if ('isSpacer' in item) {
+                        return <div key={`spacer-${index}`} className="w-full h-1" />
+                    }
+                    const originalIndex = drills.indexOf(item);
+                    const isCurrent = currentDrillIndex === originalIndex;
+                    const isCompleted = originalIndex < currentDrillIndex;
+                    return renderDrillPrompt(item, isCurrent, isCompleted, `${item.prompt}-${originalIndex}`);
+                })}
+            </div>
         </div>
     );
 };

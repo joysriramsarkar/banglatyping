@@ -359,6 +359,10 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
                         timeLeft={timeLeft}
                         currentWpm={time > 0 ? Math.round((totalCharsTyped / 5) / (time / 60)) : 0}
                         currentAccuracy={totalCharsTyped > 0 ? Math.round(((totalCharsTyped - totalErrors) / totalCharsTyped) * 100) : 100}
+                        currentDrillIndex={currentDrillIndex}
+                        totalDrills={drills.length}
+                        totalCharsTyped={totalCharsTyped}
+                        totalErrors={totalErrors}
                     />
                      <div className="flex justify-end gap-2 mt-4">
                         <Button onClick={() => router.push('/dashboard/lessons')} variant="destructive" className="w-full sm:w-auto">অনুশীলন বাতিল করুন</Button>
