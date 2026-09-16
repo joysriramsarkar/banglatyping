@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "banglatyping",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-15",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://lwuvumhusxppqamvsusv.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3dXZ1bWh1c3hwcHFhbXZzdXN2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjMzMzEsImV4cCI6MjA5MTM5OTMzMX0.cH8oZbRnQxo2C0i5Q3afCJK9AxJ8Mf6a_VeBzylhwHM",
+    "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3dXZ1bWh1c3hwcHFhbXZzdXN2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTgyMzMzMSwiZXhwIjoyMDkxMzk5MzMxfQ.JKFPriI4Cwtjn42k836B3nbc993eUYimL7UVm6oK9N0"
+  }
+}
