@@ -70,7 +70,10 @@ describe('Curriculum Engine & Data Tests', () => {
 
     // After completing prerequisite lesson-0-1 with 95% accuracy
     state = recordLessonCompletion(state, 'lesson-0-1', 95, 25, 125);
-    expect(state.completedLessons['lesson-0-1'].completed).toBe(true);
+    state = recordLessonCompletion(state, 'lesson-0-2', 95, 25, 125);
+    state = recordLessonCompletion(state, 'lesson-0-3', 95, 25, 125);
+    state = recordLessonCompletion(state, 'lesson-0-4', 95, 25, 125);
+    expect(state.completedLessons['lesson-0-4'].completed).toBe(true);
     expect(isLessonUnlocked('lesson-1-1', state)).toBe(true);
   });
 
