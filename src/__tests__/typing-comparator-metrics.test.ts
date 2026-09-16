@@ -82,31 +82,37 @@ describe('Typing Metrics Engine', () => {
   test('computes metrics from recorded events', () => {
     const events: TypingEvent[] = [
       {
-        expected: 'বা',
+        expectedGrapheme: 'বা',
         actualInput: 'বা',
         correct: true,
         sequence: 0,
         timestamp: 1000,
         latencyMs: 300,
-        graphemeLength: 1,
+        errorType: null,
+        layout: 'probhat',
+        corrected: false,
       },
       {
-        expected: 'ং',
+        expectedGrapheme: 'ং',
         actualInput: 'ং',
         correct: true,
         sequence: 1,
         timestamp: 1500,
         latencyMs: 500,
-        graphemeLength: 1,
+        errorType: null,
+        layout: 'probhat',
+        corrected: false,
       },
       {
-        expected: 'লা',
+        expectedGrapheme: 'লা',
         actualInput: 'লা',
         correct: true,
         sequence: 2,
         timestamp: 2000,
         latencyMs: 500,
-        graphemeLength: 1,
+        errorType: null,
+        layout: 'probhat',
+        corrected: false,
       },
     ];
 

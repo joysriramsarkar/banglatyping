@@ -64,8 +64,7 @@ describe('Skill Mastery Engine', () => {
         total_attempts: 10,
         error_count: 1,
         accuracy_rate: 90,
-        avg_latency_ms: 200,
-        last_seen: new Date().toISOString(),
+        strength_level: 'Good',
       },
     ];
     const converted = weakCharsToMastery('u1', weakChars);
@@ -88,8 +87,7 @@ describe('Adaptive Practice Recommender', () => {
         total_attempts: 20,
         error_count: 10,
         accuracy_rate: 50,
-        avg_latency_ms: 600,
-        last_seen: new Date().toISOString(),
+        strength_level: 'Very Weak',
       },
       {
         user_id: 'user-1',
@@ -97,8 +95,7 @@ describe('Adaptive Practice Recommender', () => {
         total_attempts: 30,
         error_count: 5,
         accuracy_rate: 83,
-        avg_latency_ms: 300,
-        last_seen: new Date().toISOString(),
+        strength_level: 'Weak',
       },
     ];
 

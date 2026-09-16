@@ -109,7 +109,7 @@ describe('useToast Hook & Reducer', () => {
   });
 
   test('reducer handles ADD_TOAST, UPDATE_TOAST, DISMISS_TOAST, and REMOVE_TOAST', () => {
-    let state = { toasts: [] };
+    let state: any = { toasts: [] };
     const newToast = { id: '1', title: 'Test Toast', open: true };
 
     state = reducer(state, { type: 'ADD_TOAST', toast: newToast as any });

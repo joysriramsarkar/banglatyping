@@ -156,8 +156,7 @@ describe('Custom Drill Generator Service', () => {
       total_attempts: 10,
       error_count: 5,
       accuracy_rate: 50,
-      avg_latency_ms: 400,
-      last_seen: new Date().toISOString(),
+      strength_level: 'Very Weak',
     },
   ];
 
