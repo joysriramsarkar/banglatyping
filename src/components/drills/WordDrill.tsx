@@ -12,21 +12,33 @@ import { useWordDrill } from "./use-word-drill";
 
 const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; isCurrent: boolean; userInput: string; isError: boolean }) => {
     if (isCurrent) {
-        const remainingPart = word.substring(userInput.length);
+        const progressRatio = word.length > 0 ? Math.min(1, userInput.length / word.length) : 0;
+        const clipPercent = Math.round(progressRatio * 100);
 
         return (
-             <span className="text-3xl text-primary font-bold mr-4 relative">
-                <span className="opacity-0">{word}</span> {/* For layout spacing */}
-                <span className="absolute left-0 top-0">
-                    <span className={isError ? "text-red-500" : "text-green-500"}>{userInput}</span>
-                    <span className="border-b-2 border-primary">{remainingPart[0]}</span>
-                    <span>{remainingPart.substring(1)}</span>
+            <span className="text-3xl font-bold mr-4 relative inline-flex items-center justify-center">
+                {/* Base layer: full unbroken word */}
+                <span className={userInput.length > 0 ? "text-muted-foreground/40" : "text-primary border-b-2 border-primary"}>
+                    {word}
                 </span>
+
+                {/* Typed overlay layer: same full unbroken word in green (or red if error), clipped to typed length */}
+                {userInput.length > 0 && (
+                    <span
+                        className={`absolute inset-0 pointer-events-none select-none ${isError ? "text-red-500" : "text-green-500"}`}
+                        style={{
+                            clipPath: `polygon(0 0, ${clipPercent}% 0, ${clipPercent}% 100%, 0 100%)`
+                        }}
+                        aria-hidden="true"
+                    >
+                        {word}
+                    </span>
+                )}
             </span>
-        )
+        );
     }
-    return <span className="text-3xl text-muted-foreground mr-4">{word}</span>
-}
+    return <span className="text-3xl text-muted-foreground mr-4">{word}</span>;
+};
 
 export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {
     const router = useRouter();

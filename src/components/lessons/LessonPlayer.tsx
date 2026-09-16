@@ -35,6 +35,7 @@ import {
   isValidBengaliTypingPrefix,
   getNextExpectedKeyChar,
   bengaliSegmenter,
+  getBengaliGraphemeClip,
 } from "@/lib/bengali-grapheme";
 
 interface LessonPlayerProps {
@@ -764,16 +765,53 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                   )}
                 </div>
 
-                {/* Target String Display */}
-                <div className="text-4xl sm:text-5xl font-extrabold font-headline text-primary tracking-wider my-0.5">
-                  {currentTarget === " " ? "␣ (Space)" : currentTarget}
+                {/* Target String Display with grapheme-safe progress coloring */}
+                <div className="text-4xl sm:text-5xl font-extrabold font-headline text-primary tracking-wider my-0.5 relative inline-flex items-center justify-center">
+                  {currentTarget === " " ? (
+                    <span>␣ (Space)</span>
+                  ) : (
+                    <span className="relative inline-flex items-center justify-center leading-none">
+                      {/* Base layer: full unbroken target in muted color when partially typed, or text-primary */}
+                      <span
+                        className={cn(
+                          "transition-colors select-none leading-none",
+                          currentInput.length > 0
+                            ? "text-muted-foreground/35 dark:text-muted-foreground/45"
+                            : "text-primary"
+                        )}
+                      >
+                        {currentTarget}
+                      </span>
+
+                      {/* Progress overlay layer: same full unbroken target in green, clipped to the typed portion */}
+                      {currentInput.length > 0 && (
+                        <span
+                          className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-extrabold select-none pointer-events-none leading-none transition-all duration-150"
+                          style={{
+                            clipPath: getBengaliGraphemeClip(
+                              currentTarget,
+                              currentInput.length,
+                              currentTarget.length
+                            ),
+                          }}
+                          aria-hidden="true"
+                        >
+                          {currentTarget}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
 
                 {/* Live Input Progress Display */}
-                <div className="text-xl sm:text-2xl font-mono text-muted-foreground min-h-[1.75rem] flex items-center">
-                  <span className="text-green-600 dark:text-green-400 font-bold">{currentInput}</span>
-                  <span className="opacity-30">{currentTarget.slice(currentInput.length)}</span>
-                </div>
+                {currentInput.length > 0 && (
+                  <div className="text-sm font-mono text-muted-foreground min-h-[1.5rem] flex items-center gap-1.5 mt-0.5">
+                    <span className="text-xs text-muted-foreground/70">টাইপ করেছেন:</span>
+                    <span className="text-green-600 dark:text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
+                      {currentInput}
+                    </span>
+                  </div>
+                )}
 
                 {lastWrongChar && (
                   <p className="text-[11px] text-red-500 font-semibold mt-0.5">

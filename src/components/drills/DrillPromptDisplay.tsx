@@ -3,6 +3,7 @@ import { CheckCircle } from "lucide-react";
 import { cn, toBengaliNumber } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import type { Drill } from "@/lib/types";
+import { getBengaliGraphemeClip } from "@/lib/bengali-grapheme";
 
 interface DrillPromptDisplayProps {
     drills: Drill[];
@@ -55,6 +56,7 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
         }
 
         const isMultiChar = drillData.prompt.length > 2;
+        const totalSteps = drillData.steps ? drillData.steps.length : 1;
 
         return (
             <div
@@ -70,25 +72,32 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                         <span>{drillData.prompt}</span>
                         <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
                     </div>
-                ) : isCurrent && drillData.steps && drillData.steps.length > 1 ? (
-                    <span className="flex items-center">
-                        {drillData.steps.map((step, sIdx) => {
-                            const isStepDone = sIdx < currentStepIndex;
-                            const isStepCurrent = sIdx === currentStepIndex;
-                            return (
-                                <span
-                                    key={sIdx}
-                                    className={cn(
-                                        "transition-all",
-                                        isStepDone && "text-green-600 dark:text-green-400",
-                                        isStepCurrent && "text-primary underline decoration-primary decoration-4 underline-offset-4 font-extrabold bg-primary/10 rounded px-0.5",
-                                        !isStepDone && !isStepCurrent && "opacity-65"
-                                    )}
-                                >
-                                    {step.display || step.key}
-                                </span>
-                            );
-                        })}
+                ) : isCurrent ? (
+                    <span className="relative inline-flex items-center justify-center leading-none">
+                        {/* Base layer: renders the COMPLETE unbroken Bengali character */}
+                        <span className={cn(
+                            "transition-colors select-none leading-none",
+                            currentStepIndex > 0 ? "text-muted-foreground/35 dark:text-muted-foreground/45" : "text-primary"
+                        )}>
+                            {drillData.prompt}
+                        </span>
+
+                        {/* Progress overlay layer: same complete unbroken character in green, clipped to show the typed portion */}
+                        {currentStepIndex > 0 && (
+                            <span
+                                className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-extrabold select-none pointer-events-none leading-none transition-all duration-150"
+                                style={{
+                                    clipPath: getBengaliGraphemeClip(
+                                        drillData.prompt,
+                                        currentStepIndex,
+                                        totalSteps
+                                    )
+                                }}
+                                aria-hidden="true"
+                            >
+                                {drillData.prompt}
+                            </span>
+                        )}
                     </span>
                 ) : (
                     <span>{drillData.prompt}</span>

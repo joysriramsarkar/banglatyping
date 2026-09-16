@@ -386,3 +386,64 @@ export function getNextExpectedKeyChar(buffer: string, target: string): string {
   return normTarget[0] || '';
 }
 
+/**
+ * Compute clip-path polygon to reveal only the typed portion of a composite Bengali character or word
+ * without ever splitting the Unicode grapheme cluster into disconnected DOM nodes.
+ */
+export function getBengaliGraphemeClip(text: string, currentStep: number, totalSteps: number): string {
+  if (currentStep <= 0) return 'inset(100%)';
+  if (currentStep >= totalSteps) return 'inset(0)';
+
+  // Below-base combining marks: ু (U+09C1), ূ (U+09C2), ৃ (U+09C3), ৄ (U+09C4), ্ (U+09CD), ৢ, ৣ
+  const hasBelowBase = /[\u09C1\u09C2\u09C3\u09C4\u09CD\u09E2\u09E3]/.test(text);
+  // Post-base (right-side) marks: া (U+09BE), ী (U+09C0), ং (U+0982), ঃ (U+0983)
+  const hasPostBase = /[\u09BE\u09C0\u0982\u0983]/.test(text);
+  // Pre-base (left-side) marks: ি (U+09BF), ে (U+09C7), ৈ (U+09C8)
+  const hasPreBase = /[\u09BF\u09C7\u09C8]/.test(text);
+  // Circumfix (both sides) marks: ো (U+09CB), ৌ (U+09CC)
+  const hasBothSides = /[\u09CB\u09CC]/.test(text);
+  // Top mark: ঁ (U+0981, chandrabindu)
+  const hasTopMark = /[\u0981]/.test(text);
+
+  // Below-base marks (e.g. 'টূ', 'কু', 'কৃ', 'ক্'):
+  // Base consonant is at top (~65%), kar is at bottom (~35%).
+  // When consonant is typed (step 0 done -> currentStep 1): top is green, bottom is muted.
+  if (hasBelowBase && !hasPreBase && !hasPostBase && !hasBothSides) {
+    if (totalSteps === 2) {
+      return 'polygon(0 0, 100% 0, 100% 68%, 0 68%)';
+    }
+    const yPercent = Math.round((currentStep / totalSteps) * 100);
+    return `polygon(0 0, 100% 0, 100% ${yPercent}%, 0 ${yPercent}%)`;
+  }
+
+  // Post-base marks (e.g. 'টা', 'কী', 'টং', 'টঃ'):
+  // Consonant is on left (~52%), kar is on right (~48%).
+  // When consonant is typed: left is green, right is muted.
+  if (hasPostBase && !hasPreBase && !hasBothSides) {
+    return 'polygon(0 0, 52% 0, 52% 100%, 0 100%)';
+  }
+
+  // Pre-base marks (e.g. 'টি', 'টে', 'টৈ'):
+  // Kar is on left (~36%), consonant is on right (~64%).
+  // In our typing order, consonant is step 0: right is green, left is muted.
+  if (hasPreBase && !hasPostBase && !hasBothSides) {
+    return 'polygon(36% 0, 100% 0, 100% 100%, 36% 100%)';
+  }
+
+  // Circumfix marks (e.g. 'টো', 'টৌ'):
+  // Consonant is in center (~46%), kar is on left and right (~27% each).
+  // When consonant is typed: center is green.
+  if (hasBothSides) {
+    return 'polygon(27% 0, 73% 0, 73% 100%, 27% 100%)';
+  }
+
+  // Top mark (chandrabindu ঁ):
+  if (hasTopMark) {
+    return 'polygon(0 22%, 100% 22%, 100% 100%, 0 100%)';
+  }
+
+  // General multi-character / horizontal text:
+  const xPercent = Math.round((currentStep / totalSteps) * 100);
+  return `polygon(0 0, ${xPercent}% 0, ${xPercent}% 100%, 0 100%)`;
+}
+
