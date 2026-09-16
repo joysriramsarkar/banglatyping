@@ -1,4 +1,8 @@
-import { getKeyboardLayoutConfig, normalizeKeyboardLayout } from '../lib/keyboard-layouts';
+import {
+  getKeyboardLayoutConfig,
+  normalizeKeyboardLayout,
+  findKeyInfoForChar,
+} from '../lib/keyboard-layouts';
 
 describe('keyboard layout helpers', () => {
   it('normalizes supported layout names to canonical values', () => {
@@ -21,4 +25,30 @@ describe('keyboard layout helpers', () => {
     expect(backslash?.bn).toBe('ৃ');
     expect(backslash?.bnShift).toBe('ঞ');
   });
+
+  it('finds key info for various characters', () => {
+    expect(findKeyInfoForChar('')).toBeNull();
+
+    const spaceInfo = findKeyInfoForChar(' ');
+    expect(spaceInfo?.keyCode).toBe('Space');
+    expect(spaceInfo?.bengaliFingerLabel).toContain('Spacebar');
+
+    const vowelInfo = findKeyInfoForChar('আ');
+    expect(vowelInfo?.keyCode).toBe('KeyA');
+    expect(vowelInfo?.needsShift).toBe(false);
+
+    const normalInfo = findKeyInfoForChar('ক', 'banglaword');
+    expect(normalInfo?.key).toBe('k');
+    expect(normalInfo?.needsShift).toBe(false);
+
+    const shiftInfo = findKeyInfoForChar('খ', 'banglaword');
+    expect(shiftInfo?.key).toBe('k');
+    expect(shiftInfo?.needsShift).toBe(true);
+
+    const latinInfo = findKeyInfoForChar('a', 'banglaword');
+    expect(latinInfo?.keyCode).toBe('KeyA');
+
+    expect(findKeyInfoForChar('—', 'banglaword')).toBeNull();
+  });
 });
+

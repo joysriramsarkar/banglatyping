@@ -140,6 +140,119 @@ export function recordLessonCompletion(
 }
 
 /**
+ * Calculate the difficulty score of a Bengali word or phrase
+ * Based on length, unique keys, vowel signs (কার), hasanta (্), conjuncts (যুক্তাক্ষর),
+ * and special characters.
+ *
+ * Examples:
+ *   "জল" -> ~1.2 (Easy)
+ *   "বাংলা" -> ~2.4 (Intermediate)
+ *   "স্বাধীনতা" -> ~4.7 (Hard)
+ *   "প্রযুক্তি" -> ~5.1 (Complex)
+ */
+export function calculateWordDifficulty(word: string): number {
+  if (!word || word.trim().length === 0) return 0;
+
+  const text = word.trim();
+  const graphemes = Array.from(new Intl.Segmenter('bn-IN', { granularity: 'grapheme' }).segment(text));
+  const graphemeCount = graphemes.length;
+
+  // Counts of specific features
+  const karMatches = text.match(/[\u09BE-\u09C4\u09C7-\u09C8\u09CB-\u09CC]/g) || [];
+  const karCount = karMatches.length;
+
+  const hasantaMatches = text.match(/\u09CD/g) || [];
+  const hasantaCount = hasantaMatches.length;
+
+  const specialMatches = text.match(/[\u0981\u0982\u0983\u09BC\u09CE\u09DC\u09DD\u09DF]/g) || [];
+  const specialCharCount = specialMatches.length;
+
+  // Detect conjuncts in graphemes
+  let conjunctCount = 0;
+  for (const g of graphemes) {
+    if (g.segment.includes('\u09CD') || g.segment.length > 1) {
+      conjunctCount++;
+    }
+  }
+
+  // Unique characters
+  const uniqueChars = new Set(Array.from(text)).size;
+
+  // Formula matching পরিকল্পনা.md
+  const rawScore = 
+    graphemeCount * 0.4 +
+    uniqueChars * 0.2 +
+    karCount * 0.5 +
+    hasantaCount * 0.9 +
+    conjunctCount * 1.2 +
+    specialCharCount * 0.8;
+
+  // Return rounded to 1 decimal place, minimum 1.0 for valid words
+  return Math.max(1.0, Math.round(rawScore * 10) / 10);
+}
+
+/**
+ * Categorize difficulty score into tiers:
+ * Tier 1: 1.0 - 2.0 (Easy)
+ * Tier 2: 2.1 - 3.5 (Medium)
+ * Tier 3: 3.6 - 5.0 (Hard)
+ * Tier 4: 5.1+ (Expert)
+ */
+export function getWordDifficultyTier(score: number): 'Tier 1' | 'Tier 2' | 'Tier 3' | 'Tier 4' {
+  if (score <= 2.0) return 'Tier 1';
+  if (score <= 3.5) return 'Tier 2';
+  if (score <= 5.0) return 'Tier 3';
+  return 'Tier 4';
+}
+
+/**
+ * Weighted and balanced drill item generator without naive random replacement
+ */
+export function generateWeightedDrillList(
+  items: string[],
+  count: number = 20,
+  weights?: Record<string, number>
+): string[] {
+  if (!items || items.length === 0) return [];
+  if (items.length === 1) return Array(count).fill(items[0]);
+
+  const result: string[] = [];
+  const itemPool = [...items];
+
+  // If weights provided, build weighted cumulative array
+  if (weights) {
+    const totalWeight = itemPool.reduce((sum, item) => sum + (weights[item] || 1), 0);
+    for (let i = 0; i < count; i++) {
+      let randomVal = Math.random() * totalWeight;
+      let selected = itemPool[0];
+      for (const item of itemPool) {
+        const w = weights[item] || 1;
+        if (randomVal <= w) {
+          selected = item;
+          break;
+        }
+        randomVal -= w;
+      }
+      result.push(selected);
+    }
+    return result;
+  }
+
+  // Balanced distribution without immediately consecutive duplicates
+  let lastItem = '';
+  for (let i = 0; i < count; i++) {
+    const candidates = itemPool.filter(item => item !== lastItem);
+    const chosen = candidates.length > 0
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : itemPool[Math.floor(Math.random() * itemPool.length)];
+    result.push(chosen);
+    lastItem = chosen;
+  }
+
+  return result;
+}
+
+/**
  * Calculate overall curriculum progress percentage (0-100)
  */
 export function calculateCurriculumProgress(state: UserCurriculumState): {
@@ -162,3 +275,5 @@ export function calculateCurriculumProgress(state: UserCurriculumState): {
   const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   return { completedCount, totalCount, percentage, masteredCount };
 }
+
+

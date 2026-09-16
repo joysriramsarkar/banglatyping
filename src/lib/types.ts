@@ -1,12 +1,25 @@
 export type KeyboardLayout = "Avro Phonetic" | "Bijoy Classic" | "BanglaWord";
 
+export type RowCategoryType = 
+  | 'home-row' 
+  | 'top-row' 
+  | 'bottom-row' 
+  | 'mixed-row' 
+  | 'kar-row' 
+  | 'hasanta-row' 
+  | 'phola-row' 
+  | 'conjunct-row' 
+  | 'special-row' 
+  | 'number-row' 
+  | 'words-row';
+
 export interface Lesson {
   id: string;
   title: string;
   level: "Beginner" | "Intermediate" | "Advanced";
   text?: string;
   drills?: Drill[];
-  row?: 'home-row' | 'top-row' | 'bottom-row' | 'mixed-row' | 'kar-row';
+  row?: RowCategoryType;
   isWordDrill?: boolean;
 }
 
@@ -38,7 +51,7 @@ export interface Drill {
 }
 
 export type RowDrillCategory = {
-    id: 'home-row' | 'top-row' | 'bottom-row' | 'mixed-row' | 'kar-row';
+    id: RowCategoryType;
     name: string;
     description: string;
 }

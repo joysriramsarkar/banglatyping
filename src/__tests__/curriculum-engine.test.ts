@@ -12,6 +12,9 @@ import {
   recordLessonCompletion,
   calculateCurriculumProgress,
   INITIAL_CURRICULUM_STATE,
+  calculateWordDifficulty,
+  getWordDifficultyTier,
+  generateWeightedDrillList,
 } from '../lib/curriculum/engine';
 import {
   classifyGraphemeError,
@@ -51,7 +54,7 @@ describe('Curriculum Engine & Data Tests', () => {
 
   test('getAllCurriculumLessons returns full linear array of lessons', () => {
     const all = getAllCurriculumLessons();
-    expect(all.length).toBeGreaterThan(15);
+    expect(all.length).toBeGreaterThan(25);
     expect(all[0].id).toBe('lesson-0-1');
   });
 
@@ -70,10 +73,7 @@ describe('Curriculum Engine & Data Tests', () => {
 
     // After completing prerequisite lesson-0-1 with 95% accuracy
     state = recordLessonCompletion(state, 'lesson-0-1', 95, 25, 125);
-    state = recordLessonCompletion(state, 'lesson-0-2', 95, 25, 125);
-    state = recordLessonCompletion(state, 'lesson-0-3', 95, 25, 125);
-    state = recordLessonCompletion(state, 'lesson-0-4', 95, 25, 125);
-    expect(state.completedLessons['lesson-0-4'].completed).toBe(true);
+    expect(state.completedLessons['lesson-0-1'].completed).toBe(true);
     expect(isLessonUnlocked('lesson-1-1', state)).toBe(true);
   });
 
@@ -86,6 +86,36 @@ describe('Curriculum Engine & Data Tests', () => {
     expect(progress.completedCount).toBe(1);
     expect(progress.masteredCount).toBe(1);
     expect(progress.percentage).toBeGreaterThan(0);
+  });
+});
+
+describe('Word Difficulty Engine & Weighted Generator Tests', () => {
+  test('calculates difficulty for basic, medium, and complex Bengali words', () => {
+    const jolDifficulty = calculateWordDifficulty('জল');
+    const banglaDifficulty = calculateWordDifficulty('বাংলা');
+    const shadhinotaDifficulty = calculateWordDifficulty('স্বাধীনতা');
+    const projuktiDifficulty = calculateWordDifficulty('প্রযুক্তি');
+
+    expect(jolDifficulty).toBeGreaterThanOrEqual(1.0);
+    expect(banglaDifficulty).toBeGreaterThan(jolDifficulty);
+    expect(shadhinotaDifficulty).toBeGreaterThan(banglaDifficulty);
+    expect(projuktiDifficulty).toBeGreaterThan(banglaDifficulty);
+  });
+
+  test('correctly categorizes difficulty tiers', () => {
+    expect(getWordDifficultyTier(1.2)).toBe('Tier 1');
+    expect(getWordDifficultyTier(2.5)).toBe('Tier 2');
+    expect(getWordDifficultyTier(4.5)).toBe('Tier 3');
+    expect(getWordDifficultyTier(5.5)).toBe('Tier 4');
+  });
+
+  test('generateWeightedDrillList produces balanced items', () => {
+    const items = ['সা', 'দা', 'গা'];
+    const generated = generateWeightedDrillList(items, 15);
+    expect(generated.length).toBe(15);
+    for (const item of generated) {
+      expect(items).toContain(item);
+    }
   });
 });
 

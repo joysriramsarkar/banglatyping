@@ -2,15 +2,15 @@ import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
 import { 
   bengaliSegmenter, 
   isConjunct, 
-  parseConjunct,
-  isBengaliVowelSign,
+  parseConjunct, 
+  isBengaliVowelSign, 
   normalizeBengaliString 
 } from "./bengali-grapheme";
 
 // Finger position mapping: 1-5 left hand, 6-10 right hand
 // Left: 1=Pinky, 2=Ring, 3=Middle, 4=Index, 5=Thumb
 // Right: 6=Thumb, 7=Index, 8=Middle, 9=Ring, 10=Pinky
-type KeyMapEntry = {
+export type KeyMapEntry = {
     key: string;
     keyCode: string;
     bn: string;
@@ -50,7 +50,6 @@ export const keyMap: KeyMapEntry[] = [
     {key: ';', keyCode: 'Semicolon', bn: ';', bnShift: ':', row: 'home', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
     {key: "'", keyCode: 'Quote', bn: "'", bnShift: '"', row: 'home', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
 
-
     // Bottom Row
     {key: 'z', keyCode: 'KeyZ', bn: '্য', bnShift: 'ং', row: 'bottom', hand: 'left', fingerPosition: 1, fingerName: 'Pinky'},
     {key: 'x', keyCode: 'KeyX', bn: 'ত', bnShift: 'থ', row: 'bottom', hand: 'left', fingerPosition: 2, fingerName: 'Ring'},
@@ -63,15 +62,28 @@ export const keyMap: KeyMapEntry[] = [
     {key: '.', keyCode: 'Period', bn: '।', bnShift: '>', row: 'bottom', hand: 'right', fingerPosition: 9, fingerName: 'Ring'},
     {key: '/', keyCode: 'Slash', bn: '/', bnShift: '?', row: 'bottom', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
     {key: '-', keyCode: 'Minus', bn: '়', row: 'other', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
+
+    // Numerals Row
+    {key: '0', keyCode: 'Digit0', bn: '০', row: 'other', hand: 'right', fingerPosition: 10, fingerName: 'Pinky'},
+    {key: '1', keyCode: 'Digit1', bn: '১', row: 'other', hand: 'left', fingerPosition: 1, fingerName: 'Pinky'},
+    {key: '2', keyCode: 'Digit2', bn: '২', row: 'other', hand: 'left', fingerPosition: 2, fingerName: 'Ring'},
+    {key: '3', keyCode: 'Digit3', bn: '৩', row: 'other', hand: 'left', fingerPosition: 3, fingerName: 'Middle'},
+    {key: '4', keyCode: 'Digit4', bn: '৪', row: 'other', hand: 'left', fingerPosition: 4, fingerName: 'Index'},
+    {key: '5', keyCode: 'Digit5', bn: '৫', row: 'other', hand: 'left', fingerPosition: 4, fingerName: 'Index'},
+    {key: '6', keyCode: 'Digit6', bn: '৬', row: 'other', hand: 'right', fingerPosition: 7, fingerName: 'Index'},
+    {key: '7', keyCode: 'Digit7', bn: '৭', row: 'other', hand: 'right', fingerPosition: 7, fingerName: 'Index'},
+    {key: '8', keyCode: 'Digit8', bn: '৮', row: 'other', hand: 'right', fingerPosition: 8, fingerName: 'Middle'},
+    {key: '9', keyCode: 'Digit9', bn: '৯', row: 'other', hand: 'right', fingerPosition: 9, fingerName: 'Ring'},
 ];
 
-const findKey = (bengaliChar: string) => {
+export const findKey = (bengaliChar: string) => {
   const normalized = normalizeBengaliString(bengaliChar);
   return keyMap.find(k => 
     normalizeBengaliString(k.bn) === normalized || 
     (k.bnShift && normalizeBengaliString(k.bnShift) === normalized)
   );
 };
+
 const hasantKey = findKey('্');
 if (!hasantKey) {
   throw new Error("Hasant key mapping not found!");
@@ -90,14 +102,11 @@ const vowelMap: Record<string, { kar: string, vowel: string }> = {
     '\\': { kar: 'ৃ', vowel: 'ঋ' },
 };
 
-
-const getStepsForChar = (char: string): SingleDrill[] => {
+export const getStepsForChar = (char: string): SingleDrill[] => {
     const steps: SingleDrill[] = [];
-
-    // Normalize the input for consistency (remove ZWJ/ZWNJ)
     const normalizedChar = normalizeBengaliString(char);
 
-    // Special case for 'ক্ষ' which can be typed directly with 'q'
+    // Special case for 'ক্ষ'
     if (normalizedChar === 'ক্ষ') {
         const directMapping = findKey(normalizedChar);
         if (directMapping) {
@@ -113,8 +122,8 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         }
     }
 
-    // Case 1: Is it a standalone vowel that can be formed with hasant?
-     const vowelEntry = Object.values(vowelMap).find(v => v.vowel === normalizedChar);
+    // Case 1: Standalone vowel
+    const vowelEntry = Object.values(vowelMap).find(v => v.vowel === normalizedChar);
     if (vowelEntry) {
         const signKey = findKey(vowelEntry.kar);
         if (signKey && hasantKey) {
@@ -124,7 +133,7 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         }
     }
     
-    // Case 2: Is it a direct mapping? (consonant, vowel sign, 'অ' or other direct keys)
+    // Case 2: Direct key mapping
     const directMapping = findKey(normalizedChar);
     if (directMapping) {
         steps.push({
@@ -138,17 +147,13 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         return steps;
     }
     
-    // Case 3: Is it a conjunct? (যুক্তাক্ষর) - using proper grapheme-aware parsing
+    // Case 3: Conjunct (যুক্তাক্ষর)
     if (isConjunct(normalizedChar)) {
         const { consonants, halants, trailingKar } = parseConjunct(normalizedChar);
         
         if (consonants.length >= 2) {
-            // Add first consonant
             const firstKey = findKey(consonants[0]);
-            if (!firstKey) {
-                console.warn("Could not find key mapping for consonant:", consonants[0]);
-                return [];
-            }
+            if (!firstKey) return [];
             
             steps.push({ 
                 key: firstKey.key,
@@ -159,20 +164,14 @@ const getStepsForChar = (char: string): SingleDrill[] => {
                 display: consonants[0] 
             });
 
-            // Process remaining consonants with halants between them
             for (let i = 1; i < consonants.length; i++) {
-                // Add halant(s) - typically one, but handle multiple halants for complex conjuncts
                 const halantCountBefore = halants[i - 1] || 1;
                 for (let j = 0; j < halantCountBefore; j++) {
                     steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: false, display: '্' });
                 }
 
-                // Add consonant
                 const consonantKey = findKey(consonants[i]);
-                if (!consonantKey) {
-                    console.warn("Could not find key mapping for consonant:", consonants[i]);
-                    return [];
-                }
+                if (!consonantKey) return [];
                 steps.push({ 
                     key: consonantKey.key,
                     keyCode: consonantKey.keyCode,
@@ -183,7 +182,6 @@ const getStepsForChar = (char: string): SingleDrill[] => {
                 });
             }
 
-            // Add trailing vowel sign if present
             if (trailingKar) {
                 const karKey = findKey(trailingKar);
                 if (karKey) {
@@ -198,22 +196,19 @@ const getStepsForChar = (char: string): SingleDrill[] => {
                 }
             }
 
-            if (steps.length > 0) {
-                return steps;
-            }
+            if (steps.length > 0) return steps;
         }
     }
 
-    // Case 4: Is it a base (consonant/conjunct) + vowel sign combination?
+    // Case 4: Base + vowel sign
     const codePoints = Array.from(normalizedChar);
     if (codePoints.length > 1) {
         const lastChar = codePoints[codePoints.length - 1];
         const isKar = isBengaliVowelSign(lastChar);
         
         if (isKar) {
-            // Reconstruct base without final kar
             const baseChar = codePoints.slice(0, -1).join('');
-            const baseSteps = getStepsForChar(baseChar); // Recursively get steps for base (could be consonant or conjunct)
+            const baseSteps = getStepsForChar(baseChar);
             const karKey = findKey(lastChar);
             
             if (baseSteps.length > 0 && karKey) {
@@ -231,21 +226,39 @@ const getStepsForChar = (char: string): SingleDrill[] => {
         }
     }
 
-    // Case 5: Multi-grapheme sequence or word passed to getStepsForChar
-    const subGraphemes = bengaliSegmenter.segmentString(normalizedChar);
-    if (subGraphemes.length > 1) {
-        const multiSteps = subGraphemes.flatMap(g => getStepsForChar(g));
-        if (multiSteps.length > 0) {
-            return multiSteps;
-        }
-    }
-
-    // Fallback for complex cases not handled
-    // console.warn("Could not determine steps for character:", normalizedChar);
     return [];
 };
 
+export const getStepsForWord = (word: string): SingleDrill[] => {
+    const graphemes = bengaliSegmenter.segmentString(word);
+    return graphemes.flatMap(char => getStepsForChar(char));
+};
 
+/**
+ * Deterministic Drill Generator: converts curated sequence of items to drills with spaces
+ */
+export const createDeterministicDrills = (items: string[]): Drill[] => {
+    const drills: Drill[] = [];
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const steps = getStepsForWord(item);
+        if (steps.length > 0) {
+            drills.push({ prompt: item, steps });
+        }
+        // Add a space between items (except after the last item)
+        if (i < items.length - 1) {
+            drills.push({
+                prompt: ' ',
+                steps: [{ key: ' ', keyCode: 'Space', shift: false, display: ' ', fingerPosition: 0, fingerName: 'Pinky' }]
+            });
+        }
+    }
+    return drills;
+};
+
+/**
+ * Backward-compatible Random Drill Generator
+ */
 export const generateDrills = (chars: string[], count: number): Drill[] => {
     const drills: Drill[] = [];
     let spaceCounter = 0;
@@ -257,8 +270,8 @@ export const generateDrills = (chars: string[], count: number): Drill[] => {
                 steps: [{ key: ' ', keyCode: 'Space', shift: false, display: ' ', fingerPosition: 0, fingerName: 'Pinky' }]
             });
             spaceCounter = 0;
-             i--; 
-             continue;
+            i--; 
+            continue;
         }
 
         const char = chars[Math.floor(Math.random() * chars.length)];
@@ -272,55 +285,8 @@ export const generateDrills = (chars: string[], count: number): Drill[] => {
             spaceCounter++;
         }
     }
-    // Ensure the last drill is not a space
     if (drills.length > 0 && drills[drills.length - 1].prompt === ' ') {
         drills.pop();
-    }
-    return drills;
-};
-
-const getStepsForWord = (word: string): SingleDrill[] => {
-    // Use grapheme-aware segmentation instead of naive split
-    const graphemes = bengaliSegmenter.segmentString(word);
-    return graphemes.flatMap(char => getStepsForChar(char));
-};
-
-export const generateCuratedDrills = (items: string[]): Drill[] => {
-    const drills: Drill[] = [];
-    for (const item of items) {
-        if (item === ' ') {
-            drills.push({
-                prompt: ' ',
-                steps: [{ key: ' ', keyCode: 'Space', shift: false, display: ' ', fingerPosition: 0, fingerName: 'Pinky' }]
-            });
-            continue;
-        }
-
-        if (item.includes(' ')) {
-            const parts = item.split(' ');
-            const phraseSteps: SingleDrill[] = [];
-            for (let p = 0; p < parts.length; p++) {
-                if (p > 0) {
-                    phraseSteps.push({ key: ' ', keyCode: 'Space', shift: false, display: ' ', fingerPosition: 0, fingerName: 'Pinky' });
-                }
-                const subSteps = getStepsForWord(parts[p]);
-                phraseSteps.push(...subSteps);
-            }
-            if (phraseSteps.length > 0) {
-                drills.push({
-                    prompt: item,
-                    steps: phraseSteps
-                });
-            }
-        } else {
-            const steps = getStepsForWord(item);
-            if (steps.length > 0) {
-                drills.push({
-                    prompt: item,
-                    steps: steps
-                });
-            }
-        }
     }
     return drills;
 };
@@ -332,7 +298,6 @@ export const generateWordDrills = (words: string[]): Drill[] => {
     for (let i = 0; i < 200; i++) {
         const wordIndex = Math.floor(Math.random() * wordPool.length);
         const word = wordPool[wordIndex];
-
         const steps = getStepsForWord(word);
         if (steps.length > 0) {
              drills.push({
@@ -342,8 +307,7 @@ export const generateWordDrills = (words: string[]): Drill[] => {
         }
     }
     return drills;
-}
-
+};
 
 const consonants: {bn: string, en: string}[] = [
     { bn: 'ক', en: 'ka' }, { bn: 'খ', en: 'kha' }, { bn: 'গ', en: 'ga' }, { bn: 'ঘ', en: 'gha' }, { bn: 'ঙ', en: 'nga' }, 
@@ -369,17 +333,15 @@ const vowelSignsForCompounds: { sign: string; name: string }[] = [
     { sign: '্য', name: 'ja-fola'}
 ];
 
-
 const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: string; name: string }): Drill | null => {
     const steps: SingleDrill[] = [];
-
     const conKey = findKey(consonant.bn);
     if (!conKey) return null;
     steps.push({ key: conKey.key, keyCode: conKey.keyCode, fingerPosition: conKey.fingerPosition, fingerName: conKey.fingerName, shift: !!conKey.bnShift && conKey.bnShift === consonant.bn, display: consonant.bn });
     
     if (sign.sign === '্য') {
          const jaFolaKey = findKey('্য');
-         if(jaFolaKey){
+         if (jaFolaKey) {
              steps.push({ key: jaFolaKey.key, keyCode: jaFolaKey.keyCode, fingerPosition: jaFolaKey.fingerPosition, fingerName: jaFolaKey.fingerName, shift: !!jaFolaKey.bnShift && jaFolaKey.bnShift === '্য', display: '্য'});
          } else {
              return null;
@@ -393,19 +355,15 @@ const getStepsForCompound = (consonant: {bn: string, en: string}, sign: { sign: 
         }
     }
     
-    let prompt = consonant.bn;
-    prompt += sign.sign;
+    let prompt = consonant.bn + sign.sign;
     prompt = prompt.normalize('NFC');
-
     return { prompt, steps };
 };
-
 
 const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Drill[] => {
     const drills: Drill[] = [];
     let spaceCounter = 0;
-
-    const combinations = vowelSignsForCompounds.flatMap(sign => Array(15).fill(sign));
+    const combinations = vowelSignsForCompounds.flatMap(sign => Array(8).fill(sign));
     combinations.sort(() => Math.random() - 0.5);
 
     for (const sign of combinations) {
@@ -424,448 +382,369 @@ const generateKarDrillsForConsonant = (consonant: {bn: string, en: string}): Dri
             spaceCounter++;
         }
     }
-    
     return drills;
 };
 
-const homeRowWords = "জল ফল গল ডল জাল গাল ফাল সাল জগ গজ সাজ ডগা গজা জলা ফালা গালা ডালা সাজা সফল ফসল গজল ফস লগা অজ অঘ অলস অশ খল খস খাসা ঘষা ঘাস ঢল ঝল শখ সৎ হজ হল সহ ঢাল গলা ঝাল শসা শাখা শাল শালা হলফ হাসা হাল জগৎ জঙ্গল জলসা সহসা অলস জজ শাস হাহা খসখস খলখল ঝলসা অঢল".split(" ");
-const topRowWords = "ক্ষর রঙ রট রক্ষ টের ঠের এঁর ওঁর রঙে এঁটে ঠরঠর পর পট পিঠ পুড় পুর পীর টুপ টিপ টুঁটি টোপর টোপ ঠুঁটো ঠোঁট রূপ রূঢ় রীতি ঢের ক্ষয় ক্ষীর ক্ষুর যূপ যেই উর ঊরু পিউ টুট টুটি টোটো টইটই টুঁ রিপু পুঁটি পৈঠা পৈতে ইঁট এয়ো রুই রুটি পুঁই পিঁড়ি পরে পড়ে টর ঠর ঊর উঠ রোঁ টীট পুঁ ঠুঁই".split(" ");
-const bottomRowWords = "তথ্য তব বদ মন বন ভব ধন নদ দম নব মদ বধ ছন্দ বন্ধ মধ্য ভবন দম্ভ দ্বন্দ্ব চন্দন মন্থন তন নত মত মম নভ পণ বচন দমন মদন নন্দন বন্ধন বন্দন দন্ত ধন্য নব্য".split(" ");
-const gameWords = ["বই", "কলম", "বল", "জল", "ফল", "ঘর", "বন", "পথ", "মত", "নদ", "জন", "সব", "কম", "গম", "আম", "জাম", "গান", "ধান", "মালা", "চাকা", "পাতা", "লতা", "কাকা", "মামা", "নানা", "দাদা", "দিদি", "ফুল", "পাখি", "মাছ"];
+// Word bank data
+export const homeRowWords = "জল ফল গল ডল জাল গাল ফাল সাল জগ গজ সাজ ডগা গজা জলা ফালা গালা ডালা সাজা সফল ফসল গজল ফস লগা অজ অঘ অলস অশ খল খস খাসা ঘষা ঘাস ঢল ঝল শখ সৎ হজ হল সহ ঢাল গলা ঝাল শসা শাখা শাল শালা হলফ হাসা হাল জগৎ জঙ্গল জলসা সহসা অলস জজ শাস হাহা খসখস খলখল ঝলসা অঢল".split(" ");
+export const topRowWords = "ক্ষর রঙ রট রক্ষ টের ঠের এঁর ওঁর রঙে এঁটে ঠরঠর পর পট পিঠ পুড় পুর পীর টুপ টিপ টুঁটি টোপর টোপ ঠুঁটো ঠোঁট রূপ রূঢ় রীতি ঢের ক্ষয় ক্ষীর ক্ষুর যূপ যেই উর ঊরু পিউ টুট টুটি টোটো টইটই টুঁ রিপু পুঁটি পৈঠা পৈতে ইঁট এয়ো রুই রুটি পুঁই পিঁড়ি পরে পড়ে টর ঠর ঊর উঠ রোঁ টীট পুঁ ঠুঁই".split(" ");
+export const bottomRowWords = "তথ্য তব বদ মন বন ভব ধন নদ দম নব মদ বধ ছন্দ বন্ধ মধ্য ভবন দম্ভ দ্বন্দ্ব চন্দন মন্থন তন নত মত মম নভ পণ বচন দমন মদন নন্দন বন্ধন বন্দন দন্ত ধন্য নব্য".split(" ");
+export const gameWords = ["বই", "কলম", "বল", "জল", "ফল", "ঘর", "বন", "পথ", "মত", "নদ", "জন", "সব", "কম", "গম", "আম", "জাম", "গান", "ধান", "মালা", "চাকা", "পাতা", "লতা", "কাকা", "মামা", "নানা", "দাদা", "দিদি", "ফুল", "পাখি", "মাছ"];
 
-const homeRowChars = ['া', 'স', 'ড', 'ফ', 'গ', '্', 'জ', 'ক', 'ল', 'অ', 'শ', 'ঢ', 'ৎ', 'ঘ', 'হ', 'ঝ', 'খ', 'ষ'];
-const topRowChars = ['\u0999', '\u09b0', '\u099f', '\u09c7', '\u0995\u09cd\u09b7', '\u09af', '\u09c1', '\u09bf', '\u09cb', '\u09aa', '\u09a1', '\u09ac', '\u09c3', '\u0981', '\u0983', '\u09c8', '\u09a1\u09bc', '\u09a0', '\u09af\u09bc', '\u09c2', '\u09c0', '\u09cc', '\u09a2\u09bc', '\u09a2', '\u099e'];
-const bottomRowChars = ['্য', 'ত', 'চ', 'দ', 'ব', 'ন', 'ম', 'ং', 'থ', 'ছ', 'ধ', 'ভ', 'ণ'];
-
+export const homeRowChars = ['া', 'স', 'ড', 'ফ', 'গ', '্', 'জ', 'ক', 'ল', 'অ', 'শ', 'ঢ', 'ৎ', 'ঘ', 'হ', 'ঝ', 'খ', 'ষ'];
+export const topRowChars = ['\u0999', '\u09b0', '\u099f', '\u09c7', '\u0995\u09cd\u09b7', '\u09af', '\u09c1', '\u09bf', '\u09cb', '\u09aa', '\u09a1', '\u09ac', '\u09c3', '\u0981', '\u0983', '\u09c8', '\u09a1\u09bc', '\u09a0', '\u09af\u09bc', '\u09c2', '\u09c0', '\u09cc', '\u09a2\u09bc', '\u09a2', '\u099e'];
+export const bottomRowChars = ['্য', 'ত', 'চ', 'দ', 'ব', 'ন', 'ম', 'ং', 'থ', 'ছ', 'ধ', 'ভ', 'ণ'];
 
 export const lessons: Lesson[] = [
-  // --- HOME ROW MICRO-LESSONS (HR-01 to HR-07) ---
-  {
-    id: "hr-01",
-    title: "HR-01 — প্রথম হাতের অক্ষর (া স ড ফ)",
-    level: "Beginner",
-    row: "home-row",
-    drills: generateCuratedDrills([
-      "া", "স", "ড", "ফ",
-      "া", "স", "া", "ফ",
-      "স", "ড", "স", "ফ",
-      "ফ", "ড", "স", "া",
-      "া", "স", "ড", "ফ", "স", "া", "ফ"
-    ])
-  },
-  {
-    id: "hr-02",
-    title: "HR-02 — ডান হাতের অক্ষর (গ ্ জ ক ল)",
-    level: "Beginner",
-    row: "home-row",
-    drills: generateCuratedDrills([
-      "গ", "্", "জ", "ক", "ল",
-      "গ", "জ", "ক", "ল",
-      "ক", "ল", "জ", "গ",
-      "গ", "ক", "ল", "জ", "্",
-      "ক", "গ", "ল", "জ", "ক"
-    ])
-  },
-  {
-    id: "hr-03",
-    title: "HR-03 — Home Row Balanced Combination",
-    level: "Beginner",
-    row: "home-row",
-    drills: generateCuratedDrills([
-      "স", "স", "গ", "গ",
-      "ফ", "ফ", "ড", "ড", "জ",
-      "া", "স", "ড", "ফ", "গ",
-      "্", "জ", "ক", "ল",
-      "ক", "ল", "স", "া", "গ", "ফ"
-    ])
-  },
-  {
-    id: "hr-04",
-    title: "HR-04 — দুই অক্ষরের Combination",
-    level: "Beginner",
-    row: "home-row",
-    drills: generateCuratedDrills([
-      "সা", "দা", "গা", "জা", "কা", "লা",
-      "ফা", "দগ", "সক", "লগ", "জক",
-      "সা", "দা", "গা", "কা", "লা"
-    ])
-  },
-  {
-    id: "hr-05",
-    title: "HR-05 — তিন ও চার অক্ষরের Combination (Word Feel)",
-    level: "Beginner",
-    row: "home-row",
-    drills: generateCuratedDrills([
-      "সাদা", "গাদা", "জালা", "দাদা", "ফালা",
-      "সাদা", "দাদা", "গাদা", "ফালা", "জালা"
-    ])
-  },
-  {
-    id: "hr-06",
-    title: "HR-06 — বাস্তব শব্দ অনুশীলন (Tiered Words)",
-    level: "Beginner",
-    row: "home-row",
-    isWordDrill: true,
-    drills: generateCuratedDrills([
-      "জল", "ফল", "গল", "জগ", "গজ", "সাজ", "ঢল", "ঝল", "হল",
-      "জালা", "ফালা", "গালা", "ডালা", "সাজা", "ঢাল", "গলা", "ঝাল",
-      "সফল", "ফসল", "গজল", "জঙ্গল", "জলসা", "সহসা", "অলস"
-    ])
-  },
-  {
-    id: "hr-07",
-    title: "HR-07 — Home Row Mastery Test",
-    level: "Beginner",
-    row: "home-row",
-    drills: generateCuratedDrills([
-      "া", "স", "ড", "ফ", "গ", "জ", "ক", "ল",
-      "সা", "দা", "গা", "কা", "লা",
-      "জল", "ফল", "গল", "সাদা", "গাদা", "জালা", "দাদা", "ফালা",
-      "সফল", "ফসল", "জঙ্গল", "জলসা", "অলস", "জগৎ"
-    ])
-  },
-
-  // Legacy fallback Home Row IDs for compatibility
+  // ── HOME ROW (৭টি কিউরেটেড পাঠ) ──────────────────────────────────
   {
     id: "home-row-chars",
-    title: "হোম রো - অক্ষর অনুশীলন (কম্প্রিহেনসিভ)",
+    title: "HR-01: প্রথম হাতের অক্ষর (া স ড ফ)",
     level: "Beginner",
     row: "home-row",
-    drills: generateDrills(homeRowChars, 100)
+    drills: createDeterministicDrills(['া', 'স', 'ড', 'ফ', 'া', 'স', 'া', 'ফ', 'স', 'ড', 'স', 'ফ', 'ফা', 'সা', 'ডা'])
+  },
+  {
+    id: "home-row-right",
+    title: "HR-02: ডান পাশের হোম কী (গ ্ জ ক ল)",
+    level: "Beginner",
+    row: "home-row",
+    drills: createDeterministicDrills(['গ', '্', 'জ', 'ক', 'ল', 'গ', 'জ', 'ক', 'ল', 'গজ', 'কল', 'গল', 'জগ', 'লগ'])
+  },
+  {
+    id: "home-row-mix",
+    title: "HR-03: হোম রো মিক্স (সুষম ফ্রিকোয়েন্সি)",
+    level: "Beginner",
+    row: "home-row",
+    drills: createDeterministicDrills(['স', 'স', 'স', 'গ', 'গ', 'ফ', 'ফ', 'ড', 'ড', 'জ', 'ক', 'ক', 'ল', 'ল', 'সগ', 'ফড', 'জক', 'লসা'])
+  },
+  {
+    id: "home-row-combos",
+    title: "HR-04: দুই অক্ষরের কম্বিনেশন (সা, দা, গা, কা, লা)",
+    level: "Beginner",
+    row: "home-row",
+    drills: createDeterministicDrills(['সা', 'গা', 'কা', 'লা', 'ফা', 'ডা', 'জা', 'সা', 'গা', 'কা', 'কালা', 'গালা', 'সালা'])
+  },
+  {
+    id: "home-row-syllables",
+    title: "HR-05: তিন অক্ষরের সিলেবল (সাদা, গাদা, জালা, দাদা)",
+    level: "Beginner",
+    row: "home-row",
+    drills: createDeterministicDrills(['সাদা', 'গাদা', 'জালা', 'দাদা', 'ফালা', 'কালা', 'গালা', 'ডালা', 'শালা', 'হাল'])
   },
   {
     id: "home-row-word-drill",
-    title: "হোম রো - শব্দ অনুশীলন (কম্প্রিহেনসিভ)",
+    title: "HR-06: বাস্তব হোম রো শব্দ (টিয়ার ১, ২, ৩)",
     level: "Beginner",
     row: "home-row",
     text: homeRowWords.join(' '),
     isWordDrill: true,
   },
-
-  // --- TOP ROW MICRO-LESSONS (TR-01 to TR-07) ---
   {
-    id: "tr-01",
-    title: "TR-01 — প্রথম টপ রো অক্ষর (ঙ র ট ে)",
+    id: "home-row-mastery",
+    title: "HR-07: হোম রো চূড়ান্ত মাস্টারি পরীক্ষা",
     level: "Beginner",
-    row: "top-row",
-    drills: generateCuratedDrills([
-      "ঙ", "র", "ট", "ে",
-      "ঙ", "র", "ট", "ে",
-      "র", "ট", "ে", "ঙ",
-      "ে", "ট", "র", "ঙ",
-      "ঙ", "র", "ট", "ে", "র"
-    ])
-  },
-  {
-    id: "tr-02",
-    title: "TR-02 — দ্বিতীয় টপ রো অক্ষর (য ু ি ো প)",
-    level: "Beginner",
-    row: "top-row",
-    drills: generateCuratedDrills([
-      "য", "ু", "ি", "ো", "প",
-      "য", "ু", "ি", "ো", "প",
-      "প", "ো", "ি", "ু", "য",
-      "ু", "ি", "ো", "প", "য"
-    ])
-  },
-  {
-    id: "tr-03",
-    title: "TR-03 — বিশেষ ও বিরল বর্ণ (ঁ ঃ ৈ ূ ী ৌ ৃ ড় ঢ় য় ঞ)",
-    level: "Beginner",
-    row: "top-row",
-    drills: generateCuratedDrills([
-      "ঁ", "ঃ", "ৈ", "ূ", "ী", "ৌ", "ৃ",
-      "ড়", "ঢ়", "য়", "ঞ",
-      "ঁ", "ঃ", "ৈ", "ূ", "ী", "ৌ", "ৃ", "ড়", "ঢ়", "য়", "ঞ"
-    ])
-  },
-  {
-    id: "tr-04",
-    title: "TR-04 — Home + Top Mixed Combinations",
-    level: "Beginner",
-    row: "top-row",
-    drills: generateCuratedDrills([
-      "সা", "রি", "গো", "টি", "রে",
-      "পি", "টু", "রে", "গো", "সা",
-      "টি", "রি", "গো", "রে", "সা"
-    ])
-  },
-  {
-    id: "tr-05",
-    title: "TR-05 — Top Row Words Practice",
-    level: "Beginner",
-    row: "top-row",
-    isWordDrill: true,
-    drills: generateCuratedDrills([
-      "রুটি", "পিঠ", "পুঁই", "ক্ষীর", "পৈতে",
-      "পর", "পট", "পিঠ", "পুড়", "পুর", "পীর", "টুপ", "টিপ",
-      "রূপ", "রীতি", "রুই", "রুটি", "পুঁই", "পিঁড়ি"
-    ])
-  },
-  {
-    id: "tr-06",
-    title: "TR-06 — Home + Top Sentences (বাক্যংশ)",
-    level: "Beginner",
-    row: "top-row",
-    drills: generateCuratedDrills([
-      "পরের জায়গা", "রুটি খাই", "পিঠ চাপড়ে দাও",
-      "পুকুরে মাছ", "এক ফোঁটা জল", "আজ রোদ উঠেছে"
-    ])
-  },
-  {
-    id: "tr-07",
-    title: "TR-07 — Top Row Mastery Test",
-    level: "Beginner",
-    row: "top-row",
-    drills: generateCuratedDrills([
-      "ঙ", "র", "ট", "ে", "য", "ু", "ি", "ো", "প",
-      "সা", "রি", "গো", "টি", "রে",
-      "রুটি", "পিঠ", "পুঁই", "ক্ষীর", "পৈতে", "রূপ", "রীতি"
-    ])
+    row: "home-row",
+    drills: createDeterministicDrills(['জল', 'ফল', 'সাদা', 'গালা', 'সফল', 'ফসল', 'জাল', 'গাল', 'জালা', 'শালা', 'জঙ্গল', 'জলসা', 'কালা', 'ডালা', 'গজল', 'সহসা'])
   },
 
-  // Legacy fallback Top Row IDs for compatibility
+  // ── TOP ROW (৭টি কিউরেটেড পাঠ) ───────────────────────────────────
   {
     id: "top-row-chars",
-    title: "টপ রো - অক্ষর অনুশীলন (কম্প্রিহেনসিভ)",
+    title: "TR-01: বাম হাতের টপ কী (ঙ র ট ে)",
     level: "Beginner",
     row: "top-row",
-    drills: generateDrills(topRowChars, 100)
+    drills: createDeterministicDrills(['ঙ', 'র', 'ট', 'ে', 'ঙ', 'র', 'ট', 'ে', 'রে', 'টে', 'রট', 'রঙ', 'টের'])
+  },
+  {
+    id: "top-row-right",
+    title: "TR-02: ডান হাতের টপ কী (য ু ি ো প)",
+    level: "Beginner",
+    row: "top-row",
+    drills: createDeterministicDrills(['য', 'ু', 'ি', 'ো', 'প', 'পু', 'পি', 'পো', 'যো', 'পর', 'পট', 'পিঠ', 'পুর'])
+  },
+  {
+    id: "top-row-special",
+    title: "TR-03: বিরল ও বিশেষ টপ কী (ঁ ঃ ৈ ূ ী ৌ ৃ)",
+    level: "Beginner",
+    row: "top-row",
+    drills: createDeterministicDrills(['ঁ', 'ঃ', 'ৈ', 'ূ', 'ী', 'ৌ', 'ৃ', 'ড়', 'ঢ়', 'য়', 'ঞ', 'রঙ', 'পৈতে', 'ক্ষীর', 'পূজা', 'চাঁদ', 'দুঃখ'])
+  },
+  {
+    id: "top-row-mix",
+    title: "TR-04: হোম + টপ মিশ্রিত কম্বো (সা, রি, গো, টি, রে)",
+    level: "Beginner",
+    row: "top-row",
+    drills: createDeterministicDrills(['সা', 'রি', 'গো', 'টি', 'রে', 'পো', 'কা', 'রু', 'গে', 'পা', 'সারি', 'গোরু', 'টিরে', 'পোকা', 'গাছ', 'পাখি', 'রুটি'])
   },
   {
     id: "top-row-word-drill",
-    title: "টপ রো - শব্দ অনুশীলন (কম্প্রিহেনসিভ)",
+    title: "TR-05: টপ রো শব্দভাণ্ডার (রুটি, পিঠ, পুঁই, ক্ষীর)",
     level: "Beginner",
     row: "top-row",
     text: topRowWords.join(' '),
     isWordDrill: true,
   },
-
-  // --- BOTTOM ROW MICRO-LESSONS (BR-01 to BR-07) ---
   {
-    id: "br-01",
-    title: "BR-01 — প্রথম বটম রো অক্ষর (ত চ দ)",
+    id: "top-row-sentences",
+    title: "TR-06: হোম + টপ বাক্য অনুশীলন",
     level: "Beginner",
-    row: "bottom-row",
-    drills: generateCuratedDrills([
-      "ত", "চ", "দ",
-      "ত", "চ", "দ", "ত",
-      "দ", "চ", "ত", "দ",
-      "ত", "ত", "চ", "চ", "দ", "দ"
-    ])
+    row: "top-row",
+    text: "পাখি ফল খায়। গাছে পাখি গান গায়। জলে মাছ খেলা করে। সাদা রুটি খাই।",
   },
   {
-    id: "br-02",
-    title: "BR-02 — দ্বিতীয় বটম রো অক্ষর (ব ন ম)",
+    id: "top-row-mastery",
+    title: "TR-07: টপ রো চূড়ান্ত মাস্টারি পরীক্ষা",
     level: "Beginner",
-    row: "bottom-row",
-    drills: generateCuratedDrills([
-      "ব", "ন", "ম",
-      "ব", "ন", "ম", "ব",
-      "ম", "ন", "ব", "ম",
-      "ব", "ব", "ন", "ন", "ম", "ম"
-    ])
-  },
-  {
-    id: "br-03",
-    title: "BR-03 — অতিরিক্ত বটম রো অক্ষর (থ ছ ধ ভ ণ ং ্য)",
-    level: "Beginner",
-    row: "bottom-row",
-    drills: generateCuratedDrills([
-      "থ", "ছ", "ধ", "ভ", "ণ", "ং", "্য",
-      "থ", "ছ", "ধ", "ভ", "ণ",
-      "ং", "্য", "থ", "ছ", "ধ"
-    ])
-  },
-  {
-    id: "br-04",
-    title: "BR-04 — Home + Top + Bottom Combinations",
-    level: "Beginner",
-    row: "bottom-row",
-    drills: generateCuratedDrills([
-      "সাদা", "বাংলা", "মানুষ", "জীবন",
-      "বাংলা", "মানুষ", "জীবন", "সাদা"
-    ])
-  },
-  {
-    id: "br-05",
-    title: "BR-05 — Bottom-Heavy Words Practice",
-    level: "Beginner",
-    row: "bottom-row",
-    isWordDrill: true,
-    drills: generateCuratedDrills([
-      "তথ্য", "তব", "বদ", "মন", "বন", "ভব", "ধন", "নদ", "দম", "নব", "মদ", "বধ",
-      "ছন্দ", "বন্ধ", "মধ্য", "ভবন", "দম্ভ", "দ্বন্দ্ব", "চন্দন", "মন্থন"
-    ])
-  },
-  {
-    id: "br-06",
-    title: "BR-06 — Mixed Short Paragraph (বটম রো সমৃদ্ধ)",
-    level: "Beginner",
-    row: "bottom-row",
-    text: "বনের কাছে নদী চলে। নদীতে জলের ঢেউ নাচে। মানুষ ও বন একত্রে বাঁচে। সত্য ও সুন্দর জীবন গড়ি।"
-  },
-  {
-    id: "br-07",
-    title: "BR-07 — Bottom Row Mastery Test",
-    level: "Beginner",
-    row: "bottom-row",
-    drills: generateCuratedDrills([
-      "ত", "চ", "দ", "ব", "ন", "ম", "থ", "ছ", "ধ", "ভ", "ণ",
-      "তথ্য", "তব", "বদ", "মন", "বন", "ভব", "ধন", "ছন্দ", "বন্ধ", "ভবন",
-      "সাদা", "বাংলা", "মানুষ", "জীবন"
-    ])
+    row: "top-row",
+    drills: createDeterministicDrills(['রুটি', 'ক্ষীর', 'পুঁই', 'পৈতে', 'টোপর', 'পিঠ', 'রূপ', 'রীতি', 'পাখি', 'গাছ'])
   },
 
-  // Legacy fallback Bottom Row IDs for compatibility
+  // ── BOTTOM ROW (৭টি কিউরেটেড পাঠ) ────────────────────────────────
   {
     id: "bottom-row-chars",
-    title: "বটম রো - অক্ষর অনুশীলন (কম্প্রিহেনসিভ)",
+    title: "BR-01: ত চ দ (বাম হাতের বটম কী)",
     level: "Beginner",
     row: "bottom-row",
-    drills: generateDrills(bottomRowChars, 100)
+    drills: createDeterministicDrills(['ত', 'চ', 'দ', 'ত', 'চ', 'দ', 'তদ', 'চত', 'দচ', 'তচদ', 'চাঁদ', 'দান', 'তাল', 'চক'])
+  },
+  {
+    id: "bottom-row-mid",
+    title: "BR-02: ব ন ম (ডান হাতের বটম কী)",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: createDeterministicDrills(['ব', 'ন', 'ম', 'বন', 'নব', 'মন', 'মব', 'নম', 'বম', 'বই', 'নদী', 'মাটি', 'মানব'])
+  },
+  {
+    id: "bottom-row-shift",
+    title: "BR-03: থ ছ ধ ভ ণ (বটম Shift সমন্বয়)",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: createDeterministicDrills(['থ', 'ছ', 'ধ', 'ভ', 'ণ', 'তথ্য', 'ছাতা', 'ধনী', 'ভালো', 'বাণী', 'ছন্দ', 'ধন', 'ভাত', 'গুণ'])
+  },
+  {
+    id: "bottom-row-all-mix",
+    title: "BR-04: Home + Top + Bottom সর্ব-রো মিক্স",
+    level: "Beginner",
+    row: "bottom-row",
+    drills: createDeterministicDrills(['সাদা', 'বাংলা', 'মানুষ', 'জীবন', 'সময়', 'দেশ', 'স্বাধীনতা', 'প্রকৃতি'])
   },
   {
     id: "bottom-row-word-drill",
-    title: "বটম রো - শব্দ অনুশীলন (কম্প্রিহেনসিভ)",
+    title: "BR-05: বটম-হেভি শব্দভাণ্ডার (তথ্য, বন্ধ, চন্দন, ধন্য)",
     level: "Beginner",
     row: "bottom-row",
     text: bottomRowWords.join(' '),
     isWordDrill: true,
   },
-
-  // --- MIXED ROW LESSONS (MR-01 to MR-05) ---
   {
-    id: "mr-01",
-    title: "MR-01 — Home Row Only Refresher",
+    id: "bottom-row-paragraph",
+    title: "BR-06: সর্ব-রো সমন্বিত অনুচ্ছেদ",
     level: "Beginner",
-    row: "mixed-row",
-    drills: generateCuratedDrills([
-      "া", "স", "ড", "ফ", "গ", "জ", "ক", "ল",
-      "সাদা", "গাদা", "জালা", "দাদা", "সফল", "ফসল"
-    ])
+    row: "bottom-row",
+    text: "আমার সোনার বাংলা আমি তোমায় ভালোবাসি। মানুষের জীবন সাধনা ও অধ্যবসায়ের মাধ্যমে সুন্দর হয়ে ওঠে।",
   },
   {
-    id: "mr-02",
-    title: "MR-02 — Home + Top Rows Transition",
+    id: "bottom-row-mastery",
+    title: "BR-07: বটম রো চূড়ান্ত মাস্টারি পরীক্ষা",
     level: "Beginner",
-    row: "mixed-row",
-    drills: generateCuratedDrills([
-      "সারি", "গোটি", "রেখা", "পুকুর", "রুটি", "পিঠ", "ক্ষীর"
-    ])
-  },
-  {
-    id: "mr-03",
-    title: "MR-03 — Home + Bottom Rows Transition",
-    level: "Beginner",
-    row: "mixed-row",
-    drills: generateCuratedDrills([
-      "সদাই", "কদম", "জলবন", "চন্দন", "মনন", "দমন", "বচন"
-    ])
-  },
-  {
-    id: "mr-04",
-    title: "MR-04 — Top + Bottom Rows Transition",
-    level: "Beginner",
-    row: "mixed-row",
-    drills: generateCuratedDrills([
-      "উত্তর", "প্রবীন", "জীবন", "পবন", "রতন", "ভ্রমণ", "রুপম"
-    ])
-  },
-  {
-    id: "mr-05",
-    title: "MR-05 — All Rows Mixed Challenge",
-    level: "Beginner",
-    row: "mixed-row",
-    drills: generateCuratedDrills([
-      "বাংলা আমাদের মাতৃভাষা।", "আমরা প্রতিদিন নতুন কিছু শিখি।",
-      "টাইপিং নিয়মিত অনুশীলন করলে গতি বাড়ে।", "সঠিক আঙুল ব্যবহারে নির্ভুলতা আসে।"
-    ])
+    row: "bottom-row",
+    drills: createDeterministicDrills(['তথ্য', 'বন্ধন', 'চন্দন', 'বাংলা', 'মানুষ', 'জীবন', 'ধন্য', 'স্বাধীনতা'])
   },
 
-  // --- KAR LESSONS (Stage A: Individual Kar, Stage B: Mixed Kar, Stage C: Kar + Words) ---
+  // ── ROW MIXING (৫টি পাঠ) ─────────────────────────────────────────
   {
-    id: "kar-stage-a-01",
-    title: "KAR-01 — আ-কার (া) অনুশীলন",
+    id: "mixed-row-1",
+    title: "রো মিক্সিং ১: হোম রো বিশুদ্ধ গতি (Home Only)",
     level: "Beginner",
-    row: "kar-row",
-    drills: generateCuratedDrills([
-      "কা", "খা", "গা", "ঘা", "চা", "ছা", "জা", "ঝা", "টা", "ঠা", "ডা", "ঢা", "তা", "থা", "দা", "ধা", "না", "পা", "ফা", "বা", "ভা", "মা", "রা", "লা", "সা", "হা"
-    ])
+    row: "mixed-row",
+    drills: createDeterministicDrills(['জল', 'ফল', 'সাদা', 'গালা', 'সফল', 'ফসল', 'জালা', 'শালা', 'হাল', 'ডালা'])
   },
   {
-    id: "kar-stage-a-02",
-    title: "KAR-02 — ই-কার (ি) অনুশীলন",
+    id: "mixed-row-2",
+    title: "রো মিক্সিং ২: হোম + টপ ট্রানজিশন",
     level: "Beginner",
-    row: "kar-row",
-    drills: generateCuratedDrills([
-      "কি", "গি", "চি", "জি", "টি", "দি", "নি", "পি", "বি", "মি", "রি", "লি", "সি", "হি"
-    ])
+    row: "mixed-row",
+    drills: createDeterministicDrills(['পাখি', 'রুটি', 'গাছ', 'পিঠ', 'ক্ষীর', 'পোকা', 'সারি', 'গোরু'])
   },
   {
-    id: "kar-stage-a-03",
-    title: "KAR-03 — ঈ-কার (ী) অনুশীলন",
+    id: "mixed-row-3",
+    title: "রো মিক্সিং ৩: হোম + বটম ট্রানজিশন",
     level: "Beginner",
-    row: "kar-row",
-    drills: generateCuratedDrills([
-      "কী", "গী", "চী", "জী", "টী", "দী", "নী", "পী", "বী", "মী", "রী", "লী", "সী", "হী"
-    ])
+    row: "mixed-row",
+    drills: createDeterministicDrills(['সাদা', 'বন', 'জল', 'মন', 'ফল', 'নদ', 'দান', 'তাল'])
   },
   {
-    id: "kar-stage-a-04",
-    title: "KAR-04 — উ-কার (ু) ও ঊ-কার (ূ) অনুশীলন",
+    id: "mixed-row-4",
+    title: "রো মিক্সিং ৪: টপ + বটম জাম্পিং",
     level: "Beginner",
-    row: "kar-row",
-    drills: generateCuratedDrills([
-      "কু", "খু", "গু", "ঘুর", "চু", "জু", "টু", "দু", "নু", "পু", "ফু", "বু", "মু", "রু", "লু", "সু",
-      "কূ", "গূ", "দূ", "পূ", "ভূ", "মূ", "রূপ"
-    ])
+    row: "mixed-row",
+    drills: createDeterministicDrills(['নদী', 'পাখি', 'পানি', 'রুটি', 'ভাত', 'মাটি', 'পাহাড়', 'মেঘ'])
   },
   {
-    id: "kar-stage-a-05",
-    title: "KAR-05 — এ-কার (ে), ঐ-কার (ৈ), ও-কার (ো), ঔ-কার (ৌ) অনুশীলন",
+    id: "mixed-row-5",
+    title: "রো মিক্সিং ৫: সর্ব-রো ফ্লুয়েন্সি (All Rows)",
     level: "Beginner",
-    row: "kar-row",
-    drills: generateCuratedDrills([
-      "কে", "খে", "গে", "ঘে", "চে", "জে", "টে", "দে", "নে", "পে", "ফে", "বে", "মে", "রে", "লে", "সে",
-      "কৈ", "গৈ", "দৈ", "নৈ", "পৈ", "বৈ", "মৈ",
-      "কো", "গো", "চো", "জো", "টো", "দো", "নো", "পো", "ফো", "বো", "মো", "রো", "লো", "সো",
-      "কৌ", "গৌ", "দৌ", "নৌ", "পৌ", "মৌ"
-    ])
-  },
-  {
-    id: "kar-stage-b-mixed",
-    title: "KAR-06 — কার-চিহ্ন Mixed Sequential Combinations",
-    level: "Beginner",
-    row: "kar-row",
-    drills: generateCuratedDrills([
-      "কা", "কি", "কী", "কু", "কূ", "কৃ", "কে", "কৈ", "কো", "কৌ",
-      "গা", "গি", "গী", "গু", "গূ", "গে", "গৈ", "গো", "গৌ",
-      "কা", "গি", "রু", "সে", "মো", "নৌ", "পৈ", "দী"
-    ])
-  },
-  {
-    id: "kar-stage-c-words",
-    title: "KAR-07 — কার-যুক্ত বাস্তব শব্দ অনুশীলন",
-    level: "Beginner",
-    row: "kar-row",
-    isWordDrill: true,
-    drills: generateCuratedDrills([
-      "দিন", "মাটি", "নদী", "বিজয়", "খুশি", "ফুল", "নতুন", "মেঘ", "আলো", "নৌকা",
-      "সকাল", "আকাশ", "বাতাস", "জীবন", "মাথা", "পাখি", "মাছ", "পানি"
-    ])
+    row: "mixed-row",
+    drills: createDeterministicDrills(['বাংলাদেশ', 'মানুষ', 'জীবন', 'স্বাধীনতা', 'প্রকৃতি', 'পরিবার', 'সংস্কৃতি', 'শিক্ষা'])
   },
 
-  // Legacy fallback Kar ID
+  // ── HASANTA & PHOLA MODULES ──────────────────────────────────────
   {
-    id: "kar-row",
-    title: "কার-চিহ্ন কম্প্রিহেনসিভ অনুশীলন",
-    level: "Beginner",
-    row: "kar-row",
-    drills: consonants.flatMap(c => generateKarDrillsForConsonant(c)).slice(0, 100)
+    id: "hasanta-drill-1",
+    title: "HAS-01: একক হসন্ত ট্রানজিশন (ক্, ত্, ন্, স্)",
+    level: "Intermediate",
+    row: "hasanta-row",
+    drills: createDeterministicDrills(['ক্', 'ত্', 'ন্', 'স্', 'ব্', 'দ্', 'প্', 'ম্', 'র্'])
+  },
+  {
+    id: "hasanta-drill-2",
+    title: "HAS-02: দ্বিত্ব ও সন্ধি (ক্ক, ক্ত, ন্ত, ন্দ)",
+    level: "Intermediate",
+    row: "hasanta-row",
+    drills: createDeterministicDrills(['পাক্কা', 'রক্ত', 'শান্ত', 'আনন্দ', 'মুক্তি', 'সুন্দর', 'অনন্ত', 'বন্ধন'])
+  },
+  {
+    id: "hasanta-drill-3",
+    title: "HAS-03: দন্ত্য-স যুক্ত রূপ (স্ট, স্থ, স্ক, স্প)",
+    level: "Intermediate",
+    row: "hasanta-row",
+    drills: createDeterministicDrills(['স্টেশন', 'স্থান', 'স্কুল', 'স্পর্শ', 'স্পষ্ট', 'স্বাস্থ্য', 'অস্থির', 'পুস্তক'])
+  },
+  {
+    id: "hasanta-drill-4",
+    title: "HAS-04: মূর্ধন্য-ষ ও তালব্য-শ যুক্ত রূপ (ষ্ট, ষ্ঠ, শ্চ, ঞ্চ)",
+    level: "Intermediate",
+    row: "hasanta-row",
+    drills: createDeterministicDrills(['কষ্ট', 'শ্রেষ্ঠ', 'নিশ্চয়', 'মঞ্চ', 'বৃষ্টি', 'প্রতিষ্ঠা', 'আশ্চর্য', 'অঞ্চল'])
+  },
+  {
+    id: "hasanta-drill-5",
+    title: "HAS-05: হসন্ত মাস্টার পরীক্ষা",
+    level: "Intermediate",
+    row: "hasanta-row",
+    drills: createDeterministicDrills(['রক্ত', 'আনন্দ', 'স্কুল', 'স্টেশন', 'শ্রেষ্ঠ', 'কষ্ট', 'নিশ্চয়', 'স্বাস্থ্য', 'বৃষ্টি'])
+  },
+  {
+    id: "phola-drill-ra",
+    title: "ফলা ১: র-ফলা পরিবার (ক্র, গ্র, প্র, ব্র, ত্র, দ্র)",
+    level: "Intermediate",
+    row: "phola-row",
+    drills: createDeterministicDrills(['গ্রাম', 'প্রথম', 'ব্রত', 'ছাত্র', 'দ্রুত', 'শ্রম', 'ভ্রমণ', 'ক্রিকেট', 'প্রকৃতি'])
+  },
+  {
+    id: "phola-drill-ja",
+    title: "ফলা ২: য-ফলা পরিবার (ক্য, ব্য, গ্য, দ্য, ন্য)",
+    level: "Intermediate",
+    row: "phola-row",
+    drills: createDeterministicDrills(['বাক্য', 'ব্যয়', 'ব্যবসা', 'ধন্য', 'পদ্য', 'গদ্য', 'মূল্য', 'সত্য', 'বিদ্যা'])
+  },
+  {
+    id: "phola-drill-la",
+    title: "ফলা ৩: ল-ফলা পরিবার (ক্ল, গ্ল, প্ল, ব্ল)",
+    level: "Intermediate",
+    row: "phola-row",
+    drills: createDeterministicDrills(['ক্লাস', 'গ্লানি', 'বিপ্লব', 'অম্লান', 'শুক্ল', 'প্লাবন'])
+  },
+  {
+    id: "phola-drill-ref",
+    title: "ফলা ৪: রেফ পরিবার (র্ক, র্গ, র্ত, র্দ, র্ম, র্ষ)",
+    level: "Intermediate",
+    row: "phola-row",
+    drills: createDeterministicDrills(['কর্ম', 'ধর্ম', 'গর্ব', 'সূর্য', 'তর্ক', 'বর্ষা', 'স্বর্গ', 'পর্দা'])
+  },
+  {
+    id: "phola-drill-bama",
+    title: "ফলা ৫: ব-ফলা ও ম-ফলা পরিবার (দ্ব, শ্ব, স্ব, পদ্ম, গ্রীষ্ম)",
+    level: "Intermediate",
+    row: "phola-row",
+    drills: createDeterministicDrills(['দ্বিধা', 'বিশ্ব', 'স্বাধীনতা', 'স্বদেশ', 'পদ্ম', 'গ্রীষ্ম', 'বিস্ময়', 'আত্মা'])
   },
 
-  // GAME & OTHER BEGINNER/INTERMEDIATE/ADVANCED LESSONS
+  // ── CONJUNCTS & SPECIAL ──────────────────────────────────────────
+  {
+    id: "conjunct-tier-1-2",
+    title: "যুক্তাক্ষর টিয়ার ১ ও ২ (সহজ ও মাঝারি)",
+    level: "Intermediate",
+    row: "conjunct-row",
+    drills: createDeterministicDrills(['রক্ত', 'শান্ত', 'আনন্দ', 'বন্ধু', 'প্রথম', 'ছাত্র', 'দ্রুত', 'গ্রাম'])
+  },
+  {
+    id: "conjunct-tier-3",
+    title: "যুক্তাক্ষর টিয়ার ৩ (কঠিন: ক্ষ, জ্ঞ, শ্র, হ্ম, চ্ছ)",
+    level: "Intermediate",
+    row: "conjunct-row",
+    drills: createDeterministicDrills(['শিক্ষা', 'পরীক্ষা', 'জ্ঞান', 'বিজ্ঞান', 'ব্রাহ্মণ', 'ইচ্ছা', 'শ্রেষ্ঠ', 'শ্রদ্ধা'])
+  },
+  {
+    id: "conjunct-tier-4",
+    title: "যুক্তাক্ষর টিয়ার ৪ (ত্রি-ব্যঞ্জন: ক্ষ্ম, ষ্ক্র, ন্ত্র, ম্প্র, ষ্ট্র)",
+    level: "Intermediate",
+    row: "conjunct-row",
+    drills: createDeterministicDrills(['সূক্ষ্ম', 'নিষ্ক্রিয়', 'যন্ত্র', 'সম্প্রদায়', 'রাষ্ট্র', 'অস্ট্রেলিয়া', 'উচ্ছ্বাস'])
+  },
+  {
+    id: "special-chars-1",
+    title: "বিশেষ চিহ্ন: ঁ, ং, ঃ, ৎ, ়",
+    level: "Beginner",
+    row: "special-row",
+    drills: createDeterministicDrills(['চাঁদ', 'হাঁস', 'রংধনু', 'সিংহ', 'দুঃখ', 'উৎসব', 'হঠাৎ', 'বিদ্যুৎ', 'বাংলা'])
+  },
+  {
+    id: "special-chars-2",
+    title: "বিশেষ বর্ণ: ড়, ঢ়, য়, ঞ",
+    level: "Beginner",
+    row: "special-row",
+    drills: createDeterministicDrills(['পাহাড়', 'বাড়ি', 'আষাঢ়', 'গাঢ়', 'সময়', 'ভয়', 'মিঞা', 'দাঁড়কাক', 'ঘড়ি'])
+  },
+
+  // ── NUMERALS & PUNCTUATION ───────────────────────────────────────
+  {
+    id: "numerals-1",
+    title: "বাংলা সংখ্যা ০ থেকে ৯",
+    level: "Beginner",
+    row: "number-row",
+    drills: createDeterministicDrills(['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯', '১০', '২০', '৫০', '১০০', '১৯৭১', '২০২৬'])
+  },
+  {
+    id: "numerals-2",
+    title: "বাস্তব ফরম্যাট (তারিখ, মুদ্রা, শতাংশ)",
+    level: "Intermediate",
+    row: "number-row",
+    text: "২০২৬ সাল, ১৩ নভেম্বর ২০০০, ৳ ৫০০, ৳ ১০০০, ২৫%, ৫০%, ১২:৩০ মিনিট।"
+  },
+  {
+    id: "punctuation-1",
+    title: "বিরামচিহ্ন ১: দাঁড়ি, কমা, প্রশ্ন, বিস্ময় (।, ,, ?, !)",
+    level: "Intermediate",
+    row: "number-row",
+    text: "আমার দেশ বাংলাদেশ। তুমি কি যাবে? সাবাশ, আমরা পেরেছি! দাঁড়াও, আমি আসছি।"
+  },
+  {
+    id: "punctuation-2",
+    title: "বিরামচিহ্ন ২: কোলন, সেমিকোলন, উদ্ধৃতি (: ; — \" \')",
+    level: "Intermediate",
+    row: "number-row",
+    text: 'শিক্ষক বললেন, "সততা সর্বোৎকৃষ্ট পন্থা।" বিষয়: ছুটির আবেদন। নজরুল (১৮৯৯-১৯৭৬) আমাদের জাতীয় কবি।'
+  },
+
+  // ── COMMON WORDS & PHRASES ───────────────────────────────────────
+  {
+    id: "common-words-50",
+    title: "শীর্ষ বহুল ব্যবহৃত বাংলা শব্দ",
+    level: "Intermediate",
+    row: "words-row",
+    text: "আমি আমরা তুমি আপনি সে এটা ওটা করে হয় আছে নিয়ে থেকে জন্য করা হবে ছিল মানুষ দেশ জীবন সময় কাজ দিন রাত ভালো"
+  },
+  {
+    id: "common-phrases-1",
+    title: "শব্দগুচ্ছ ও স্পেস ট্রানজিশন",
+    level: "Intermediate",
+    row: "words-row",
+    text: "আমি যাব তুমি কি আসবে কেমন আছো আজ খুব ভালো দিন আমরা সবাই যাব সবাই মিলে কাজ করব"
+  },
+
+  // ── GAME & KAR ROWS ──────────────────────────────────────────────
   {
     id: "game-easy",
     title: "গেম - সহজ শব্দ",
@@ -873,6 +752,15 @@ export const lessons: Lesson[] = [
     text: gameWords.join(' '),
     isWordDrill: true,
   },
+  ...consonants.map(consonant => ({
+    id: `kar-drill-${consonant.en}`,
+    title: `${consonant.bn}-এর সাথে কার-চিহ্ন অনুশীলন`,
+    level: 'Beginner' as const,
+    row: 'kar-row' as const,
+    drills: generateKarDrillsForConsonant(consonant),
+  })),
+
+  // ── ALPHABET & CLASSIC LESSONS ───────────────────────────────────
   {
     id: "char-practice-1",
     title: "বর্ণমালা অনুশীলন",
@@ -881,7 +769,7 @@ export const lessons: Lesson[] = [
   },
   {
     id: "char-practice-2",
-    title: "ব্যাপক কার-চিহ্ন অনুশীলন",
+    title: "ব্যাপক কার-চিহ্ন অনুশীলন (রিভিউ)",
     level: "Beginner",
     text: "কা কি কী কু কূ কৃ কে কৈ কো কৌ ক্য। খা খি খী খু খূ খৃ খে খৈ খো খৌ খ্য। গা গি গী গু গূ গৃ গে গৈ গো গৌ গ্য। ঘা ঘি ঘী ঘু ঘূ ঘৃ ঘে ঘৈ ঘো ঘৌ ঘ্য। চা চি চী চু চূ বৃ চে চৈ চো চৌ চ্য। জা জি জী জু জূ জৃ জে জৈ জো জৌ জ্য। টা টি টী টু টূ টৃ টে টৈ টো টৌ ট্য। দা দি দী দু দূ দৃ দে দৈ দো দৌ দ্য। না নি নী নু নূ নৃ নে নৈ নো নৌ ন্য। পা পি পী পু পূ পৃ পে পৈ পো পৌ প্য। বা বি বী বু বূ বৃ বে বৈ বো বৌ ব্য। মা মি মী মু মূ মৃ মে মৈ মো মৌ ম্য। রা রি রী রু রূ রৃ রে রাই রো রৌ র্য। লা লি লী লু লূ বৃ লে লৈ লো লৌ ল্য। সা সি সী সু সূ সৃ সে সৈ সো সৌ স্য। ক্ষা ক্ষি ক্ষী ক্ষু ক্ষূ ক্ষৃ ক্ষে ক্ষৈ ক্ষো খৌ ক্ষ্য।",
   },
@@ -890,25 +778,6 @@ export const lessons: Lesson[] = [
     title: "সহজ পাঠ - প্রথম ভাগ",
     level: "Beginner",
     text: "বনে থাকে বাঘ। গাছে থাকে পাখি। জলে থাকে মাছ। ডালে আছে ফল। পাখি ফল খায়। পাখা মেলে ওড়ে। বাঘ আছে আম-বনে। গায়ে চাকা চাকা দাগ। পাখি বনে গান গায়। মাছ জলে খেলা করে। ডালে ডালে কাক ডাকে। খালে বক মাছ ধরে। বনে কত মাছি ওড়ে। ওরা সব মৌ-মাছি। ঐখানে মৌ-চাক। তাতে আছে মধু ভরা।",
-  },
-  // Intermediate Lessons
-  {
-    id: "word-practice-1",
-    title: "ছোট শব্দ অনুশীলন",
-    level: "Intermediate",
-    text: "আমার সোনার বাংলা আমি তোমায় ভালোবাসি। চিরদিন তোমার আকাশ, তোমার বাতাস, আমার প্রাণে বাজায় বাঁশি। ও মা, ফাগুনে তোর আমের বনে ঘ্রাণে পাগল করে, মরি হায়, হায় রে— ও মা, অঘ্রানে তোর ভরা খেতে আমি কী দেখেছি মধুর হাসি।",
-  },
-  {
-    id: "word-practice-2",
-    title: "মাঝারি শব্দ অনুশীলন",
-    level: "Intermediate",
-    text: "বাংলাদেশ, ঢাকা, সুন্দরবন, নদী, সমুদ্র, মেঘ, আকাশ, বাতাস। স্বাধীনতা, মুক্তি, সংগ্রাম, বিজয়, একাত্তর। এই শব্দগুলো আমাদের দেশের পরিচয় বহন করে।",
-  },
-   {
-    id: "word-practice-3",
-    title: "দৈনন্দিন ব্যবহৃত শব্দ",
-    level: "Intermediate",
-    text: "কাজ, ঘর, বাজার, বাবা, মা, ভাই, বোন, বন্ধু। প্রতিদিন, সকাল, দুপুর, রাত, খাওয়া, ঘুম। এইগুলো আমাদের জীবনের সাধারণ কিন্তু গুরুত্বপূর্ণ অংশ।",
   },
   {
     id: "sahaj-path-2",
@@ -922,7 +791,8 @@ export const lessons: Lesson[] = [
     level: "Intermediate",
     text: "ঐ সাদা ছাতা। দাদা যায় হাটে। গায়ে লাল জামা। মামা যায় খাতা হাতে। গায়ে শাদা শাল। মামা আনে চাল ডাল। আর কেনে শাক। আর কেনে আটা। দাদা কেনে পাকা আটা, সাত আনা দিয়ে। আর, আখ আর জাম চার আনা। বাবা খাবে। কাকা খাবে। আর খাবে মামা। তার পরে কাজ আছে। বাবা কাজে যাবে।",
   },
-  // Advanced Lessons
+
+  // ── ADVANCED & LITERATURE ────────────────────────────────────────
   {
     id: "sentence-practice-1",
     title: "ছোট বাক্য অনুশীলন",
@@ -939,7 +809,7 @@ export const lessons: Lesson[] = [
     id: "paragraph-practice-1",
     title: "অনুচ্ছেদ অনুশীলন - সাধারণ",
     level: "Advanced",
-text: "দ্রুত বাদামী শেয়ালটি অলস কুকুরটিকে লাফিয়ে পার হয়ে গেল। এই বাক্যটি ইংরেজি বর্ণমালার সমস্ত অক্ষর ব্যবহার করে লেখা যায়, তেমনই বাংলাতেও এমন বাক্য তৈরি করা সম্ভব যা প্রায় সমস্ত বর্ণ ব্যবহার করে। টাইপিং অনুশীলন ধৈর্য ও অধ্যবসায়ের বিষয়। নিয়মিত অনুশীলন করলে গতি ও নির্ভুলতা দুটোই বাড়ে।",
+    text: "দ্রুত বাদামী শেয়ালটি অলস কুকুরটিকে লাফিয়ে পার হয়ে গেল। এই বাক্যটি ইংরেজি বর্ণমালার সমস্ত অক্ষর ব্যবহার করে লেখা যায়, তেমনই বাংলাতেও এমন বাক্য তৈরি করা সম্ভব যা প্রায় সমস্ত বর্ণ ব্যবহার করে। টাইপিং অনুশীলন ধৈর্য ও অধ্যবসায়ের বিষয়। নিয়মিত অনুশীলন করলে গতি ও নির্ভুলতা দুটোই বাড়ে।",
   },
   {
     id: "paragraph-practice-2",
@@ -959,13 +829,13 @@ text: "দ্রুত বাদামী শেয়ালটি অলস ক
     level: "Advanced",
     text: "এমন সময় ঠিক তাহার বাসার সামনেই একটা ঠিকাগাড়ির উপরে একটা মস্ত জুড়িগাড়ি আসিয়া পড়িল এবং ঠিকাগাড়ির একটা চাকা ভাঙিয়া দিয়া দৃকপাত না করিয়া বেগে চলিয়া গেল। ঠিকাগাড়িটা সম্পূর্ণ উলটাইয়া না পড়িয়া এক পাশে কাত হইয়া পড়িল। বিনয় তাড়াতাড়ি রাস্তায় বাহির হইয়া দেখিল, গাড়ি হইতে একটি সতেরো-আঠারো বৎসরের মেয়ে নামিয়া পড়িয়াছে, এবং ভিতর হইতে একজন বৃদ্ধগোছের ভদ্রলোক নামিবার উপক্রম করিতেছেন। এই আকস্মিক ঘটনায় সে কিছুটা কিংকর্তব্যবিমূঢ় হয়ে পড়েছিল।",
   },
-    {
+  {
     id: "rabindranath-poem-1",
     title: "কবিতা - নির্ঝরের স্বপ্নভঙ্গ",
     level: "Advanced",
     text: "আজি এ প্রভাতে রবির কর কেমনে পশিল প্রাণের 'পর, কেমনে পশিল গুহার আঁধারে প্রভাতপাখির গান! না জানি কেন রে এতদিন পরে জাগিয়া উঠিল প্রাণ। জাগিয়া উঠেছে প্রাণ, ওরে উথলি উঠেছে বারি, ওরে প্রাণের বাসনা প্রাণের আবেগ রুধিয়া রাখিতে নারি। থরথর করি কাঁপিছে ভূধর, শিলারাশি রাশি পড়িছে খসে, ফুলিয়া ফুলিয়া ফেনিল সলিল গরজি উঠিছে দারুণ রোষে। হেথায় হোথায় পাগলের প্রায় ঘুরিয়া ঘুরিয়া মাতিয়া বেড়ায়- বাহিরেতে চায়, দেখিতে না পায় কোথায় কারার দ্বার। কেন রে বিধাতা পাষাণ হেন, চারি দিকে তার বাঁধন কেন! ভাঙ রে হৃদয়, ভাঙ রে বাঁধন, সাধ্য সাধনে কর রে সাধন, সে লহরীমালা-পাথার-গাত্রে আঘাত কর রে দারুণ ঘাতে।",
   },
-   {
+  {
     id: "nazrul-poem-1",
     title: "কবিতা - বিদ্রোহী",
     level: "Advanced",
@@ -979,51 +849,63 @@ export const practiceParagraphs: string[] = [
   "সুন্দরবন বিশ্বের বৃহত্তম ম্যানগ্রোভ বন। এটি বাংলাদেশ ও ভারতের পশ্চিমবঙ্গ জুড়ে বিস্তৃত। সুন্দরবন রয়েল বেঙ্গল টাইগার, চিত্রা হরিণ, কুমির ও নানা প্রজাতির পাখির আবাসস্থল। ১৯৯৭ সালে ইউনেস্কো সুন্দরবনকে বিশ্ব ঐতিহ্যবাহী স্থান হিসেবে স্বীকৃতি দেয়। এই বন আমাদের প্রাকৃতিক রক্ষাকবচ হিসেবে কাজ করে এবং ঝড় ও জলোচ্ছ্বাস থেকে আমাদের রক্ষা করে। এই মূল্যবান সম্পদ রক্ষা করা আমাদের সকলের দায়িত্ব।",
   "আমাদের জাতীয় সংগীত 'আমার সোনার বাংলা' রবীন্দ্রনাথ ঠাকুর রচনা করেছেন। এর প্রথম দশ চরণ বাংলাদেশের জাতীয় সংগীত হিসেবে গৃহীত হয়েছে। এই গানটি মূলত স্বদেশী আন্দোলনের সময় রচিত হয়েছিল। গানটি শুনলে দেশের প্রতি ভালোবাসা আরও বেড়ে যায়। এই গান আমাদের প্রেরণার উৎস। এই গানের প্রতিটি শব্দ আমাদের দেশের প্রতি গভীর মমত্ববোধ এবং ভালোবাসার প্রকাশ করে। এই গান আমাদের জাতীয় চেতনার প্রতীক।",
   "ষড়ঋতুর দেশ বাংলাদেশ। গ্রীষ্ম, বর্ষা, শরৎ, হেমন্ত, শীত ও বসন্ত এই ছয়টি ঋতু চক্রাকারে আসে। প্রতিটি ঋতুরই রয়েছে নিজস্ব রূপ ও বৈশিষ্ট্য। বর্ষার বৃষ্টি যেমন প্রকৃতিকে সজীব করে তোলে, তেমনি বসন্তের আগমনে প্রকৃতি নতুন সাজে সেজে ওঠে। এই ঋতু বৈচিত্র্যই বাংলাদেশকে করেছে অনন্য সুন্দর। এই বৈচিত্র্যময় প্রকৃতি আমাদের মনকে মুগ্ধ করে এবং আমাদের জীবনকে নানাভাবে প্রভাবিত করে।",
-  "ডিজিটাল বাংলাদেশ বর্তমান সরকারের একটি গুরুত্বপূর্ণ কর্মসূচি। এর মূল লক্ষ্য হলো প্রযুক্তির ব্যবহার করে দেশের মানুষের জীবনযাত্রার মান উন্নয়ন করা। শিক্ষা, স্বাস্থ্য, কৃষি, যোগাযোগসহ সকল ক্ষেত্রে ডিজিটাল প্রযুক্তির ছোঁয়া লেগেছে। এর ফলে দেশ দ্রুত উন্নতির দিকে এগিয়ে যাচ্ছে। আমরা সবাই এর সুফল ভোগ করছি। এই কর্মসূচির মাধ্যমে আমরা একটি উন্নত ও সমৃদ্ধ দেশের স্বপ্ন দেখি।",
-  "শ্রাবণ মাসের সকালবেলায় মেঘ কাটিয়া গিয়া নির্মল রৌদ্রে কলিকাতার আকাশ ভরিয়া গিয়াছে। রাস্তায় গাড়িঘোড়ার বিরাম নাই, ফেরিওয়ালা অবিশ্রাম হাঁকিয়া চলিয়াছে, যাহারা আপিসে কালেজে আদালতে যাইবে তাহাদের জন্য বাসায় বাসায় মাছ-তরকারির চুপড়ি আসিয়াছে ও রান্নাঘরে উনান জ্বলাইবার ধোঁয়া উঠিয়াছে— কিন্তু তবু এত বড়ো এই-যে কাজের শহর কঠিনহৃদয় কলিকাতা, ইহার শত শত রাস্তা এবং গলির ভিতরে সোনার আলোকের ধারা আজ যেন একটা অপূর্ব যৌবনের প্রবাহ বহিয়া লইয়া চলিয়াছে। এই ব্যস্ততার মাঝেও প্রকৃতির সৌন্দর্য মনকে ছুঁয়ে যায়।",
-  "এমন দিনে বিনা কাজের অবকাশে বিনয়ভূষণ তাহার বাসার দোতলার বারান্দায় একলা দাঁড়াইয়া রাস্তায় জনতার চলাচল দেখিতেছিল। কলেজের পড়াও অনেক দিন চুকিয়া গেছে, অথচ সংসারের মধ্যেও প্রবেশ করে নাই, বিনয়ের অবস্থাটা এইরূপ; সভাসমিতি চালানো এবং খবরের কাগজ লেখায় মন দিয়াছে— কিন্তু তাহাতে সব মনটা ভরিয়া উঠে নাই। অন্তত আজ সকালবেলায় কী করিবে তাহা ভাবিয়া না পাইয়া তাহার মনটা চঞ্চল হইয়া উঠিতেছিল। পাশের বাড়ির ছাতের উপরে গোটা-তিনেক কাক কী লইয়া ডাকাডাকি করিতেছিল এবং চড়ুই-দম্পতি তাহার বারান্দার এক কোণে বাসা-নির্মাণ-ব্যাপারে পরস্পরকে কিচিমিচি শব্দে উৎসাহ দিতেছিল— সেই সমস্ত অব্যক্ত কাকলি বিনয়ের মনের মধ্যে একটা কোন অস্পষ্ট ভাবাবেগকে জাগাইয়া তুলিতেছিল।",
-  "আলখাল্লা-পরা একটা বাউল নিকটে দোকানের সামনে দাঁড়াইয়া গান গাহিতে লাগিল— “খাঁচার ভিতর অচিন পাখি কেমনে আসে যায়, ধরতে পারলে মনোবেড়ি দিতেম পাখির পায়।” বিনয়ের ইচ্ছা করিতে লাগিল, বাউলকে ডাকিয়া এই অচিন পাখি গানটা লিখিয়া লয়। কিন্তু ভোর-রাত্রে যেমন শীত শীত করে অথচ গায়ের কাপড়টা টানিয়া লইতে উদ্যম থাকে না, তেমনি একটা আলস্যের ভাবে বাউলকে ডাকা হইল না, গান লেখাও হইল না, কেবল ওই অচেনা পাখির স্বরটা মনের মধ্যে গুন্‌ গুন্‌ করিতে লাগিল। এই গানটি তার মনে গভীর ছাপ ফেলেছিল।",
-  "এমন সময় ঠিক তাহার বাসার সামনেই একটা ঠিকাগাড়ির উপরে একটা মস্ত জুড়িগাড়ি আসিয়া পড়িল এবং ঠিকাগাড়ির একটা চাকা ভাঙিয়া দিয়া দৃকপাত না করিয়া বেগে চলিয়া গেল। ঠিকাগাড়িটা সম্পূর্ণ উলটাইয়া না পড়িয়া এক পাশে কাত হইয়া পড়িল। বিনয় তাড়াতাড়ি রাস্তায় বাহির হইয়া দেখিল, গাড়ি হইতে একটি সতেরো-আঠারো বৎসরের মেয়ে নামিয়া পড়িয়াছে, এবং ভিতর হইতে একজন বৃদ্ধগোছের ভদ্রলোক নামিবার উপক্রম করিতেছেন। এই আকস্মিক ঘটনায় সে কিছুটা কিংকর্তব্যবিমূঢ় হয়ে পড়েছিল।",
-  "বিনয় তাহাকে ধরাধরি করিয়া নামাইয়া দিল, এবং তাহার মুখ বিবর্ণ হইয়া গেছে দেখিয়া জিজ্ঞাসা করিল, “আপনার লাগে নি তো?” তিনি “না, কিছু হয় নি” বলিয়া হাসিবার চেষ্টা করিলেন; সে হাসি তখনই মিলাইয়া গেল এবং তিনি মূর্ছিত হইয়া পড়িবার উপক্রম করিলেন। বিনয় তাহাকে ধরিয়া ফেলিল ও উৎকণ্ঠিত মেয়েটিকে কহিল, “এই সামনেই আমার বাড়ি; ভিতরে চলুন।”  বৃদ্ধকে বিছানায় শোয়ানো হইলে মেয়েটি চারি দিকে তাকাইয়া দেখিল, ঘরের কোণে একটি জলের কুঁজা আছে। তখনি সেই কুঁজার জল গেলাসে করিয়া লইয়া বৃদ্ধের মুখে ছিটা দিয়া বাতাস করিতে লাগিল এবং বিনয়কে কহিল, “একজন ডাক্তার ডাকলে হয় না?”",
-  "বনে থাকে বাঘ। গাছে থাকে পাখি। জলে থাকে মাছ। ডালে আছে ফল। পাখি ফল খায়। পাখা মেলে ওড়ে। বাঘ আছে আম-বনে। গায়ে চাকা চাকা দাগ। পাখি বনে গান গায়। মাছ জলে খেলা করে। ডালে ডালে কাক ডাকে। খালে বক মাছ ধরে। বনে কত মাছি ওড়ে। ওরা সব মৌ-মাছি। ঐখানে মৌ-চাক। তাতে আছে মধু ভরা। এই প্রাকৃতিক দৃশ্য মনকে শান্ত করে।",
-  "রাম বনে ফুল পাড়ে। গায়ে তার লাল শাল। হাতে তার সাজি। জবা ফুল তোলে। বেল ফুল তোলে। বেল ফুল সাদা। জবা ফুল লাল। জলে আছে নাল ফুল। ফুল তুলে রাম বাড়ি चले। তার বাড়ি আজ পূজা। পূজা হবে রাতে। তাই রাম ফুল আনে। তাই তার ঘরে খুব ঘটা। ঢাক বাজে, ঢোল বাজে। ঘরে ঘরে ধূপ ধূনা। এই আয়োজন দেখে সবাই খুব খুশি।",
-  "ঐ সাদা ছাতা। দাদা যায় হাটে। গায়ে লাল জামা। মামা যায় খাতা হাতে। গায়ে শাদা শাল। মামা আনে চাল ডাল। আর কেনে শাক। আর কেনে আটা। দাদা কেনে পাকা আটা, সাত আনা দিয়ে। আর, আখ আর জাম চার আনা। বাবা খাবে। কাকা খাবে। আর খাবে মামা। তার পরে কাজ আছে। বাবা কাজে যাবে। এই সাধারণ দৃশ্যগুলো আমাদের জীবনের অংশ।",
-  "নদীর ঘাটের কাছে নৌকা বাঁধা আছে, নাইতে যখন যাই, দেখি সে জলের ঢেউয়ে নাচে। আজ গিয়ে সেইখানে দেখি দূরের পানে মাঝনদীতে নৌকা, কোথায় চলে ভাঁটার টানে। জানি না কোন দেশে পৌঁছে যাবে শেষে, সেখানেতে কেমন মানুষ থাকে কেমন বেশে। থাকি ঘরের কোণে, সাধ জাগে মোর মনে, অমনি করে যাই ভেসে, ভাই, নতুন নগর বনে। দূর সাগরের পারে, জলের ধারে ধারে, নারিকেলের বনগুলি সব দাঁড়িয়ে সারে সারে। পাহাড়-চূড়া সাজে নীল আকাশের মাঝে, বরফ ভেঙে ডিঙিয়ে যাওয়া কেউ তা পারে না-যে। কোন সে বনের তলে নতুন ফুলে ফলে নতুন নতুন পশু কত বেড়ায় দলে দলে! কত রাতের শেষে নৌকা-যে যায় ভেসে; বাবা কেন আপিসে যায়, যায় না নতুন দেশে?",
-  "আমাদের ছোটো নদী চলে বাঁকে বাঁke, বৈশাখ মাসে তার হাঁটুজল থাকে। পার হয়ে যায় গোরু, পার হয় গাড়ি, দুই ধার উঁচু তার, ঢালু তার পাড়ি। চিকচিক করে বালি, কোথা নাই কাদা, এক ধারে কাশবন ফুলে ফুলে সাদা। কিচিমিচি করে সেথা শালিকের ঝাঁক, রাতে ওঠে থেকে থেকে শেয়ালের হাঁক। আর-পারে আমবন তালবন চলে, গাঁয়ের বামুনপাড়া তারি ছায়াতলে। তীরে তীরে ছেলেমেয়ে নাহিবার কালে গামছায় জল ভরি গায়ে তারা ঢালে। সকালে বিকালে কভু নাওয়া হলে পরে আঁচলে ছাঁকিয়া তারা ছোটো মাছ ধরে। বালি দিয়ে মাজে থালা, ঘটিগুলি মাজে, বধূরা কাপড় কেচে যায় গৃহকাজে। আষাঢ়ে বাদল নামে, নদী ভর-ভর- মাতিয়া ছুটিয়া চলে ধারা খরতর। মহাবেগে কলকল কোলাহল ওঠে, ঘোলাজলে পাকগুলি ঘুরে ঘুরে ছোটে। দুই কূলে বনে বনে পড়ে যায় সাড়া, বরষার উৎসবে জেগে ওঠে পাড়া।",
-  "এসেছে শরৎ, হিমের পরশ লেগেছে হাওয়ার 'পরে- সকালবেলায় ঘাসের আগায় শিশিরের রেখা ধরে। আমলকী-বন কাঁপে, যেন তার বুক করে দুরু দুরু পেয়েছে খবর পাতা-खসানোর সময় হয়েছে শুরু। শিউলির ডাale কুঁড়ি ভরে এল, টগর ফুটিল মেলা, মালতীলতায় খোঁজ নিয়ে যায় মৌমাছি দুই বেলা। গগনে গগনে বরষণ-শেষে মেঘেরা পেয়েছে ছাড়া, বাতাসে বাতাসে ফেরে ভেসে ভেসে, নাই কোনো কাজে তাড়া। দীঘিভra জল করে ঢলঢল, নানা ফুল ধারে ধারে, কচি ধানগাছে ক্ষেত ভরে আছে- হাওয়া দোলা দেয় তারে। যে দিকে তাকাই সোনার আলোয় দেখি যে ছুটির ছবি, পূজার ফুলের বনে ওঠে ওই পূজার দিনের রবি।",
-  "একদা, এক বাঘের গলায় হাড় ফুটিয়াছিল। বাঘ বিস্তর চেষ্টা পাইল, কিছুতেই হাড় বাহির করিতে পারিল না; যন্ত্রণায় অস্থির হইয়া চারি দিকে দৌড়িয়া বেড়াইতে লাগিল। সে যে জন্তুকে সম্মুখে দেখে, তাহাকেই বলে, ভাই হে! যদি তুমি, আমার গলা হইতে, হাড় বাহির করিয়া দাও, তাহা হইলে, আমি তোমায় বিলক্ষণ পুরস্কার দি, এবং, চির কালের জন্যে, তোমার কেনা হইয়া থাকি। কোনো জন্তুই সম্মত হইল না। অবশেষে, এক বক, পুরস্কারের লোভে, সম্মত হইল, এবং, বাঘের মুখের ভিতর, আপন লম্বা ঠোঁট প্রবেশ করাইয়া দিয়া, অনেক যত্নে ঐ হাড় বাহির করিয়া আনিল। বাঘ সুস্থ হইল। বক পুরস্কারের কথা উত্থাপিত করিবামাত্র, সে, দাঁত কড়মড় ও চক্ষু রক্তবর্ণ করিয়া, কহিল, অরে নির্বোধ! তুই বাঘের মুখে ঠোঁট প্রবেশ করাইয়া দিয়াছিলি। তুই যে নির্বিঘ্নে ঠোঁট বাহির করিয়া লইয়াছিস, তাহাই ভাগ্য করিয়া না মানিয়া, আবার পুরস্কার চাহিতেছিস। যদি বাঁচিবার সাধ থাকে, আমার সম্মুখ হইতে যা; নতুবা, এখনই তোর ঘাড় ভাঙিব। বক শুনিয়া, হতবুদ্ধি হইয়া, তৎক্ষণাৎ তথা হইতে প্রস্থান করিল।",
-  "এক স্থানে, কতক গুলি ময়ূরপুচ্ছ পড়িয়া ছিল। এক দাঁড়কাক, দেখিয়া, মনে মনে বিবেচনা করিল, যদি আমি এই ময়ূরপুচ্ছ গুলি আপন পাখায় বসাইয়া দি, তাহা হইলে, আমিও ময়ূরের মত সুশ্রী হইব। এই ভাবিয়া, দাঁড়কাক ময়ূরপুচ্ছ গুলি আপন পাখায় বসাইয়া দিল, এবং, দাঁড়কাকদের নিকটে গিয়া, তোরা অতি নীচ ও অতি বিশ্রী, আর আমি তোদের সঙ্গে থাকিব না; এই বলিয়া, গালাগালি দিয়া, ময়ূরের দলে মিলিতে গেল। ময়ূরগণ, দেখিবা মাত্র, তাহাকে দাঁড়কাক বলিয়া বুঝিতে পারিল; সকলে মিলিয়া, তাহার পাখা হইতে, একটি একটি করিয়া, ময়ূরpuচ্ছ গুলি তুলিয়া লইল; এবং, তাহাকে নিতান্ত অপদার্থ স্থির করিয়া, এত ঠোকরাইতে আরম্ভ করিল যে, দাঁড়কাক, জ্বালায় অস্থির হইয়া, পলায়ন করিল। অনন্তর, সে পুনরায় আপন দলে মিলিতে গেল। তখন, দাঁড়াকাকেরা উপহাস করিয়া কহিল, অরে নির্বোধ! তুই ময়ূরপুচ্ছ পাইয়া, অহঙ্কারে মত্ত হইয়া, আমাদিগকে ঘৃণা করিয়া ও গালাগালি দিয়া, ময়ূরের দলে মিলিতে গিয়াছিলি; সেখানে অপদস্থ হইয়া, আবার আমাদের দলে মিলিতে আসিয়াছিস। তুই অতি নির্লজ্জ। এই রূপে, যথোচিত তিরস্কার করিয়া, তাহারা সেই নির্বোধ দাঁড়কাককে তাড়াইয়া দিল।",
-  "এক কুকুর, মাংসের এক খণ্ড মুখে করিয়া, নদী পার হইতেছিল। নদীর নির্মূল জলে, তাহার যে প্রতিবিম্ব পড়িয়াছিল, সেই প্রতিবিম্বকে অন্য কুকুর স্থির করিয়া, সে মনে মনে বিবেচনা করিল, এই কুকুরের মুখে যে মাংসখণ্ড আছে, কাড়িয়া লই; তাহা হইলে, আমার দুই খণ্ড মাংস হইবেক। এইরূপ লোভে পড়িয়া, মুখ বিস্তৃত করিয়া, কুকুর যেমন অলীক মাংসখণ্ড ধরিতে গেল, অমনি, উহার মুখস্থিত মাংসখণ্ড, জলে পড়িয়া, স্রোতে ভাসিয়া গেল। তখন সে, হতবুদ্ধি হইয়া, কিয়ৎ ক্ষণ, স্তব্ধ হইয়া রহিল; অনন্তর, এই বলিতে বলিতে, নদী পার হইয়া চলিয়া গেল, যাহারা, লোভের বশীভূত হইয়া, কল্পিত লাভের প্রত্যাশায়, ধাবমান হয়, তাহাদের এই দশাই ঘটে।",
-  "এক ব্যাঘ্র, পর্ব্বতের ঝরনায় জলপান করিতে করিতে, দেখিতে পাইল, কিছু দূরে, নীচের দিকে, এক মেষশাবক জলপান করিতেছে। সে, দেখিয়া, মনে মনে কহিতে লাগিল, এই মেষশাবকের প্রাণসংহার করিয়া, আজকার আহার সম্পন্ন করি; কিন্তু, বিনা দোষে, এক জনের প্রাণবধ করা ভাল দেখায় না; অতএব, একটা দোষ দেখাইয়া, অপরাধী করিয়া, উহার প্রাণবধ করিব। এই স্থির করিয়া, ব্যাঘ্র, সত্বর গমনে, মেষশাবকের নিকট উপস্থিত হইয়া কহিল, অরে দুরাত্মন্! তোর এত বড় আম্পর্ধা যে, আমি জলপান করিতেছি দেখিয়াও, তুই জল ঘোলা করিতেছিস। মেষশাবক, শুনিয়া, ভয়ে কাঁপিতে কাঁপিতে কহিল, সে কি মহাশয়! আমি, কেমন করিয়া, আপনকার পান করিবার জল ঘোলা করিলাম। আমি নীচে জলপান করিতেছি, আপনি উপরে জলপান করিতেছেন। নীচের জল ঘোলা করিলেও, উপরের জল ঘোলা হইতে পারে না। বাঘ কহিল, সে যাহা হউক, তুই, এক বৎসর পূর্ব্বে, আমার অনেক নিন্দা করিয়াছিলি; আজ তোরে তাহার সমুচিত প্রতিফল দিব। মেষশাবক কাঁপিতে কাঁপিতে কহিল, আপনি অন্যায্য আজ্ঞা করিতেছেন; এক বৎসর পূর্ব্বে, আমার জন্মই হয় নাই; সুতরাং, তৎকালে আমি আপনকার নিন্দা করিয়াছি, ইহা কি রূপে সম্ভবিতে পারে। বাঘ কহিল, সত্য বটে; সে তুই নহিস, তোর বাপ আমার নিন্দা করিয়াছিল। তুই কর, আর তোর বাপ করুক, একই কথা; আর আমি তোর কোনো ওজর শুনিতে চাহি না। এই বলিয়া, বাঘ ঐ অসহায়, দুর্ব্বল মেষশাবকের প্রাণসংহার করিল।",
-  "এক সিংহ, পর্ব্বতের গুহায়, নিদ্রা যাইতেছিল। দৈবাৎ, একটা ইঁদুর, সেই দিক দিয়া যাইতে যাইতে, সিংহের নাসারন্ধ্রে প্রবিষ্ট হইয়া গেল। প্রবিষ্ট হইবা মাত্র, সিংহের নিদ্রাভঙ্গ হইল। পরে, ইঁদুর নির্গত হইলে, সিংহ, ঈষৎ কুপিত হইয়া, নখরের প্রহার দ্বারা, তাহার প্রাণসংহারে উদ্যত হইল। ইঁদুর, প্রাণভয়ে কাতর হইয়া, বিনয় করিয়া, কহিল, মহারাজ! আমি না জানিয়া অপরাধ করিয়াছি, ক্ষমা করিয়া, আমায় প্রাণদান করুন। আপনি সমস্ত পশুর রাজা; আমার মত ক্ষুদ্র পশুর প্রাণবধ করিলে, আপনকার কলঙ্ক আছে। সিংহ শুনিয়া ঈষৎ হাস্য করিল, এবং, দয়া করিয়া, ইঁদুরকে ছাড়িয়া দিল। এই ঘটনার কিছু দিন পরে, সিংহ, ইতস্ততঃ ভ্রমণ করিতে করিতে, এক শিকারির জালে পড়িল; বিস্তর চেষ্টা পাইল, কিছুতেই জাল ছাড়াইতে পারিল না। পরিশেষে, প্রাণরক্ষা বিষয়ে নিতান্ত নিরাশ হইয়া, সে এমন ভয়ঙ্কর গর্জন করিতে লাগিল যে, সমস্ত অরণ্য কম্পিত হইয়া উঠিল। সিংহ, ইতঃপূর্ব্বে, যে ইঁদুরের প্রাণরক্ষা করিয়াছিল, সে ঐ স্থানের অনতিদূরে বাস করিত। এক্ষণে সে, পূর্ব্ব প্রাণদাতার স্বর চিনিতে পারিয়া, সত্বর সেই স্থানে উপস্থিত হইল, তাহার এই বিপদ দেখিয়া, ক্ষণ মাত্র বিলম্ব না করিয়া, জাল কাটিতে আরম্ভ করিল, এবং, অল্প ক্ষণের মধ্যেই, সিংহকে বন্ধন হইতে মুক্ত করিয়া দিল।",
-  "আজি এ প্রভাতে রবির কর কেমনে পশিল প্রাণের 'পর, কেমনে পশিল গুহার আঁধারে প্রভাতপাখির গান! না জানি কেন রে এতদিন পরে জাগিয়া উঠিল প্রাণ। জাগিয়া উঠেছে প্রাণ, ওরে উথলি উঠেছে বারি, ওরে প্রাণের বাসনা প্রাণের আবেগ রুধিয়া রাখিতে নারি। থরথর করি কাঁপিছে ভূধর, শিলারাশি রাশি পড়িছে খসে, ফুলিয়া ফুলিয়া ফেনিল সলিল গরজি উঠিছে দারুণ রোষে।",
-  "বল বীর- বল উন্নত মম শির! শির নেহারি' আমারি, নতশির ওই শিখর হিমাদ্রির! বল বীর- বল মহাবিশ্বের মহাকাশ ফাড়ি' চন্দ্র সূর্য গ্রহ তারা ছাড়ি' ভূলোক দ্যুলোক গোলক ভেদিয়া খোদার আসন 'আরশ' ছেদিয়া, উঠিয়াছি চির-বিস্ময় আমি বিশ্ববিধাতৃর! মম ললাটে রুদ্র-ভগবান জ্বলে রাজ-রাজটীকা দীপ্ত জয়শ্রীড়! বল বীর - আমি চির-উন্নত শির!",
+  "ডিজিটাল বাংলাদেশ বর্তমান সরকারের একটি গুরুত্বপূর্ণ কর্মসূচি। এর মূল লক্ষ্য হলো প্রযুক্তির ব্যবহার করে দেশের মানুষের জীবনযাত্রার মান উন্নয়ন করা। শিক্ষা, স্বাস্থ্য, কৃষি, যোগাযোগসহ সকল ক্ষেত্রে ডিজিটাল প্রযুক্তির ছোঁয়া লেগেছে। এর ফলে দেশ দ্রুত উন্নতির দিকে এগিয়ে যাচ্ছে। আমরা সবাই এর সুফল ভোগ করছি। এই কর্মসূচির মাধ্যমে আমরা একটি উন্নত ও সমৃদ্ধ দেশের স্বপ্ন দেখি।"
 ];
 
 export const rowCategories: RowDrillCategory[] = [
   { 
     id: 'home-row', 
-    name: 'হোম রো', 
-    description: 'কীবোর্ডের মাঝের সারি — প্রথম ৪ কি থেকে ৭টি ধাপে মাস্টার করুন।'
+    name: 'হোম রো (৭টি পাঠ)', 
+    description: 'বাম হাত, ডান হাত, কম্বিনেশন, সিলেবল, টিয়ার্ড শব্দ ও চূড়ান্ত পরীক্ষা।'
   },
   { 
     id: 'top-row', 
-    name: 'টপ রো',
-    description: 'হোম রো-এর উপরের সারি — অক্ষর, যুক্তবর্ণ ও শব্দাবলি।'
+    name: 'টপ রো (৭টি পাঠ)', 
+    description: 'টপ রো বর্ণ, বিশেষ চিহ্ন, টপ শব্দ, হোম+টপ কম্বো ও মাস্টারি টেস্ট।'
   },
   { 
     id: 'bottom-row', 
-    name: 'বটম রো',
-    description: 'হোম রো-এর নিচের সারি — ত, চ, দ, ব, ন, ম সহ বিশেষ বর্ণ।'
+    name: 'বটম রো (৭টি পাঠ)', 
+    description: 'বটম রো বর্ণ, শিফট কী, বটম শব্দ, সর্ব-রো মিক্স ও মাস্টারি টেস্ট।'
   },
-  {
-    id: 'mixed-row',
-    name: 'রো মিক্সিং (Row Mixing)',
-    description: 'Home, Top ও Bottom রো মিলিয়ে বাস্তবিক টাইপিং অনুশীলন।'
+  { 
+    id: 'mixed-row', 
+    name: 'রো মিক্সিং মডিউল (৫টি পাঠ)', 
+    description: 'Home only, Home+Top, Home+Bottom, Top+Bottom এবং All Rows ট্রানজিশন।'
   },
   {
     id: 'kar-row',
-    name: 'কার-চিহ্ন অনুশীলন',
-    description: 'স্বতন্ত্র কার, প্যাটার্ন ও কার-যুক্ত শব্দের ধাপভিত্তিক পাঠ।'
+    name: 'কার-চিহ্ন অনুশীলন (২-স্তর)',
+    description: 'ব্যঞ্জনবর্ণের সাথে সকল কার চিহ্নের সংযোগ ও নিবিড় ড্রিল।'
+  },
+  {
+    id: 'hasanta-row',
+    name: 'হসন্ত নিবিড় পাঠ (HAS 1–5)',
+    description: 'হসন্তের একক ট্রানজিশন, ক্ক-ক্ত-ন্ত-ন্দ সন্ধি ও স্ট-স্থ-স্ক-স্প যুক্ত রূপ।'
+  },
+  {
+    id: 'phola-row',
+    name: 'ফলা পরিবার (৫টি পাঠ)',
+    description: 'র-ফলা, য-ফলা, ল-ফলা, রেফ, ব-ফলা ও ম-ফলা পরিবারভিত্তিক অনুশীলন।'
+  },
+  {
+    id: 'conjunct-row',
+    name: 'যুক্তাক্ষর কাঠিন্য স্তর (Tiers 1–4)',
+    description: 'সহজ, মাঝারি, কঠিন (ক্ষ, জ্ঞ) ও ত্রি-ব্যঞ্জন জটিল যুক্তাক্ষর।'
+  },
+  {
+    id: 'special-row',
+    name: 'বিশেষ বর্ণ ও চিহ্ন (২টি পাঠ)',
+    description: 'ঁ, ং, ঃ, ৎ, ় এবং ড়, ঢ়, য়, ঞ এর নিখুঁত টাইপিং।'
+  },
+  {
+    id: 'number-row',
+    name: 'সংখ্যা ও যতিচিহ্ন (৪টি পাঠ)',
+    description: 'বাংলা সংখ্যা ০-৯, মুদ্রা, তারিখ, শতকরা এবং দাঁড়ি, কমা ও উদ্ধৃতি।'
+  },
+  {
+    id: 'words-row',
+    name: 'কমন শব্দ ও ফ্রেজ (২টি পাঠ)',
+    description: 'সর্বাধিক ব্যবহৃত বাংলা শব্দ এবং দ্রুত স্পেস ট্রানজিশন।'
   }
 ];

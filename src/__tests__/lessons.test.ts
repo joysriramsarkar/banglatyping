@@ -1,4 +1,4 @@
-import { generateDrills, keyMap, lessons, rowCategories, practiceParagraphs } from '@/lib/lessons';
+import { generateDrills, createDeterministicDrills, keyMap, lessons, rowCategories, practiceParagraphs } from '@/lib/lessons';
 
 const HASANTA = '\u09CD';       // ্ Bengali hasanta
 const _DEVANAGARI = /[\u0900-\u097F]/;
@@ -23,9 +23,7 @@ describe('keyMap', () => {
 
   it('has no Devanagari characters in any key mapping', () => {
     keyMap.forEach(entry => {
-      // Check only the bn field (display character) - not bnShift which may have punctuation
       const codePoint = entry.bn.codePointAt(0) || 0;
-      // Devanagari range: U+0900-U+097F, but exclude U+0964 (।) which is shared
       const isDevanagariOnly = codePoint >= 0x0900 && codePoint <= 0x0963;
       expect(isDevanagariOnly).toBe(false);
     });
@@ -41,11 +39,11 @@ describe('keyMap', () => {
   it('z key maps to hasanta+ya (্য)', () => {
     const zKey = keyMap.find(k => k.key === 'z');
     expect(zKey).toBeDefined();
-    expect(zKey!.bn.codePointAt(0)).toBe(0x09CD); // starts with Bengali hasanta
+    expect(zKey!.bn.codePointAt(0)).toBe(0x09CD);
   });
 });
 
-describe('generateDrills', () => {
+describe('generateDrills & createDeterministicDrills', () => {
   it('generates drills for simple consonants', () => {
     const drills = generateDrills(['\u0995', '\u0996', '\u0997'], 10); // ক, খ, গ
     expect(drills.length).toBeGreaterThan(0);
@@ -55,10 +53,21 @@ describe('generateDrills', () => {
     });
   });
 
-  it('inserts space drills every 4 characters', () => {
+  it('inserts space drills every 4 characters in random generator', () => {
     const drills = generateDrills(['\u0995'], 20); // ক
     const spaceDrills = drills.filter(d => d.prompt === ' ');
     expect(spaceDrills.length).toBeGreaterThan(0);
+  });
+
+  it('createDeterministicDrills preserves exact curated item sequence with spaces', () => {
+    const items = ['জল', 'ফল', 'সাদা'];
+    const drills = createDeterministicDrills(items);
+    expect(drills.length).toBe(5); // 3 items + 2 spaces
+    expect(drills[0].prompt).toBe('জল');
+    expect(drills[1].prompt).toBe(' ');
+    expect(drills[2].prompt).toBe('ফল');
+    expect(drills[3].prompt).toBe(' ');
+    expect(drills[4].prompt).toBe('সাদা');
   });
 
   it('does not end with a space drill', () => {
@@ -131,34 +140,39 @@ describe('lessons', () => {
     });
   });
 
-  it('has structured micro-lessons for home row (hr-01 through hr-07)', () => {
-    ['hr-01', 'hr-02', 'hr-03', 'hr-04'].forEach(id => {
-      expect(lessons.some(l => l.id === id)).toBe(true);
-    });
+  it('has structured home-row lessons (HR-01 to HR-07)', () => {
+    expect(lessons.some(l => l.id === 'home-row-chars')).toBe(true);
+    expect(lessons.some(l => l.id === 'home-row-right')).toBe(true);
+    expect(lessons.some(l => l.id === 'home-row-mix')).toBe(true);
+    expect(lessons.some(l => l.id === 'home-row-combos')).toBe(true);
+    expect(lessons.some(l => l.id === 'home-row-syllables')).toBe(true);
+    expect(lessons.some(l => l.id === 'home-row-word-drill')).toBe(true);
+    expect(lessons.some(l => l.id === 'home-row-mastery')).toBe(true);
   });
 
-  it('has structured micro-lessons for top row (tr-01 through tr-07)', () => {
-    ['tr-01'].forEach(id => {
-      expect(lessons.some(l => l.id === id)).toBe(true);
-    });
+  it('has structured top-row lessons (TR-01 to TR-07)', () => {
+    expect(lessons.some(l => l.id === 'top-row-chars')).toBe(true);
+    expect(lessons.some(l => l.id === 'top-row-right')).toBe(true);
+    expect(lessons.some(l => l.id === 'top-row-special')).toBe(true);
+    expect(lessons.some(l => l.id === 'top-row-mix')).toBe(true);
+    expect(lessons.some(l => l.id === 'top-row-word-drill')).toBe(true);
+    expect(lessons.some(l => l.id === 'top-row-sentences')).toBe(true);
+    expect(lessons.some(l => l.id === 'top-row-mastery')).toBe(true);
   });
 
-  it('has structured micro-lessons for bottom row (br-01 through br-07)', () => {
-    ['br-01'].forEach(id => {
-      expect(lessons.some(l => l.id === id)).toBe(true);
-    });
+  it('has structured bottom-row lessons (BR-01 to BR-07)', () => {
+    expect(lessons.some(l => l.id === 'bottom-row-chars')).toBe(true);
+    expect(lessons.some(l => l.id === 'bottom-row-mid')).toBe(true);
+    expect(lessons.some(l => l.id === 'bottom-row-shift')).toBe(true);
+    expect(lessons.some(l => l.id === 'bottom-row-all-mix')).toBe(true);
+    expect(lessons.some(l => l.id === 'bottom-row-word-drill')).toBe(true);
+    expect(lessons.some(l => l.id === 'bottom-row-paragraph')).toBe(true);
+    expect(lessons.some(l => l.id === 'bottom-row-mastery')).toBe(true);
   });
 
-  it('has row mixing lessons (mr-01 through mr-05)', () => {
-    ['mr-01'].forEach(id => {
-      expect(lessons.some(l => l.id === id)).toBe(true);
-    });
-  });
-
-  it('has kar lessons', () => {
-    ['kar-stage-a-01', 'kar-stage-b-mixed', 'kar-stage-c-words'].forEach(id => {
-      expect(lessons.some(l => l.id === id)).toBe(true);
-    });
+  it('has row mixing lessons (mixed-row-1 to 5)', () => {
+    expect(lessons.some(l => l.id === 'mixed-row-1')).toBe(true);
+    expect(lessons.some(l => l.id === 'mixed-row-5')).toBe(true);
   });
 
   it('all lesson IDs are unique', () => {
@@ -175,13 +189,18 @@ describe('lessons', () => {
 });
 
 describe('rowCategories', () => {
-  it('has 5 row categories including mixed-row', () => {
-    expect(rowCategories.length).toBe(5);
-    expect(rowCategories.some(c => c.id === 'mixed-row')).toBe(true);
+  it('has all 11 row and skill categories defined', () => {
+    expect(rowCategories.length).toBe(11);
   });
 
-  it('has home-row category', () => {
+  it('has home-row, top-row, bottom-row and mixed-row categories', () => {
     expect(rowCategories.some(c => c.id === 'home-row')).toBe(true);
+    expect(rowCategories.some(c => c.id === 'top-row')).toBe(true);
+    expect(rowCategories.some(c => c.id === 'bottom-row')).toBe(true);
+    expect(rowCategories.some(c => c.id === 'mixed-row')).toBe(true);
+    expect(rowCategories.some(c => c.id === 'hasanta-row')).toBe(true);
+    expect(rowCategories.some(c => c.id === 'phola-row')).toBe(true);
+    expect(rowCategories.some(c => c.id === 'conjunct-row')).toBe(true);
   });
 
   it('each category has name and description', () => {

@@ -25,7 +25,7 @@ describe('CURRICULUM_LEVELS Complete Coverage', () => {
 
   test('getCurriculumLessonById returns correct lessons for key IDs', () => {
     expect(getCurriculumLessonById('lesson-0-1')).toBeDefined();
-    expect(getCurriculumLessonById('lesson-0-4')).toBeDefined();
+    expect(getCurriculumLessonById('lesson-1-1')).toBeDefined();
     expect(getCurriculumLessonById('lesson-12-1')).toBeDefined();
     expect(getCurriculumLessonById('non-existent')).toBeUndefined();
   });
