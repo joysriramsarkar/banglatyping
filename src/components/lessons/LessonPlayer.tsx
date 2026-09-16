@@ -34,6 +34,7 @@ import {
   composeBengaliKeystroke,
   isValidBengaliTypingPrefix,
   getNextExpectedKeyChar,
+  bengaliSegmenter,
 } from "@/lib/bengali-grapheme";
 
 interface LessonPlayerProps {
@@ -141,10 +142,32 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     return Math.max(1, Math.round((end - startTime) / 1000));
   }, [startTime, endTime]);
 
+  // Total graphemes typed so far in this section (completed items + current input)
+  const totalCompletedGraphemes = useMemo(() => {
+    let count = 0;
+    for (let i = 0; i < drillIndex && i < sectionItems.length; i++) {
+      count += bengaliSegmenter.segmentString(sectionItems[i]).length;
+      if (i < sectionItems.length - 1) {
+        count += 1; // space between drill items
+      }
+    }
+    if (currentInput) {
+      count += bengaliSegmenter.segmentString(currentInput).length;
+    }
+    return count;
+  }, [drillIndex, sectionItems, currentInput]);
+
+  // GPM = Graphemes Per Minute (Bengali-accurate metric)
+  const gpm = useMemo(() => {
+    if (timeElapsedSec <= 0 || totalCompletedGraphemes <= 0) return 0;
+    return Math.round(totalCompletedGraphemes / (timeElapsedSec / 60));
+  }, [totalCompletedGraphemes, timeElapsedSec]);
+
+  // WPM approximation for display (1 Bengali word ≈ 4 graphemes on average)
   const wpm = useMemo(() => {
-    if (timeElapsedSec <= 0 || totalAttempts <= 0) return 0;
-    return Math.round((totalAttempts / 5) / (timeElapsedSec / 60));
-  }, [totalAttempts, timeElapsedSec]);
+    if (timeElapsedSec <= 0 || totalCompletedGraphemes <= 0) return 0;
+    return Math.round((totalCompletedGraphemes / 4) / (timeElapsedSec / 60));
+  }, [totalCompletedGraphemes, timeElapsedSec]);
 
   // Focus input automatically
   useEffect(() => {
@@ -163,7 +186,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
       playSuccess();
 
       const state = getStoredCurriculumState();
-      recordLessonCompletion(state, lesson.id, accuracy, wpm, wpm * 5);
+      recordLessonCompletion(state, lesson.id, accuracy, wpm, gpm);
 
       // Save to Supabase if authenticated
       if (user) {
@@ -195,6 +218,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     initSection,
     accuracy,
     wpm,
+    gpm,
     errorsCount,
     timeElapsedSec,
     user,
@@ -325,7 +349,12 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
       if (e.key === "Backspace") {
         e.preventDefault();
         setLastWrongChar(null);
-        setCurrentInput((prev) => prev.slice(0, -1));
+        setCurrentInput((prev) => {
+          if (!prev) return prev;
+          // Grapheme-safe backspace: use segmenter to avoid splitting multi-byte chars
+          const segments = bengaliSegmenter.segmentString(prev);
+          return segments.slice(0, -1).join('');
+        });
         return;
       }
 
@@ -446,10 +475,14 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
           <p className="text-muted-foreground text-sm mt-1">{lesson.title} সফলভাবে আয়ত্ত করেছেন।</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 max-w-lg mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
+          <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
+            <p className="text-[11px] text-muted-foreground font-semibold">গতি (GPM)</p>
+            <p className="text-xl font-bold text-primary">{toBengaliNumber(gpm)}</p>
+          </div>
           <div className="p-3 bg-secondary rounded-xl">
-            <p className="text-[11px] text-muted-foreground font-semibold">গতি (WPM)</p>
-            <p className="text-xl font-bold text-primary">{toBengaliNumber(wpm)}</p>
+            <p className="text-[11px] text-muted-foreground font-semibold">WPM (আনুমানিক)</p>
+            <p className="text-xl font-bold text-foreground">{toBengaliNumber(wpm)}</p>
           </div>
           <div className="p-3 bg-secondary rounded-xl">
             <p className="text-[11px] text-muted-foreground font-semibold">নির্ভুলতা</p>
@@ -784,7 +817,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                     <div>
                       <p className="font-bold text-xs">ধাপটি সফলভাবে সম্পন্ন হয়েছে 🎉</p>
                       <p className="text-[11px] text-muted-foreground">
-                        অর্জিত নির্ভুলতা {toBengaliNumber(accuracy)}% • গতি {toBengaliNumber(wpm)} WPM
+                        অর্জিত নির্ভুলতা {toBengaliNumber(accuracy)}% • গতি {toBengaliNumber(gpm)} GPM
                       </p>
                     </div>
                   </div>
@@ -815,7 +848,10 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
               <div className="flex items-center justify-between py-2 px-3 bg-muted/40 rounded-xl text-xs font-semibold">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1 text-primary">
-                    <Zap className="h-3.5 w-3.5" /> {toBengaliNumber(wpm)} WPM
+                    <Zap className="h-3.5 w-3.5" /> {toBengaliNumber(gpm)} GPM
+                  </span>
+                  <span className="flex items-center gap-1 text-muted-foreground text-[11px]">
+                    ({toBengaliNumber(wpm)} WPM)
                   </span>
                   <span className="flex items-center gap-1 text-foreground">
                     <Target className="h-3.5 w-3.5 text-green-500" /> {toBengaliNumber(accuracy)}% নির্ভুলতা

@@ -27,7 +27,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
-import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/use-auth";
 import AuthGuard from "@/components/auth-guard";
 import { Skeleton } from "@/components/ui/skeleton";
 import React, { Suspense } from "react";
@@ -176,9 +176,5 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <AuthProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </AuthProvider>
-  );
+  return <DashboardLayoutContent>{children}</DashboardLayoutContent>;
 }
