@@ -125,6 +125,18 @@ export const getStepsForChar = (char: string): SingleDrill[] => {
     // Case 1: Standalone vowel
     const vowelEntry = Object.values(vowelMap).find(v => v.vowel === normalizedChar);
     if (vowelEntry) {
+        const directVowelKey = findKey(normalizedChar);
+        if (directVowelKey) {
+            steps.push({
+                key: directVowelKey.key,
+                keyCode: directVowelKey.keyCode,
+                fingerPosition: directVowelKey.fingerPosition,
+                fingerName: directVowelKey.fingerName,
+                shift: directVowelKey.bnShift === normalizedChar,
+                display: normalizedChar
+            });
+            return steps;
+        }
         const signKey = findKey(vowelEntry.kar);
         if (signKey && hasantKey) {
             steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: hasantKey.bnShift === '্', display: '্' });
@@ -153,76 +165,101 @@ export const getStepsForChar = (char: string): SingleDrill[] => {
         
         if (consonants.length >= 2) {
             const firstKey = findKey(consonants[0]);
-            if (!firstKey) return [];
-            
-            steps.push({ 
-                key: firstKey.key,
-                keyCode: firstKey.keyCode,
-                fingerPosition: firstKey.fingerPosition,
-                fingerName: firstKey.fingerName,
-                shift: !!firstKey.bnShift && firstKey.bnShift === consonants[0], 
-                display: consonants[0] 
-            });
-
-            for (let i = 1; i < consonants.length; i++) {
-                const halantCountBefore = halants[i - 1] || 1;
-                for (let j = 0; j < halantCountBefore; j++) {
-                    steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: false, display: '্' });
-                }
-
-                const consonantKey = findKey(consonants[i]);
-                if (!consonantKey) return [];
+            if (firstKey) {
                 steps.push({ 
-                    key: consonantKey.key,
-                    keyCode: consonantKey.keyCode,
-                    fingerPosition: consonantKey.fingerPosition,
-                    fingerName: consonantKey.fingerName,
-                    shift: !!consonantKey.bnShift && consonantKey.bnShift === consonants[i], 
-                    display: consonants[i] 
+                    key: firstKey.key,
+                    keyCode: firstKey.keyCode,
+                    fingerPosition: firstKey.fingerPosition,
+                    fingerName: firstKey.fingerName,
+                    shift: !!firstKey.bnShift && firstKey.bnShift === consonants[0], 
+                    display: consonants[0] 
                 });
-            }
 
-            if (trailingKar) {
-                const karKey = findKey(trailingKar);
-                if (karKey) {
-                    steps.push({ 
-                        key: karKey.key,
-                        keyCode: karKey.keyCode,
-                        fingerPosition: karKey.fingerPosition,
-                        fingerName: karKey.fingerName,
-                        shift: karKey.bnShift === trailingKar, 
-                        display: trailingKar 
-                    });
+                for (let i = 1; i < consonants.length; i++) {
+                    const halantCountBefore = halants[i - 1] || 1;
+                    for (let j = 0; j < halantCountBefore; j++) {
+                        steps.push({ key: hasantKey.key, keyCode: hasantKey.keyCode, fingerPosition: hasantKey.fingerPosition, fingerName: hasantKey.fingerName, shift: false, display: '্' });
+                    }
+
+                    const consonantKey = findKey(consonants[i]);
+                    if (consonantKey) {
+                        steps.push({ 
+                            key: consonantKey.key,
+                            keyCode: consonantKey.keyCode,
+                            fingerPosition: consonantKey.fingerPosition,
+                            fingerName: consonantKey.fingerName,
+                            shift: !!consonantKey.bnShift && consonantKey.bnShift === consonants[i], 
+                            display: consonants[i] 
+                        });
+                    }
                 }
-            }
 
-            if (steps.length > 0) return steps;
+                if (trailingKar) {
+                    const karKey = findKey(trailingKar);
+                    if (karKey) {
+                        steps.push({ 
+                            key: karKey.key,
+                            keyCode: karKey.keyCode,
+                            fingerPosition: karKey.fingerPosition,
+                            fingerName: karKey.fingerName,
+                            shift: karKey.bnShift === trailingKar, 
+                            display: trailingKar 
+                        });
+                    }
+                }
+
+                if (steps.length > 0) return steps;
+            }
         }
     }
 
-    // Case 4: Base + vowel sign
+    // Case 4: Base + modifier (Kar, Anusvara ং, Chandrabindu ঁ, Visarga ঃ, Nukta, etc.)
     const codePoints = Array.from(normalizedChar);
     if (codePoints.length > 1) {
         const lastChar = codePoints[codePoints.length - 1];
-        const isKar = isBengaliVowelSign(lastChar);
+        const lastKey = findKey(lastChar);
+        const baseChar = codePoints.slice(0, -1).join('');
+        const baseSteps = getStepsForChar(baseChar);
         
-        if (isKar) {
-            const baseChar = codePoints.slice(0, -1).join('');
-            const baseSteps = getStepsForChar(baseChar);
-            const karKey = findKey(lastChar);
-            
-            if (baseSteps.length > 0 && karKey) {
-                steps.push(...baseSteps);
-                steps.push({ 
-                    key: karKey.key,
-                    keyCode: karKey.keyCode,
-                    fingerPosition: karKey.fingerPosition,
-                    fingerName: karKey.fingerName,
-                    shift: !!karKey.bnShift && karKey.bnShift === lastChar, 
-                    display: lastChar 
+        if (baseSteps.length > 0 && lastKey) {
+            steps.push(...baseSteps);
+            steps.push({ 
+                key: lastKey.key,
+                keyCode: lastKey.keyCode,
+                fingerPosition: lastKey.fingerPosition,
+                fingerName: lastKey.fingerName,
+                shift: !!lastKey.bnShift && normalizeBengaliString(lastKey.bnShift) === normalizeBengaliString(lastChar), 
+                display: lastChar 
+            });
+            return steps;
+        }
+
+        // Fallback: sequential decomposition of each codePoint
+        const sequentialSteps: SingleDrill[] = [];
+        let allValid = true;
+        for (const cp of codePoints) {
+            const cpKey = findKey(cp);
+            if (cpKey) {
+                sequentialSteps.push({
+                    key: cpKey.key,
+                    keyCode: cpKey.keyCode,
+                    fingerPosition: cpKey.fingerPosition,
+                    fingerName: cpKey.fingerName,
+                    shift: !!cpKey.bnShift && normalizeBengaliString(cpKey.bnShift) === normalizeBengaliString(cp),
+                    display: cp
                 });
-                return steps;
+            } else {
+                const subSteps = getStepsForChar(cp);
+                if (subSteps.length > 0) {
+                    sequentialSteps.push(...subSteps);
+                } else {
+                    allValid = false;
+                    break;
+                }
             }
+        }
+        if (allValid && sequentialSteps.length > 0) {
+            return sequentialSteps;
         }
     }
 
@@ -231,7 +268,24 @@ export const getStepsForChar = (char: string): SingleDrill[] => {
 
 export const getStepsForWord = (word: string): SingleDrill[] => {
     const graphemes = bengaliSegmenter.segmentString(word);
-    return graphemes.flatMap(char => getStepsForChar(char));
+    const steps: SingleDrill[] = [];
+    
+    for (const g of graphemes) {
+        const gSteps = getStepsForChar(g);
+        if (gSteps.length > 0) {
+            steps.push(...gSteps);
+        } else {
+            // Fallback for graphemes that weren't resolved as a single cluster
+            for (const cp of Array.from(g)) {
+                const cpSteps = getStepsForChar(cp);
+                if (cpSteps.length > 0) {
+                    steps.push(...cpSteps);
+                }
+            }
+        }
+    }
+    
+    return steps;
 };
 
 /**

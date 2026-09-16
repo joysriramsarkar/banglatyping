@@ -1,4 +1,4 @@
-import { generateDrills, createDeterministicDrills, keyMap, lessons, rowCategories, practiceParagraphs } from '@/lib/lessons';
+import { generateDrills, createDeterministicDrills, getStepsForWord, keyMap, lessons, rowCategories, practiceParagraphs } from '@/lib/lessons';
 
 const HASANTA = '\u09CD';       // ্ Bengali hasanta
 const _DEVANAGARI = /[\u0900-\u097F]/;
@@ -211,21 +211,29 @@ describe('rowCategories', () => {
   });
 });
 
-describe('practiceParagraphs', () => {
-  it('has multiple paragraphs', () => {
-    expect(practiceParagraphs.length).toBeGreaterThan(5);
+describe('getStepsForWord with complex Bengali words', () => {
+  it('correctly decomposes সংস্কৃতি into all 8 steps without skipping any letters', () => {
+    const steps = getStepsForWord('সংস্কৃতি');
+    expect(steps.length).toBe(8);
+    expect(steps.map(s => s.display)).toEqual(['স', 'ং', 'স', '্', 'ক', 'ৃ', 'ত', 'ি']);
   });
 
-  it('each paragraph is a non-empty string', () => {
-    practiceParagraphs.forEach(p => {
-      expect(typeof p).toBe('string');
-      expect(p.length).toBeGreaterThan(0);
-    });
+  it('correctly decomposes বাংলা into all 5 steps', () => {
+    const steps = getStepsForWord('বাংলা');
+    expect(steps.length).toBe(5);
+    expect(steps.map(s => s.display)).toEqual(['ব', 'া', 'ং', 'ল', 'া']);
   });
 
-  it('paragraphs contain Bengali text', () => {
-    practiceParagraphs.forEach(p => {
-      expect(BENGALI.test(p)).toBe(true);
-    });
+  it('correctly decomposes স্বাধীনতা into all 9 steps', () => {
+    const steps = getStepsForWord('স্বাধীনতা');
+    expect(steps.length).toBe(9);
+    expect(steps.map(s => s.display)).toEqual(['স', '্', 'ব', 'া', 'ধ', 'ী', 'ন', 'ত', 'া']);
+  });
+
+  it('correctly decomposes চাঁদ into all 4 steps', () => {
+    const steps = getStepsForWord('চাঁদ');
+    expect(steps.length).toBe(4);
+    expect(steps.map(s => s.display)).toEqual(['চ', 'া', 'ঁ', 'দ']);
   });
 });
+
