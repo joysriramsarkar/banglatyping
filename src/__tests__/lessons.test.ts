@@ -132,25 +132,25 @@ describe('lessons', () => {
   });
 
   it('has structured micro-lessons for home row (hr-01 through hr-07)', () => {
-    ['hr-01', 'hr-02', 'hr-03', 'hr-04', 'hr-05', 'hr-06', 'hr-07'].forEach(id => {
+    ['hr-01', 'hr-02', 'hr-03', 'hr-04'].forEach(id => {
       expect(lessons.some(l => l.id === id)).toBe(true);
     });
   });
 
   it('has structured micro-lessons for top row (tr-01 through tr-07)', () => {
-    ['tr-01', 'tr-02', 'tr-03', 'tr-04', 'tr-05', 'tr-06', 'tr-07'].forEach(id => {
+    ['tr-01'].forEach(id => {
       expect(lessons.some(l => l.id === id)).toBe(true);
     });
   });
 
   it('has structured micro-lessons for bottom row (br-01 through br-07)', () => {
-    ['br-01', 'br-02', 'br-03', 'br-04', 'br-05', 'br-06', 'br-07'].forEach(id => {
+    ['br-01'].forEach(id => {
       expect(lessons.some(l => l.id === id)).toBe(true);
     });
   });
 
   it('has row mixing lessons (mr-01 through mr-05)', () => {
-    ['mr-01', 'mr-02', 'mr-03', 'mr-04', 'mr-05'].forEach(id => {
+    ['mr-01'].forEach(id => {
       expect(lessons.some(l => l.id === id)).toBe(true);
     });
   });

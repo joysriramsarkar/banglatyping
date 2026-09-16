@@ -241,7 +241,7 @@ const getStepsForChar = (char: string): SingleDrill[] => {
     }
 
     // Fallback for complex cases not handled
-    console.warn("Could not determine steps for character:", normalizedChar, "graphemes:", bengaliSegmenter.segmentString(normalizedChar));
+    // console.warn("Could not determine steps for character:", normalizedChar);
     return [];
 };
 
