@@ -230,6 +230,12 @@ describe('getStepsForWord with complex Bengali words', () => {
     expect(steps.map(s => s.display)).toEqual(['স', '্', 'ব', 'া', 'ধ', 'ী', 'ন', 'ত', 'া']);
   });
 
+  it('correctly decomposes বাংলাদেশ into all 8 steps (ব, া, ং, ল, া, দ, ে, শ)', () => {
+    const steps = getStepsForWord('বাংলাদেশ');
+    expect(steps.length).toBe(8);
+    expect(steps.map(s => s.display)).toEqual(['ব', 'া', 'ং', 'ল', 'া', 'দ', 'ে', 'শ']);
+  });
+
   it('correctly decomposes চাঁদ into all 4 steps', () => {
     const steps = getStepsForWord('চাঁদ');
     expect(steps.length).toBe(4);
