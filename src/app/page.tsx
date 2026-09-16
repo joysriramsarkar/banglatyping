@@ -80,6 +80,9 @@ export default function Home() {
               <Link href="/game" className="text-muted-foreground hover:text-primary transition-colors">
                 টাইপিং গেম
               </Link>
+              <Link href="/layouts" className="text-muted-foreground hover:text-primary transition-colors">
+                লেআউট
+              </Link>
               <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
                 সম্পর্কে
               </Link>

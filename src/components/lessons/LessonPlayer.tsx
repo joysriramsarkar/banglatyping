@@ -20,9 +20,11 @@ import {
   RotateCcw,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn, toBengaliNumber } from "@/lib/utils";
 import type { CurriculumLesson } from "@/lib/curriculum/types";
 import { recordLessonCompletion, getStoredCurriculumState } from "@/lib/curriculum/engine";
+import { getNextCurriculumLesson } from "@/lib/curriculum/curriculum-data";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { findKeyInfoForChar, getKeyboardLayoutConfig } from "@/lib/keyboard-layouts";
 import { useAuth } from "@/hooks/use-auth";
@@ -57,6 +59,7 @@ const HOME_ROW_FINGER_MAP = [
 ];
 
 export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
   const { playClick, playError, playSuccess } = useTypingSound();
@@ -65,6 +68,32 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
   const [sectionPassed, setSectionPassed] = useState(false);
   const [sectionFailed, setSectionFailed] = useState(false);
   const [lessonFinished, setLessonFinished] = useState(false);
+
+  // Next curriculum lesson resolution
+  const nextLesson = useMemo(() => getNextCurriculumLesson(lesson.id), [lesson.id]);
+
+  const goToNextLesson = useCallback(() => {
+    if (nextLesson) {
+      router.push(`/dashboard/practice/${nextLesson.id}`);
+    } else {
+      router.push("/dashboard/lessons");
+    }
+  }, [nextLesson, router]);
+
+  // Global Enter key handler when lesson is finished
+  useEffect(() => {
+    if (!lessonFinished) return;
+
+    const handleFinishedKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        goToNextLesson();
+      }
+    };
+
+    window.addEventListener("keydown", handleFinishedKeyDown);
+    return () => window.removeEventListener("keydown", handleFinishedKeyDown);
+  }, [lessonFinished, goToNextLesson]);
 
   // Typing practice state for active interactive sections
   const [drillIndex, setDrillIndex] = useState(0);
@@ -226,6 +255,26 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     playSuccess,
     onComplete,
   ]);
+
+  // Global Enter key handler when a section passes or fails
+  useEffect(() => {
+    if (lessonFinished) return;
+    if (!sectionPassed && !sectionFailed) return;
+
+    const handleSectionEnter = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (sectionPassed) {
+          advanceSection();
+        } else if (sectionFailed) {
+          initSection(currentSectionIndex);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleSectionEnter);
+    return () => window.removeEventListener("keydown", handleSectionEnter);
+  }, [lessonFinished, sectionPassed, sectionFailed, advanceSection, initSection, currentSectionIndex]);
 
   // Handle typing input
   const handleCharInput = useCallback(
@@ -495,21 +544,47 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-2">
           <Button
             onClick={() => initSection(0)}
             onMouseDown={(e) => e.preventDefault()}
             variant="outline"
-            className="gap-2 text-xs"
+            className="w-full sm:w-auto gap-2 text-xs"
           >
             <RefreshCw className="h-3.5 w-3.5" /> পুনরায় পাঠটি করুন
           </Button>
+
+          {nextLesson ? (
+            <Button
+              onClick={goToNextLesson}
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-2 text-xs shadow-md ring-2 ring-primary/30"
+            >
+              পরবর্তী লেসন ({nextLesson.title.split(':')[0]})
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-primary-foreground/20 rounded">
+                Enter ↵
+              </kbd>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          ) : (
+            <Button
+              onClick={goToNextLesson}
+              className="w-full sm:w-auto bg-primary text-primary-foreground font-bold gap-2 text-xs shadow-md"
+            >
+              পাঠ্যতালিকায় ফিরে যান
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-primary-foreground/20 rounded">
+                Enter ↵
+              </kbd>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          )}
+
           <Button
             asChild
-            className="bg-primary text-primary-foreground font-bold gap-2 text-xs"
+            variant="ghost"
+            className="w-full sm:w-auto text-xs text-muted-foreground hover:text-foreground"
           >
             <Link href="/dashboard/lessons">
-              পাঠ্যতালিকায় ফিরে যান <ArrowRight className="h-3.5 w-3.5" />
+              পাঠ্যতালিকা
             </Link>
           </Button>
         </div>
@@ -746,7 +821,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
               {/* Target Character / Word Display Box */}
               <div
                 className={cn(
-                  "py-3.5 px-6 rounded-xl border flex flex-col items-center justify-center min-h-[105px] text-center transition-all duration-200",
+                  "py-2.5 px-4 sm:px-6 rounded-xl border flex flex-col items-center justify-center min-h-[82px] text-center transition-all duration-200",
                   lastWrongChar
                     ? "bg-red-500/10 border-red-500/40 ring-2 ring-red-500/20"
                     : sectionPassed
@@ -765,49 +840,81 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                   )}
                 </div>
 
-                {/* Target String Display with grapheme-safe progress coloring */}
-                <div className="text-4xl sm:text-5xl font-extrabold font-headline text-primary tracking-wider my-0.5 relative inline-flex items-center justify-center">
-                  {currentTarget === " " ? (
-                    <span>␣ (Space)</span>
-                  ) : (
-                    <span className="relative inline-flex items-center justify-center leading-none">
-                      {/* Base layer: full unbroken target in muted color when partially typed, or text-primary */}
-                      <span
-                        className={cn(
-                          "transition-colors select-none leading-none",
-                          currentInput.length > 0
-                            ? "text-muted-foreground/35 dark:text-muted-foreground/45"
-                            : "text-primary"
-                        )}
-                      >
-                        {currentTarget}
-                      </span>
+                {/* Target String Stream Display: Active Set + Upcoming 3-4 Sets */}
+                <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap my-0.5 max-w-full overflow-hidden">
+                  {/* Previous Completed Item (if any) */}
+                  {drillIndex > 0 && (
+                    <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-lg text-sm text-muted-foreground/35 bg-muted/20 border border-border/30 select-none">
+                      {sectionItems[drillIndex - 1] === " " ? "␣" : sectionItems[drillIndex - 1]}
+                    </span>
+                  )}
 
-                      {/* Progress overlay layer: same full unbroken target in green, clipped to the typed portion */}
-                      {currentInput.length > 0 && (
+                  {/* Current Active Item with live grapheme progress coloring */}
+                  <div className="relative inline-flex items-center justify-center px-3 py-1 rounded-xl bg-primary/10 border-2 border-primary/40 shadow-xs">
+                    {currentTarget === " " ? (
+                      <span className="text-xl sm:text-2xl font-bold font-headline text-primary">␣ (Space)</span>
+                    ) : (
+                      <span className="relative inline-flex items-center justify-center text-3xl sm:text-4xl font-extrabold font-headline tracking-wide leading-none">
+                        {/* Base layer: full unbroken target in muted color when partially typed, or text-primary */}
                         <span
-                          className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-extrabold select-none pointer-events-none leading-none transition-all duration-150"
-                          style={{
-                            clipPath: getBengaliGraphemeClip(
-                              currentTarget,
-                              currentInput.length,
-                              currentTarget.length
-                            ),
-                          }}
-                          aria-hidden="true"
+                          className={cn(
+                            "transition-colors select-none leading-none",
+                            currentInput.length > 0
+                              ? "text-muted-foreground/35 dark:text-muted-foreground/45"
+                              : "text-primary"
+                          )}
                         >
                           {currentTarget}
                         </span>
+
+                        {/* Progress overlay layer: same full unbroken target in green, clipped to the typed portion */}
+                        {currentInput.length > 0 && (
+                          <span
+                            className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-extrabold select-none pointer-events-none leading-none transition-all duration-150"
+                            style={{
+                              clipPath: getBengaliGraphemeClip(
+                                currentTarget,
+                                currentInput.length,
+                                currentTarget.length
+                              ),
+                            }}
+                            aria-hidden="true"
+                          >
+                            {currentTarget}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Upcoming Sets (next 3 to 4 items) */}
+                  {sectionItems.slice(drillIndex + 1, drillIndex + 5).map((item, idx) => (
+                    <span
+                      key={`upcoming-${drillIndex}-${idx}`}
+                      className={cn(
+                        "inline-flex items-center px-2.5 py-0.5 rounded-lg text-base sm:text-xl font-medium select-none transition-all",
+                        idx === 0
+                          ? "bg-secondary/80 text-foreground/80 border border-border/60"
+                          : "bg-muted/30 text-muted-foreground/60 border border-transparent"
                       )}
+                    >
+                      {item === " " ? "␣" : item}
+                    </span>
+                  ))}
+
+                  {/* Remaining items count indicator */}
+                  {drillIndex + 5 < sectionItems.length && (
+                    <span className="text-xs text-muted-foreground/40 font-mono self-center">
+                      +{toBengaliNumber(sectionItems.length - (drillIndex + 5))}
                     </span>
                   )}
                 </div>
 
                 {/* Live Input Progress Display */}
                 {currentInput.length > 0 && (
-                  <div className="text-sm font-mono text-muted-foreground min-h-[1.5rem] flex items-center gap-1.5 mt-0.5">
-                    <span className="text-xs text-muted-foreground/70">টাইপ করেছেন:</span>
-                    <span className="text-green-600 dark:text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">
+                  <div className="text-xs font-mono text-muted-foreground min-h-[1.2rem] flex items-center gap-1.5 mt-0.5">
+                    <span className="text-muted-foreground/70">টাইপ করেছেন:</span>
+                    <span className="text-green-600 dark:text-green-400 font-bold bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">
                       {currentInput}
                     </span>
                   </div>

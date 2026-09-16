@@ -183,10 +183,14 @@ export function parseConjunct(conjunct: string): {
  * Removes ZWJ/ZWNJ and handles variant forms
  */
 export function normalizeBengaliString(text: string): string {
+  if (!text) return '';
   return text
     .replace(/\u200D/g, '') // Remove ZWJ
     .replace(/\u200C/g, '') // Remove ZWNJ
-    .normalize('NFC');
+    .normalize('NFC') // Apply standard NFC first
+    .replace(/\u09AF\u09BC/g, '\u09DF') // য + ় -> য় (Atomic Bengali letter YYA)
+    .replace(/\u09A1\u09BC/g, '\u09DC') // ড + ় -> ড় (Atomic Bengali letter RRA)
+    .replace(/\u09A2\u09BC/g, '\u09DD'); // ঢ + ় -> ঢ় (Atomic Bengali letter RHA)
 }
 
 /**
@@ -396,8 +400,10 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
 
   // Below-base combining marks: ু (U+09C1), ূ (U+09C2), ৃ (U+09C3), ৄ (U+09C4), ্ (U+09CD), ৢ, ৣ
   const hasBelowBase = /[\u09C1\u09C2\u09C3\u09C4\u09CD\u09E2\u09E3]/.test(text);
-  // Post-base (right-side) marks: া (U+09BE), ী (U+09C0), ং (U+0982), ঃ (U+0983)
-  const hasPostBase = /[\u09BE\u09C0\u0982\u0983]/.test(text);
+  // Post-base Aa-kar mark: া (U+09BE)
+  const hasAaKar = /\u09BE/.test(text);
+  // Other post-base (right-side) marks: ী (U+09C0), ং (U+0982), ঃ (U+0983)
+  const hasOtherPostBase = /[\u09C0\u0982\u0983]/.test(text);
   // Pre-base (left-side) marks: ি (U+09BF), ে (U+09C7), ৈ (U+09C8)
   const hasPreBase = /[\u09BF\u09C7\u09C8]/.test(text);
   // Circumfix (both sides) marks: ো (U+09CB), ৌ (U+09CC)
@@ -405,44 +411,50 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
   // Top mark: ঁ (U+0981, chandrabindu)
   const hasTopMark = /[\u0981]/.test(text);
 
-  // Below-base marks (e.g. 'টূ', 'কু', 'কৃ', 'ক্'):
-  // Base consonant is at top (~65%), kar is at bottom (~35%).
-  // When consonant is typed (step 0 done -> currentStep 1): top is green, bottom is muted.
-  if (hasBelowBase && !hasPreBase && !hasPostBase && !hasBothSides) {
-    if (totalSteps === 2) {
+  // Special intra-grapheme mark clipping for 2-step single clusters (e.g. 'ডা', 'কু', 'কী', 'কে'):
+  if (totalSteps === 2) {
+    // 1. Post-base Aa-kar 'া' (e.g. 'ডা', 'ফা', 'সা', 'কা', 'মা', 'বা', 'লা'):
+    // In Bengali typography, the consonant occupies ~76% of width, while 'া'
+    // is merely a thin vertical stroke occupying ~24% on the far right.
+    // When typing the consonant (step 1): cover 100% of the consonant in green (up to 76%),
+    // leaving ONLY the 'া' stem uncolored without cutting off the consonant or leaving a huge gap.
+    if (hasAaKar && !hasPreBase && !hasBothSides) {
+      return 'polygon(0 0, 76% 0, 76% 100%, 0 100%)';
+    }
+
+    // 2. Below-base marks (e.g. 'টূ', 'কু', 'কৃ', 'ক্'):
+    // Base consonant is at top (~68%), kar is at bottom (~32%).
+    // When consonant is typed (step 1): top is green, bottom is muted.
+    if (hasBelowBase && !hasPreBase && !hasAaKar && !hasOtherPostBase && !hasBothSides) {
       return 'polygon(0 0, 100% 0, 100% 68%, 0 68%)';
     }
-    const yPercent = Math.round((currentStep / totalSteps) * 100);
-    return `polygon(0 0, 100% 0, 100% ${yPercent}%, 0 ${yPercent}%)`;
+
+    // 3. Other post-base marks (e.g. 'কী', 'টং', 'টঃ'):
+    if (hasOtherPostBase && !hasPreBase && !hasBothSides) {
+      return 'polygon(0 0, 70% 0, 70% 100%, 0 100%)';
+    }
+
+    // 4. Pre-base marks (e.g. 'টি', 'টে', 'টৈ'):
+    // Kar is on left (~34%), consonant is on right (~66%).
+    // When consonant is typed (step 1): right consonant is green, left kar remains muted.
+    if (hasPreBase && !hasAaKar && !hasOtherPostBase && !hasBothSides) {
+      return 'polygon(34% 0, 100% 0, 100% 100%, 34% 100%)';
+    }
+
+    // 5. Circumfix marks (e.g. 'টো', 'টৌ'):
+    // Consonant is in center (~46%), kar is on left and right (~27% each).
+    // When consonant is typed (step 1): center is green.
+    if (hasBothSides) {
+      return 'polygon(27% 0, 73% 0, 73% 100%, 27% 100%)';
+    }
+
+    // 6. Top mark (chandrabindu ঁ):
+    if (hasTopMark) {
+      return 'polygon(0 22%, 100% 22%, 100% 100%, 0 100%)';
+    }
   }
 
-  // Post-base marks (e.g. 'টা', 'কী', 'টং', 'টঃ'):
-  // Consonant is on left (~52%), kar is on right (~48%).
-  // When consonant is typed: left is green, right is muted.
-  if (hasPostBase && !hasPreBase && !hasBothSides) {
-    return 'polygon(0 0, 52% 0, 52% 100%, 0 100%)';
-  }
-
-  // Pre-base marks (e.g. 'টি', 'টে', 'টৈ'):
-  // Kar is on left (~36%), consonant is on right (~64%).
-  // In our typing order, consonant is step 0: right is green, left is muted.
-  if (hasPreBase && !hasPostBase && !hasBothSides) {
-    return 'polygon(36% 0, 100% 0, 100% 100%, 36% 100%)';
-  }
-
-  // Circumfix marks (e.g. 'টো', 'টৌ'):
-  // Consonant is in center (~46%), kar is on left and right (~27% each).
-  // When consonant is typed: center is green.
-  if (hasBothSides) {
-    return 'polygon(27% 0, 73% 0, 73% 100%, 27% 100%)';
-  }
-
-  // Top mark (chandrabindu ঁ):
-  if (hasTopMark) {
-    return 'polygon(0 22%, 100% 22%, 100% 100%, 0 100%)';
-  }
-
-  // General multi-character / horizontal text:
+  // General multi-character / horizontal text or words (e.g. 'ডাল', 'সাদা', 'কলম'):
   const xPercent = Math.round((currentStep / totalSteps) * 100);
   return `polygon(0 0, ${xPercent}% 0, ${xPercent}% 100%, 0 100%)`;
 }

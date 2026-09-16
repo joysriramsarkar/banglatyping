@@ -11,6 +11,7 @@ import {
   composeBengaliKeystroke,
   isValidBengaliTypingPrefix,
   getNextExpectedKeyChar,
+  getBengaliGraphemeClip,
   VOWEL_TO_KAR_MAP as _VOWEL_TO_KAR_MAP,
   KAR_TO_VOWEL_MAP as _KAR_TO_VOWEL_MAP,
 } from '@/lib/bengali-grapheme';
@@ -175,6 +176,20 @@ describe('normalizeBengaliString', () => {
     expect(normalizeBengaliString(withZWNJ)).toBe(KA + '\u0996');
   });
 
+  it('normalizes decomposed nukta consonants to atomic whole letters', () => {
+    // \u09AF (য) + \u09BC (়) -> \u09DF (য়)
+    expect(normalizeBengaliString('\u09AF\u09BC')).toBe('\u09DF');
+    expect(normalizeBengaliString('উচ্চতা\u09AF\u09BC')).toBe('উচ্চতায়');
+
+    // \u09A1 (ড) + \u09BC (়) -> \u09DC (ড়)
+    expect(normalizeBengaliString('\u09A1\u09BC')).toBe('\u09DC');
+    expect(normalizeBengaliString('গা\u09A1\u09BCি')).toBe('গাড়ি');
+
+    // \u09A2 (ঢ) + \u09BC (়) -> \u09DD (ঢ়)
+    expect(normalizeBengaliString('\u09A2\u09BC')).toBe('\u09DD');
+    expect(normalizeBengaliString('আষা\u09A2\u09BC')).toBe('আষাঢ়');
+  });
+
   it('applies NFC normalization', () => {
     const text = '\u0986\u09AE\u09BE\u09B0';
     expect(normalizeBengaliString(text)).toBe(text.normalize('NFC'));
@@ -289,5 +304,42 @@ describe('getNextExpectedKeyChar', () => {
     expect(getNextExpectedKeyChar('ঈ', 'ঈ')).toBe('');
     expect(getNextExpectedKeyChar('কা', 'কা')).toBe('');
     expect(getNextExpectedKeyChar('কীর্তি', 'কীর্তি')).toBe('');
+  });
+});
+
+describe('getBengaliGraphemeClip', () => {
+  it('handles boundaries (0 steps and fully completed steps)', () => {
+    expect(getBengaliGraphemeClip('ডা', 0, 2)).toBe('inset(100%)');
+    expect(getBengaliGraphemeClip('ডা', 2, 2)).toBe('inset(0)');
+    expect(getBengaliGraphemeClip('ডা', 3, 2)).toBe('inset(0)');
+  });
+
+  it('correctly clips post-base Aa-kar (া) at 76% so consonant is 100% covered and aa-kar stem remains clean', () => {
+    // For 'ডা', 'ড' occupies 0 to 76%, 'া' occupies 76% to 100%
+    expect(getBengaliGraphemeClip('ডা', 1, 2)).toBe('polygon(0 0, 76% 0, 76% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('ফা', 1, 2)).toBe('polygon(0 0, 76% 0, 76% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('সা', 1, 2)).toBe('polygon(0 0, 76% 0, 76% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('কা', 1, 2)).toBe('polygon(0 0, 76% 0, 76% 100%, 0 100%)');
+  });
+
+  it('correctly clips below-base marks at top 68%', () => {
+    expect(getBengaliGraphemeClip('টূ', 1, 2)).toBe('polygon(0 0, 100% 0, 100% 68%, 0 68%)');
+    expect(getBengaliGraphemeClip('কু', 1, 2)).toBe('polygon(0 0, 100% 0, 100% 68%, 0 68%)');
+  });
+
+  it('correctly clips pre-base marks on right 66%', () => {
+    expect(getBengaliGraphemeClip('টি', 1, 2)).toBe('polygon(34% 0, 100% 0, 100% 100%, 34% 100%)');
+    expect(getBengaliGraphemeClip('টে', 1, 2)).toBe('polygon(34% 0, 100% 0, 100% 100%, 34% 100%)');
+  });
+
+  it('correctly clips circumfix marks in center', () => {
+    expect(getBengaliGraphemeClip('টো', 1, 2)).toBe('polygon(27% 0, 73% 0, 73% 100%, 27% 100%)');
+  });
+
+  it('correctly clips multi-character words proportionally rather than sticking at single-character kar ratio', () => {
+    expect(getBengaliGraphemeClip('ফাদা', 1, 4)).toBe('polygon(0 0, 25% 0, 25% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('ফাদা', 2, 4)).toBe('polygon(0 0, 50% 0, 50% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('ফাদা', 3, 4)).toBe('polygon(0 0, 75% 0, 75% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('ফাদা', 4, 4)).toBe('inset(0)');
   });
 });

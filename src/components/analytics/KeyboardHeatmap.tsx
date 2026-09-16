@@ -95,10 +95,13 @@ export default function KeyboardHeatmap({ weakChars = [], className }: KeyboardH
             value={selectedLayout}
             onValueChange={(v) => setSelectedLayout(v as KeyboardLayoutKey)}
           >
-            <TabsList className="h-9">
+            <TabsList className="h-9 flex-wrap">
               <TabsTrigger value="banglaword" className="text-xs">BanglaWord</TabsTrigger>
-              <TabsTrigger value="avro" className="text-xs">Avro</TabsTrigger>
-              <TabsTrigger value="bijoy" className="text-xs">Bijoy</TabsTrigger>
+              <TabsTrigger value="khipro" className="text-xs font-semibold">ক্ষিপ্র (Khipro)</TabsTrigger>
+              <TabsTrigger value="probhat" className="text-xs">প্রভাত</TabsTrigger>
+              <TabsTrigger value="bijoy" className="text-xs">বিজয়</TabsTrigger>
+              <TabsTrigger value="avro" className="text-xs">অভ্র</TabsTrigger>
+              <TabsTrigger value="unijoy" className="text-xs">ইউনিজয়</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

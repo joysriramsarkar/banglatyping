@@ -11,6 +11,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/db";
 import { useToast } from "@/hooks/use-toast";
 import AuthGuard from "@/components/auth-guard";
+import { 
+  getKeyboardLayoutOptions, 
+  getActiveKeyboardLayout, 
+  setActiveKeyboardLayout, 
+  type KeyboardLayoutKey 
+} from "@/lib/keyboard-layouts";
 
 function ProfilePageContent() {
   const { user, loading } = useAuth();
@@ -88,20 +94,41 @@ function ProfilePageContent() {
         </CardContent>
       </Card>
 
-      <Card className="opacity-60">
+      <Card>
         <CardHeader>
           <CardTitle>কীবোর্ড সেটিংস</CardTitle>
-          <CardDescription>বর্তমানে শুধুমাত্র BanglaWord (লিপিঘর) লেআউট সক্রিয় আছে।</CardDescription>
+          <CardDescription>টাইপিং প্র্যাকটিস ও গেমের জন্য আপনার পছন্দের কীবোর্ড লেআউট নির্বাচন করুন।</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="keyboard-layout">কীবোর্ড লেআউট</Label>
-            <Select value="banglaword" disabled>
+            <Select 
+              value={keyboardLayout || 'banglaword'} 
+              onValueChange={(val) => {
+                setKeyboardLayout(val);
+                setActiveKeyboardLayout(val as KeyboardLayoutKey);
+                toast({
+                  title: "কীবোর্ড লেআউট পরিবর্তিত হয়েছে",
+                  description: `সক্রিয় লেআউট: ${getKeyboardLayoutOptions().find(o => o.value === val)?.label || val}`,
+                });
+              }}
+            >
               <SelectTrigger id="keyboard-layout">
-                <SelectValue />
+                <SelectValue placeholder="লেআউট নির্বাচন করুন" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="banglaword">BanglaWord (লিপিঘর)</SelectItem>
+                {getKeyboardLayoutOptions().map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <div className="flex items-center gap-2">
+                      <span>{opt.label}</span>
+                      {opt.badge && (
+                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                          {opt.badge}
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

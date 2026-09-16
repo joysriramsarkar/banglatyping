@@ -14,6 +14,7 @@ import {
   BrainCircuit,
   AlertTriangle,
   Calendar,
+  Keyboard,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
@@ -67,6 +68,7 @@ const StatCard = ({
 
 const quickActions = [
   { href: "/dashboard/lessons", icon: BookCheck, label: "পাঠক্রম (Levels 0–12)", description: "ধাপে ধাপে মাস্টার হন" },
+  { href: "/dashboard/layouts", icon: Keyboard, label: "কীবোর্ড লেআউটসমূহ", description: "বাংলাওয়ার্ড, ক্ষিপ্র ও অন্যান্য" },
   { href: "/dashboard/test", icon: Timer, label: "টাইপিং টেস্ট ও পরীক্ষা", description: "গতি ও সনদ মূল্যায়ন" },
   { href: "/dashboard/practice/mistakes", icon: AlertTriangle, label: "ভুল সংশোধন হাব", description: "দুর্বলতা দূর করুন" },
   { href: "/game", icon: Gamepad2, label: "টাইপিং গেম", description: "মজা করে অনুশীলন" },

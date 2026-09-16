@@ -22,6 +22,7 @@ import {
   LogOut,
   LogIn,
   AlertTriangle,
+  Keyboard,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -112,6 +113,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/dashboard", icon: Home, label: "ড্যাশবোর্ড" },
     { href: "/dashboard/lessons", icon: BookOpen, label: "পাঠক্রম" },
+    { href: "/dashboard/layouts", icon: Keyboard, label: "লেআউট" },
     { href: "/dashboard/practice/mistakes", icon: AlertTriangle, label: "ভুল সংশোধন" },
     { href: "/dashboard/test", icon: Timer, label: "টাইপিং টেস্ট" },
     { href: "/game", icon: Gamepad2, label: "টাইপিং গেম" },

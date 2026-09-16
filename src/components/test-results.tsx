@@ -29,6 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { lessons } from "@/lib/lessons";
+import { getNextCurriculumLesson } from "@/lib/curriculum/curriculum-data";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -129,15 +130,34 @@ export default function TestResults({
     return `নির্ভুলতার লক্ষ্য অপূর্ণ থাকায় ব্যর্থ হয়েছে — আপনার নির্ভুলতা ছিল ${toBengaliNumber(accuracy)}% (প্রয়োজন: সর্বনিম্ন ${toBengaliNumber(accuracyGoal)}%)। গতি ছিল ${toBengaliNumber(wpm)} WPM (সফল)।`;
   }, [isDrill, passedDrill, isSpeedPassed, isAccuracyPassed, wpm, accuracy, accuracyGoal]);
 
-  let nextLesson: Lesson | null = null;
+  let nextLesson: { id: string; title?: string } | null = null;
   if (lessonId) {
     const currentLessonIndex = lessons.findIndex((l) => l.id === lessonId);
     if (currentLessonIndex !== -1 && currentLessonIndex < lessons.length - 1) {
       nextLesson = lessons[currentLessonIndex + 1];
+    } else {
+      const curr = getNextCurriculumLesson(lessonId);
+      if (curr) nextLesson = curr;
     }
   }
 
   const showNextLessonButton = passedDrill && nextLesson;
+
+  // Handle Enter key for next lesson or restart
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (showNextLessonButton && nextLesson) {
+          router.push(`/dashboard/practice/${nextLesson.id}`);
+        } else if (onRestart) {
+          onRestart();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showNextLessonButton, nextLesson, onRestart, router]);
 
   // Format erred characters for WhyWasIWrong
   const mistakeDetails: MistakeDetail[] = useMemo(() => {
@@ -309,7 +329,11 @@ export default function TestResults({
                     onClick={() => router.push(`/dashboard/practice/${nextLesson?.id}`)}
                     className="w-full"
                   >
-                    পরবর্তী পাঠ <ArrowRight className="ml-2 h-4 w-4" />
+                    পরবর্তী পাঠ ({nextLesson?.title ? nextLesson.title.split(':')[0] : 'পরের ধাপ'})
+                    <kbd className="ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-primary-foreground/20 rounded">
+                      Enter ↵
+                    </kbd>
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 ) : (
                   <Button ref={actionButtonRef} onClick={onRestart} variant="outline" className="w-full">
