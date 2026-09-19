@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { 
   Keyboard, 
@@ -25,7 +24,6 @@ import {
   getActiveKeyboardLayout, 
   setActiveKeyboardLayout,
   getKeyboardLayoutConfig,
-  KeyboardLayoutOption
 } from "@/lib/keyboard-layouts";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { useToast } from "@/hooks/use-toast";

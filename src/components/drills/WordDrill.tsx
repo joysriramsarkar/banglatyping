@@ -10,34 +10,81 @@ import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { DrillProgress } from "./DrillProgress";
 import { useWordDrill } from "./use-word-drill";
 
+import { normalizeBengaliString, bengaliSegmenter, getBengaliGraphemeClip } from "@/lib/bengali-grapheme";
+import { cn } from "@/lib/utils";
+
 const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; isCurrent: boolean; userInput: string; isError: boolean }) => {
-    if (isCurrent) {
-        const progressRatio = word.length > 0 ? Math.min(1, userInput.length / word.length) : 0;
-        const clipPercent = Math.round(progressRatio * 100);
-
+    if (word === ' ') {
         return (
-            <span className="text-3xl font-bold mr-4 relative inline-flex items-center justify-center">
-                {/* Base layer: full unbroken word */}
-                <span className={userInput.length > 0 ? "text-muted-foreground/40" : "text-primary border-b-2 border-primary"}>
-                    {word}
-                </span>
-
-                {/* Typed overlay layer: same full unbroken word in green (or red if error), clipped to typed length */}
-                {userInput.length > 0 && (
-                    <span
-                        className={`absolute inset-0 pointer-events-none select-none ${isError ? "text-red-500" : "text-green-500"}`}
-                        style={{
-                            clipPath: `polygon(0 0, ${clipPercent}% 0, ${clipPercent}% 100%, 0 100%)`
-                        }}
-                        aria-hidden="true"
-                    >
-                        {word}
-                    </span>
-                )}
+            <span className={cn(
+                "inline-flex items-center justify-center px-3 py-1 rounded-xl font-headline font-bold transition-all mr-3",
+                isCurrent
+                    ? "text-3xl sm:text-4xl text-primary bg-primary/10 border-2 border-primary/50 ring-2 ring-primary/20"
+                    : "text-xl sm:text-2xl text-muted-foreground/50"
+            )}>
+                ␣ স্পেস
             </span>
         );
     }
-    return <span className="text-3xl text-muted-foreground mr-4">{word}</span>;
+
+    if (isCurrent) {
+        const normWord = normalizeBengaliString(word);
+        const normInput = normalizeBengaliString(userInput);
+        const targetClusters = bengaliSegmenter.segmentString(normWord);
+        const inputClusters = bengaliSegmenter.segmentString(normInput);
+
+        return (
+            <span className="text-4xl sm:text-5xl md:text-6xl font-black font-headline mr-5 sm:mr-7 relative inline-flex items-center justify-center px-4 py-2 rounded-2xl bg-primary/10 border-2 border-primary/50 shadow-md ring-2 ring-primary/20">
+                {targetClusters.map((cluster, cIdx) => {
+                    const normCluster = normalizeBengaliString(cluster);
+
+                    if (cIdx < inputClusters.length) {
+                        const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
+                        if (typedCluster === normCluster) {
+                            return (
+                                <span key={`wd-${cIdx}`} className={isError ? "text-red-500 font-black" : "text-green-600 dark:text-green-400 font-black"}>
+                                    {cluster}
+                                </span>
+                            );
+                        }
+                    }
+
+                    if (cIdx === inputClusters.length - 1 && inputClusters.length > 0) {
+                        const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
+                        if (normCluster.startsWith(typedCluster) && typedCluster.length < normCluster.length) {
+                            return (
+                                <span key={`wd-${cIdx}`} className="relative inline-flex items-center justify-center leading-none">
+                                    <span className="text-muted-foreground/35 select-none leading-none">{cluster}</span>
+                                    <span
+                                        className={cn(
+                                            "absolute inset-0 flex items-center justify-center font-black select-none pointer-events-none leading-none",
+                                            isError ? "text-red-500" : "text-green-600 dark:text-green-400"
+                                        )}
+                                        style={{
+                                            clipPath: getBengaliGraphemeClip(normCluster, typedCluster.length, normCluster.length)
+                                        }}
+                                        aria-hidden="true"
+                                    >
+                                        {cluster}
+                                    </span>
+                                </span>
+                            );
+                        }
+                    }
+
+                    return (
+                        <span
+                            key={`wd-${cIdx}`}
+                            className={normInput.length > 0 ? "text-muted-foreground/40" : "text-primary"}
+                        >
+                            {cluster}
+                        </span>
+                    );
+                })}
+            </span>
+        );
+    }
+    return <span className="text-2xl sm:text-3xl text-muted-foreground/60 mr-4 font-semibold">{word}</span>;
 };
 
 export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }: { drills: Drill[], lessonId?: string, accuracyGoal?: number }) => {

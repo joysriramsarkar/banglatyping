@@ -21,6 +21,7 @@ interface TypingState {
   totalErrors: number;
   totalChars: number;
   wpm: number;
+  spm: number;
   accuracy: number;
   isFinished: boolean;
   wordStatsCache: Record<number, { rawInput: string, typedWord: string, keystrokes: number, errors: number }>;
@@ -46,6 +47,7 @@ const initialTypingState: TypingState = {
   totalErrors: 0,
   totalChars: 0,
   wpm: 0,
+  spm: 0,
   accuracy: 100,
   isFinished: false,
   wordStatsCache: {},
@@ -124,7 +126,10 @@ function calculateStatsHelper(
   // Use Net WPM (with minimum of 0)
   const wpm = Math.round(Math.max(0, netWpm));
 
-  return { totalCharsTyped, errors: uncorrectedErrors, accuracy, wpm, newCache };
+  // SPM (Strokes / Keystrokes Per Minute)
+  const spm = timeInMinutes > 0 ? Math.round(totalKeystrokesTyped / timeInMinutes) : 0;
+
+  return { totalCharsTyped, errors: uncorrectedErrors, accuracy, wpm, spm, newCache };
 }
 
 /**
@@ -157,17 +162,28 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
     }
     case 'INPUT_CHAR': {
       if (state.isFinished) return state;
-      const { key, maxLength } = action.payload;
-      const currentInput = (state.charInputPerWord[state.currentWordIndex] || '').normalize('NFC');
-      const newInput = composeBengaliKeystroke(currentInput, key).normalize('NFC');
-      
-      if (newInput.length <= maxLength) {
-        return {
-          ...state,
-          charInputPerWord: { ...state.charInputPerWord, [state.currentWordIndex]: newInput },
-        };
+      const currentInput = state.charInputPerWord[state.currentWordIndex] || '';
+      const rawChar = action.payload.key;
+      const targetWord = state.words[state.currentWordIndex] || '';
+
+      // Direct compose (composition is handled by IME / composeBengaliKeystroke)
+      const nextInput = composeBengaliKeystroke(currentInput, rawChar);
+
+      // Check max length
+      if (nextInput.length > action.payload.maxLength) {
+        return state;
       }
-      return state;
+
+      // Check if this is a valid prefix or typed char
+      const isPrefix = isValidBengaliTypingPrefix(nextInput, targetWord);
+
+      return {
+        ...state,
+        charInputPerWord: {
+          ...state.charInputPerWord,
+          [state.currentWordIndex]: nextInput,
+        },
+      };
     }
     case 'SET_INPUT': {
       if (state.isFinished) return state;
@@ -187,15 +203,8 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
       const currentInput = (state.charInputPerWord[state.currentWordIndex] || '').normalize('NFC');
       
       if (currentInput.length > 0) {
-        // Use Intl.Segmenter to correctly handle Bengali grapheme clusters
-        let newInput: string;
-        try {
-          const segmenter = new Intl.Segmenter('bn', { granularity: 'grapheme' });
-          const segments = Array.from(segmenter.segment(currentInput));
-          newInput = segments.slice(0, -1).map(s => s.segment).join('');
-        } catch {
-          newInput = currentInput.slice(0, -1);
-        }
+        // Step-by-step character / modifier deletion (e.g. বাংলা -> বাংল -> বাং -> বা -> ব)
+        const newInput = Array.from(currentInput).slice(0, -1).join('');
         const newCharInput = { ...state.charInputPerWord };
         if (newInput.length === 0) {
           delete newCharInput[state.currentWordIndex];
@@ -244,6 +253,7 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
         stats.errors !== state.totalErrors ||
         stats.accuracy !== state.accuracy ||
         stats.wpm !== state.wpm ||
+        stats.spm !== state.spm ||
         newCache !== state.wordStatsCache
       ) {
         return {
@@ -252,6 +262,7 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
           totalErrors: stats.errors,
           accuracy: stats.accuracy,
           wpm: stats.wpm,
+          spm: stats.spm,
           wordStatsCache: newCache,
         };
       }
@@ -267,6 +278,7 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
         totalErrors: stats.errors,
         accuracy: stats.accuracy,
         wpm: stats.wpm,
+        spm: stats.spm,
         wordStatsCache: stats.newCache || state.wordStatsCache,
         isFinished: true,
       };

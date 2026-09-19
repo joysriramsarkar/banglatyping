@@ -33,6 +33,7 @@ export interface TypingStats {
   accuracy: number;
   errors: number;
   timeElapsed: number;
+  spm?: number;
   erredCharacters?: ErredCharacter[];
 }
 
@@ -206,6 +207,7 @@ export interface ExtendedTypingStats extends TypingStats {
   netWpm: number;            // grossWpm - (uncorrectedErrors / minutes)
   gpm: number;               // Graphemes Per Minute (Bengali-specific)
   cpm: number;               // Characters Per Minute
+  spm: number;               // Strokes Per Minute (Keystrokes / Minute)
   correctedErrors: number;   // Errors the user caught and fixed
   uncorrectedErrors: number; // Errors left uncorrected
   consistency: number;       // 0–100, how consistent the speed was

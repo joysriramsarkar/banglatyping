@@ -68,23 +68,26 @@ export default function Home() {
           <div className="flex items-center gap-6">
             <Logo />
             <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
-              <Link href="/dashboard/lessons" className="text-muted-foreground hover:text-primary transition-colors">
-                পাঠক্রম
-              </Link>
-              <Link href="/dashboard/test" className="text-muted-foreground hover:text-primary transition-colors">
+              <Link href="/bangla-typing-test" className="text-muted-foreground hover:text-primary transition-colors">
                 টাইপিং টেস্ট
               </Link>
-              <Link href="/dashboard/practice/mistakes" className="text-muted-foreground hover:text-primary transition-colors">
-                ভুল সংশোধন
+              <Link href="/bangla-typing-practice" className="text-muted-foreground hover:text-primary transition-colors">
+                অনুশীলন
+              </Link>
+              <Link href="/learn" className="text-muted-foreground hover:text-primary transition-colors">
+                শিখুন
+              </Link>
+              <Link href="/bangla-typing-course" className="text-muted-foreground hover:text-primary transition-colors">
+                কোর্স
+              </Link>
+              <Link href="/bangla-keyboard" className="text-muted-foreground hover:text-primary transition-colors">
+                কীবোর্ড
+              </Link>
+              <Link href="/bangla-typing-for-jobs" className="text-muted-foreground hover:text-primary transition-colors">
+                চাকরির প্রস্তুতি
               </Link>
               <Link href="/game" className="text-muted-foreground hover:text-primary transition-colors">
-                টাইপিং গেম
-              </Link>
-              <Link href="/layouts" className="text-muted-foreground hover:text-primary transition-colors">
-                লেআউট
-              </Link>
-              <Link href="/about" className="text-muted-foreground hover:text-primary transition-colors">
-                সম্পর্কে
+                গেম
               </Link>
             </nav>
           </div>
@@ -105,7 +108,7 @@ export default function Home() {
         <section className="container mx-auto px-4 py-16 sm:py-24 text-center">
           <div className="mx-auto max-w-3xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold shadow-xs">
-              <Sparkles className="h-4 w-4" /> সেরা অনলাইন বাংলা টাইপিং টেস্ট ও লার্নিং প্ল্যাটফর্ম
+              <Sparkles className="h-4 w-4" /> ধাপে ধাপে বাংলা টাইপিং শেখা, অনুশীলন ও স্পিড টেস্ট
             </div>
 
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground font-headline leading-tight">
@@ -232,8 +235,88 @@ export default function Home() {
           </div>
         </section>
 
+        {/* 10 Steps Educational Guide (Section 17 of পরিকল্পনা.md) */}
+        <section className="container mx-auto px-4 py-16 max-w-5xl">
+          <div className="text-center space-y-2 mb-12">
+            <h2 className="text-2xl sm:text-4xl font-bold font-headline">
+              বাংলা টাইপিং দ্রুত শেখার ১০টি কার্যকর ধাপ
+            </h2>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              নতুন শিক্ষার্থী থেকে পেশাদার টাইপিস্ট হয়ে ওঠার প্রমাণিত রোডম্যাপ
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {[
+              { step: '০১', title: 'কীবোর্ড নির্বাচন', desc: 'দৈনন্দিন কাজের জন্য অভ্র বা চাকরির পরীক্ষার জন্য বিজয় নির্ধারণ করুন।' },
+              { step: '০২', title: 'হোম রো পজিশন', desc: 'হাতের আঙুলগুলো সবসময় F ও J কী-র দাগে স্থাপন করে শুরু করুন।' },
+              { step: '০৩', title: 'স্পর্শ টাইপিং', desc: 'কীবোর্ডের দিকে না তাকিয়ে শুধুমাত্র স্ক্রিনে তাকিয়ে টাইপ করার অভ্যাস করুন।' },
+              { step: '০৪', title: 'কার-চিহ্ন নিয়ন্ত্রণ', desc: 'আ-কার, ই-কার, এ-কার প্রভৃতি স্বরচিহ্নের কীবোর্ড ম্যাপিং রপ্ত করুন।' },
+              { step: '০৫', title: 'হসন্তের সঠিক ব্যবহার', desc: 'যুক্তাক্ষর তৈরির ভিত্তি হলো হসন্ত (্); এর কি-পজিশন মুখস্থ করুন।' },
+              { step: '০৬', title: 'যুক্তাক্ষর ড্রিল', desc: 'ক্ষ, জ্ঞ, ষ্ণ, ঞ্চ-এর মতো বহুল ব্যবহৃত যুক্তবর্ণগুলো আলাদা অনুশীলন করুন।' },
+              { step: '০৭', title: 'শব্দ থেকে বাক্য', desc: 'একক বর্ণ আয়ত্তের পর ২-৩ অক্ষরের শব্দ ও পূর্ণ বাক্যে টাইপ শুরু করুন।' },
+              { step: '০৮', title: 'ভুল চিহ্নিতকরণ', desc: 'আমাদের ভুল সংশোধন হাব ব্যবহার করে দুর্বল অক্ষরগুলো নিয়মিত শোধরান।' },
+              { step: '০৯', title: 'দৈনিক ১৫ মিনিট', desc: 'একটানা দীর্ঘক্ষণ না করে প্রতিদিন ১৫-২০ মিনিট একাগ্র মনোযোগে টাইপ করুন।' },
+              { step: '১০', title: 'মক টেস্ট ও সনদ', desc: '৫ মিনিটের সরকারি পরীক্ষা মোডে পরীক্ষা দিয়ে স্পিড সার্টিফিকেট অর্জন করুন।' },
+            ].map((item) => (
+              <div key={item.step} className="p-4 rounded-xl border bg-card/60 space-y-1.5 hover:border-primary/50 transition-all">
+                <span className="text-xl font-extrabold text-primary font-mono">{item.step}</span>
+                <h3 className="font-bold text-sm text-foreground">{item.title}</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Learning Hub Grid (Direct Internal Linking) */}
+        <section className="container mx-auto px-4 py-12 max-w-5xl border-t">
+          <div className="text-center space-y-2 mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold font-headline">
+              পর্যায়ক্রমিক বাংলা টাইপিং লার্নিং হাব
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              আপনার প্রয়োজন অনুযায়ী সরাসরি নির্দিষ্ট পাঠক্রম ও গাইডলাইনে প্রবেশ করুন
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+            <Link href="/learn/home-row" className="p-4 rounded-lg border bg-card hover:border-primary hover:shadow-xs transition-all text-center">
+              <span className="block font-bold text-sm text-foreground">হোম রো টাইপিং</span>
+              <span className="text-xs text-muted-foreground">মূল আঙুলের অবস্থান</span>
+            </Link>
+            <Link href="/learn/top-row" className="p-4 rounded-lg border bg-card hover:border-primary hover:shadow-xs transition-all text-center">
+              <span className="block font-bold text-sm text-foreground">টপ রো টাইপিং</span>
+              <span className="text-xs text-muted-foreground">উপরের সারির বর্ণমালা</span>
+            </Link>
+            <Link href="/learn/bottom-row" className="p-4 rounded-lg border bg-card hover:border-primary hover:shadow-xs transition-all text-center">
+              <span className="block font-bold text-sm text-foreground">বটম রো টাইপিং</span>
+              <span className="text-xs text-muted-foreground">নিচের সারির অক্ষর ও কার</span>
+            </Link>
+            <Link href="/learn/kar" className="p-4 rounded-lg border bg-card hover:border-primary hover:shadow-xs transition-all text-center">
+              <span className="block font-bold text-sm text-foreground">কার-চিহ্ন গাইড</span>
+              <span className="text-xs text-muted-foreground">া, ি, ী, ু, ূ, ে, ো</span>
+            </Link>
+            <Link href="/learn/hasanta" className="p-4 rounded-lg border bg-card hover:border-primary hover:shadow-xs transition-all text-center">
+              <span className="block font-bold text-sm text-foreground">হসন্তের ব্যবহার</span>
+              <span className="text-xs text-muted-foreground">যুক্তবর্ণ গঠনের নিয়ম</span>
+            </Link>
+            <Link href="/learn/phola" className="p-4 rounded-lg border bg-card hover:border-primary hover:shadow-xs transition-all text-center">
+              <span className="block font-bold text-sm text-foreground">বাংলা ফলা টাইপিং</span>
+              <span className="text-xs text-muted-foreground">য-ফলা, র-ফলা, ব-ফলা</span>
+            </Link>
+            <Link href="/learn/juktakkhor" className="p-4 rounded-lg border bg-card hover:border-primary hover:shadow-xs transition-all text-center">
+              <span className="block font-bold text-sm text-foreground">যুক্তাক্ষর টাইপিং</span>
+              <span className="text-xs text-muted-foreground">কঠিন যুক্তবর্ণের সহজ ট্রিক</span>
+            </Link>
+            <Link href="/learn/numbers" className="p-4 rounded-lg border bg-card hover:border-primary hover:shadow-xs transition-all text-center">
+              <span className="block font-bold text-sm text-foreground">সংখ্যা ও বিরামচিহ্ন</span>
+              <span className="text-xs text-muted-foreground">১-০ ও দাঁড়ি, কমা</span>
+            </Link>
+          </div>
+        </section>
+
         {/* FAQ Section (Structured Schema Matching) */}
-        <section className="container mx-auto px-4 py-16 max-w-4xl">
+        <section className="container mx-auto px-4 py-16 max-w-4xl border-t">
           <div className="text-center space-y-2 mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold font-headline">
               বাংলা টাইপিং সম্পর্কে সাধারণ প্রশ্নোত্তর (FAQ)
@@ -289,34 +372,91 @@ export default function Home() {
             <p className="text-sm text-muted-foreground">
               অ্যাকাউন্ট তৈরি করে ক্লাউডে অগ্রগতি সংরক্ষণ করুন, অথবা লগইন ছাড়াই সরাসরি গেস্ট হিসেবে টাইপ করুন।
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap justify-center gap-3">
               <Button
                 size="lg"
                 className="bg-primary text-primary-foreground font-bold px-8 shadow-md"
-                onClick={() => router.push("/dashboard/lessons")}
+                onClick={() => router.push("/bangla-typing-course")}
               >
-                পাঠক্রম দেখুন <ArrowRight className="ml-2 h-4 w-4" />
+                সম্পূর্ণ কোর্স দেখুন <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="font-semibold px-6"
+                onClick={() => router.push("/bangla-typing-test")}
+              >
+                টাইপিং টেস্ট দিন
               </Button>
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t py-8 bg-muted/30">
-        <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Logo />
-            <span>— বাংলা টাইপিং মাস্টার ও স্পিড টেস্ট</span>
+      {/* Rich Multi-Column Footer (Section 27 of পরিকল্পনা.md) */}
+      <footer className="border-t bg-muted/40 py-12 text-sm text-muted-foreground">
+        <div className="container mx-auto px-4">
+          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4 pb-8 border-b">
+            {/* Column 1: Tests */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">টাইপিং টেস্ট ও টুলস</h4>
+              <ul className="space-y-2 text-xs sm:text-sm">
+                <li><Link href="/bangla-typing-test" className="hover:text-primary transition-colors">বাংলা টাইপিং টেস্ট</Link></li>
+                <li><Link href="/bangla-typing-speed-test" className="hover:text-primary transition-colors">টাইপিং স্পিড টেস্ট (WPM)</Link></li>
+                <li><Link href="/avro-typing-test" className="hover:text-primary transition-colors">অভ্র টাইপিং টেস্ট</Link></li>
+                <li><Link href="/bijoy-typing-test" className="hover:text-primary transition-colors">বিজয় টাইপিং টেস্ট</Link></li>
+                <li><Link href="/game" className="hover:text-primary transition-colors">টাইপিং গেম ও আর্কেড</Link></li>
+              </ul>
+            </div>
+
+            {/* Column 2: Learn */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">শেখার পাঠক্রম</h4>
+              <ul className="space-y-2 text-xs sm:text-sm">
+                <li><Link href="/learn" className="hover:text-primary transition-colors">টাইপিং শেখার হাব</Link></li>
+                <li><Link href="/bangla-typing-course" className="hover:text-primary transition-colors">১৩ লেভেলের সম্পূর্ণ কোর্স</Link></li>
+                <li><Link href="/learn/home-row" className="hover:text-primary transition-colors">হোম রো (Home Row)</Link></li>
+                <li><Link href="/learn/top-row" className="hover:text-primary transition-colors">টপ রো (Top Row)</Link></li>
+                <li><Link href="/learn/bottom-row" className="hover:text-primary transition-colors">বটম রো (Bottom Row)</Link></li>
+                <li><Link href="/learn/kar" className="hover:text-primary transition-colors">কার-চিহ্ন টাইপিং</Link></li>
+              </ul>
+            </div>
+
+            {/* Column 3: Rules & Grammar */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">যুক্তাক্ষর ও নিয়মাবলি</h4>
+              <ul className="space-y-2 text-xs sm:text-sm">
+                <li><Link href="/learn/hasanta" className="hover:text-primary transition-colors">হসন্তের (্) নিয়ম</Link></li>
+                <li><Link href="/learn/phola" className="hover:text-primary transition-colors">বাংলা ফলা টাইপিং</Link></li>
+                <li><Link href="/learn/juktakkhor" className="hover:text-primary transition-colors">যুক্তাক্ষর টাইপিং</Link></li>
+                <li><Link href="/learn/words" className="hover:text-primary transition-colors">বাংলা শব্দ প্র্যাকটিস</Link></li>
+                <li><Link href="/learn/sentences" className="hover:text-primary transition-colors">বাক্য ও অনুচ্ছেদ টাইপিং</Link></li>
+                <li><Link href="/learn/numbers" className="hover:text-primary transition-colors">বাংলা সংখ্যা টাইপিং</Link></li>
+                <li><Link href="/learn/punctuation" className="hover:text-primary transition-colors">বিরামচিহ্ন টাইপিং</Link></li>
+              </ul>
+            </div>
+
+            {/* Column 4: Keyboards & Jobs */}
+            <div className="space-y-3">
+              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">কীবোর্ড ও ক্যারিয়ার</h4>
+              <ul className="space-y-2 text-xs sm:text-sm">
+                <li><Link href="/bangla-keyboard" className="hover:text-primary transition-colors">বাংলা কীবোর্ড পরিচিতি</Link></li>
+                <li><Link href="/bangla-typing-for-jobs" className="hover:text-primary transition-colors">চাকরির পরীক্ষার প্রস্তুতি</Link></li>
+                <li><Link href="/layouts" className="hover:text-primary transition-colors">ভার্চুয়াল কীবোর্ড লেআউট</Link></li>
+                <li><Link href="/about" className="hover:text-primary transition-colors">আমাদের সম্পর্কে</Link></li>
+                <li><Link href="/login" className="hover:text-primary transition-colors">লগইন ও অ্যাকাউন্ট</Link></li>
+              </ul>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-4 font-medium">
-            <Link href="/dashboard/lessons" className="hover:text-primary transition-colors">পাঠক্রম</Link>
-            <Link href="/dashboard/test" className="hover:text-primary transition-colors">টাইপিং টেস্ট</Link>
-            <Link href="/dashboard/practice/mistakes" className="hover:text-primary transition-colors">ভুল সংশোধন</Link>
-            <Link href="/game" className="hover:text-primary transition-colors">টাইপিং গেম</Link>
-            <Link href="/about" className="hover:text-primary transition-colors">আমাদের সম্পর্কে</Link>
-          </div>
-          <div>
-            © {toBengaliNumber(new Date().getFullYear())} সর্বস্বত্ব সংরক্ষিত।
+
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+            <div className="flex items-center gap-2">
+              <Logo />
+              <span>— বাংলা টাইপিং শেখা, অনুশীলন ও স্পিড টেস্ট প্ল্যাটফর্ম</span>
+            </div>
+            <div>
+              © {toBengaliNumber(new Date().getFullYear())} অনূরণ (onuron.org)। সর্বস্বত্ব সংরক্ষিত।
+            </div>
           </div>
         </div>
       </footer>

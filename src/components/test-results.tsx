@@ -16,7 +16,7 @@ import {
   Activity,
   AlertTriangle,
 } from "lucide-react";
-import { TypingStats, Lesson, ExtendedTypingStats } from "@/lib/types";
+import { TypingStats, ExtendedTypingStats } from "@/lib/types";
 import { useEffect, useRef, useMemo } from "react";
 import Certificate from "./certificate";
 import WhyWasIWrong, { MistakeDetail } from "./typing/WhyWasIWrong";
@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const toBengaliNumber = (num: number | string) => {
@@ -97,6 +98,7 @@ export default function TestResults({
   const extStats = "gpm" in stats ? (stats as ExtendedTypingStats) : null;
   const gpm = extStats?.gpm;
   const cpm = extStats?.cpm;
+  const spm = extStats?.spm ?? ("spm" in stats ? (stats as any).spm : undefined);
   const grossWpm = extStats?.grossWpm;
   const consistency = extStats?.consistency;
   const correctedErrors = extStats?.correctedErrors;
@@ -230,29 +232,48 @@ export default function TestResults({
 
         <CardContent className="grid md:grid-cols-2 gap-8 pt-2">
           <div className="space-y-6">
-            {/* Primary metrics — GPM is the Bengali-primary metric */}
-            <div className={`grid gap-4 text-center ${gpm !== undefined ? "grid-cols-3" : "grid-cols-2"}`}>
+            {/* Primary metrics — GPM, WPM, SPM & Accuracy */}
+            <div
+              className={cn(
+                "grid gap-3 text-center",
+                spm !== undefined && gpm !== undefined
+                  ? "grid-cols-2 sm:grid-cols-4"
+                  : gpm !== undefined
+                  ? "grid-cols-3"
+                  : "grid-cols-2"
+              )}
+            >
               {gpm !== undefined && (
-                <div className="p-4 bg-primary/10 rounded-xl border border-primary/20 shadow-xs">
+                <div className="p-3.5 bg-primary/10 rounded-xl border border-primary/20 shadow-xs">
                   <p className="text-xs text-muted-foreground font-medium">গতি (GPM)</p>
-                  <p className="text-4xl font-extrabold text-primary">{toBengaliNumber(gpm)}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">বর্ণ/মিনিট</p>
+                  <p className="text-3xl font-extrabold text-primary">{toBengaliNumber(gpm)}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">বর্ণ/মিনিট</p>
                 </div>
               )}
-              <div className="p-4 bg-secondary rounded-xl shadow-xs">
+              <div className="p-3.5 bg-secondary rounded-xl shadow-xs">
                 <p className="text-xs text-muted-foreground font-medium">গতি (WPM)</p>
-                <p className="text-4xl font-extrabold text-primary">{toBengaliNumber(wpm)}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">শব্দ/মিনিট</p>
+                <p className="text-3xl font-extrabold text-primary">{toBengaliNumber(wpm)}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">শব্দ/মিনিট</p>
               </div>
-              <div className="p-4 bg-secondary rounded-xl shadow-xs">
+              {spm !== undefined && (
+                <div className="p-3.5 bg-amber-500/10 rounded-xl border border-amber-500/20 shadow-xs">
+                  <p className="text-xs text-muted-foreground font-medium">স্ট্রোক (SPM)</p>
+                  <p className="text-3xl font-extrabold text-amber-500 dark:text-amber-400">{toBengaliNumber(spm)}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">স্ট্রোক/মিনিট</p>
+                </div>
+              )}
+              <div className="p-3.5 bg-secondary rounded-xl shadow-xs">
                 <p className="text-xs text-muted-foreground font-medium">নির্ভুলতা</p>
-                <p className="text-4xl font-extrabold text-primary">{toBengaliNumber(accuracy)}%</p>
-                <p className="text-[11px] text-muted-foreground mt-1">নির্ভুলতার হার</p>
+                <p className="text-3xl font-extrabold text-primary">{toBengaliNumber(accuracy)}%</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">নির্ভুলতার হার</p>
               </div>
             </div>
 
             {/* Detailed breakdown */}
             <div className="space-y-2 text-base">
+              {spm !== undefined && (
+                <StatItem icon={Activity} label="স্ট্রোক প্রতি মিনিট (SPM)" value={spm} unit="স্ট্রোক/মিনিট" />
+              )}
               {grossWpm !== undefined && grossWpm !== wpm && (
                 <StatItem icon={Zap} label="গ্রস গতি (Gross WPM)" value={grossWpm} unit="শব্দ/মিনিট" />
               )}

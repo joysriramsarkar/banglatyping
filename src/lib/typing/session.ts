@@ -243,12 +243,14 @@ export function computeSessionMetrics(state: SessionState): ExtendedTypingStats 
  */
 export function getLiveMetrics(state: SessionState): {
   currentGpm: number;
+  currentWpm: number;
+  currentSpm: number;
   currentAccuracy: number;
   elapsedSeconds: number;
   progress: number;  // 0–100
 } {
   if (!state.startedAt || state.events.length === 0) {
-    return { currentGpm: 0, currentAccuracy: 100, elapsedSeconds: 0, progress: 0 };
+    return { currentGpm: 0, currentWpm: 0, currentSpm: 0, currentAccuracy: 100, elapsedSeconds: 0, progress: 0 };
   }
 
   const durationMs = getEffectiveDurationMs(state);
@@ -258,6 +260,8 @@ export function getLiveMetrics(state: SessionState): {
   const totalAttempted = state.events.filter(e => !e.corrected).length;
 
   const currentGpm = minutes > 0 ? Math.round(correctCount / minutes) : 0;
+  const currentWpm = currentGpm > 0 ? Math.max(1, Math.round(currentGpm / 4)) : 0;
+  const currentSpm = minutes > 0 ? Math.round(state.events.length / minutes) : 0;
   const currentAccuracy = totalAttempted > 0
     ? Math.round((correctCount / totalAttempted) * 100)
     : 100;
@@ -266,7 +270,7 @@ export function getLiveMetrics(state: SessionState): {
     ? Math.round((state.currentGraphemeIndex / state.expectedGraphemes.length) * 100)
     : 0;
 
-  return { currentGpm, currentAccuracy, elapsedSeconds, progress };
+  return { currentGpm, currentWpm, currentSpm, currentAccuracy, elapsedSeconds, progress };
 }
 
 /**

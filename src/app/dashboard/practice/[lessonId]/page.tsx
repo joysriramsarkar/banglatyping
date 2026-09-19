@@ -5,7 +5,7 @@ import TypingPractice, { VisualTypingDrill, WordDrill } from '@/components/typin
 import LessonPlayer from '@/components/lessons/LessonPlayer';
 import { lessons } from '@/lib/lessons';
 import { getCurriculumLessonById } from '@/lib/curriculum/curriculum-data';
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import type { Lesson } from '@/lib/types';
 import type { CurriculumLesson } from '@/lib/curriculum/types';
 
@@ -14,45 +14,28 @@ export default function PracticePage() {
     const searchParams = useSearchParams();
     const lessonId = Array.isArray(params?.lessonId) ? params.lessonId[0] : params?.lessonId;
 
-    const [curriculumLesson, setCurriculumLesson] = useState<CurriculumLesson | null>(null);
-    const [legacyLesson, setLegacyLesson] = useState<Lesson | null>(null);
-    const [accuracyGoal, setAccuracyGoal] = useState<number | undefined>(undefined);
-    const [isLoaded, setIsLoaded] = useState(false);
-
-    useEffect(() => {
-        if (lessonId) {
-            const curr = getCurriculumLessonById(lessonId);
-            if (curr) {
-                setCurriculumLesson(curr);
-                setLegacyLesson(null);
-            } else {
-                const foundLesson = lessons.find(l => l.id === lessonId);
-                setLegacyLesson(foundLesson || null);
-                setCurriculumLesson(null);
-            }
-            setIsLoaded(true);
-        }
+    const accuracyGoal = useMemo(() => {
         if (searchParams.has('accuracy')) {
-            setAccuracyGoal(parseInt(searchParams.get('accuracy') as string));
-        } else {
-            setAccuracyGoal(95); // Default accuracy for word/paragraph drills
+            return parseInt(searchParams.get('accuracy') as string);
         }
-    }, [lessonId, searchParams]);
+        return 95;
+    }, [searchParams]);
 
-    if (!isLoaded) {
-        return (
-            <div className="text-center py-12">
-                <h1 className="text-2xl font-bold">পাঠ লোড হচ্ছে...</h1>
-                <p className="text-muted-foreground mt-2">অনুগ্রহ করে অপেক্ষা করুন।</p>
-            </div>
-        );
-    }
+    const curriculumLesson = useMemo(() => {
+        if (!lessonId) return null;
+        return getCurriculumLessonById(lessonId);
+    }, [lessonId]);
+
+    const legacyLesson = useMemo(() => {
+        if (curriculumLesson || !lessonId) return null;
+        return lessons.find(l => l.id === lessonId) || null;
+    }, [curriculumLesson, lessonId]);
 
     // Render modern structured Curriculum Lesson if matched
     if (curriculumLesson) {
         return (
             <div className="w-full max-w-7xl mx-auto py-2 sm:py-4">
-                <LessonPlayer lesson={curriculumLesson} />
+                <LessonPlayer lesson={curriculumLesson} key={curriculumLesson.id} />
             </div>
         );
     }

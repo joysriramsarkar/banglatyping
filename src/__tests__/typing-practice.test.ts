@@ -155,7 +155,47 @@ describe('useTypingPractice', () => {
   });
 
   describe('backspace', () => {
-    it('removes a whole Bengali grapheme cluster in one press', () => {
+    it('removes the last typed character/modifier step by step (e.g. বাংলা -> বাংল and বাং -> বা -> ব)', () => {
+      const { result } = setup(`বাংলা সোনার`);
+
+      // Type বাংলা
+      act(() => {
+        result.current.setCurrentInput('বাংলা');
+      });
+      expect(result.current.getCurrentInput()).toBe('বাংলা');
+
+      // Backspace 1: removes 'া', leaving 'বাংল'
+      act(() => {
+        result.current.handleBackspace();
+      });
+      expect(result.current.getCurrentInput()).toBe('বাংল');
+
+      // Backspace 2: removes 'ল', leaving 'বাং'
+      act(() => {
+        result.current.handleBackspace();
+      });
+      expect(result.current.getCurrentInput()).toBe('বাং');
+
+      // Backspace 3: removes 'ং', leaving 'বা'
+      act(() => {
+        result.current.handleBackspace();
+      });
+      expect(result.current.getCurrentInput()).toBe('বা');
+
+      // Backspace 4: removes 'া', leaving 'ব'
+      act(() => {
+        result.current.handleBackspace();
+      });
+      expect(result.current.getCurrentInput()).toBe('ব');
+
+      // Backspace 5: removes 'ব', leaving ''
+      act(() => {
+        result.current.handleBackspace();
+      });
+      expect(result.current.getCurrentInput()).toBe('');
+    });
+
+    it('removes conjunct characters step-by-step (e.g. ক্ষ -> ক্ -> ক)', () => {
       const { result } = setup(`${KSSA} ${SONAR}`);
 
       typeWord(result, KA);
@@ -167,10 +207,22 @@ describe('useTypingPractice', () => {
       });
       expect(result.current.getCurrentInput()).toBe(KSSA);
 
+      // 1st backspace deletes SSA (ষ), leaving KA + HASANTA (ক্)
       act(() => {
         result.current.handleBackspace();
       });
+      expect(result.current.getCurrentInput()).toBe(KA + HASANTA);
 
+      // 2nd backspace deletes HASANTA (্), leaving KA (ক)
+      act(() => {
+        result.current.handleBackspace();
+      });
+      expect(result.current.getCurrentInput()).toBe(KA);
+
+      // 3rd backspace deletes KA (ক), leaving empty
+      act(() => {
+        result.current.handleBackspace();
+      });
       expect(result.current.getCurrentInput()).toBe('');
     });
 

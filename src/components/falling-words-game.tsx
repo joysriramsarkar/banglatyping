@@ -271,7 +271,6 @@ export default function FallingWordsGame({ onBackToHub }: { onBackToHub?: () => 
       const wordScore = (matched.text.length * 10 + 5) * multiplier;
 
       setScore((s) => s + wordScore);
-      setTotalWordsTyped((t) => t + 1);
 
       // Audio feedback
       gameAudio.playCombo(newCombo);

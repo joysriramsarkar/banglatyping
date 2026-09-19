@@ -40,6 +40,8 @@ interface UseTypingSessionReturn {
   /** Live metrics (updated every 500ms during active session) */
   liveMetrics: {
     currentGpm: number;
+    currentWpm: number;
+    currentSpm: number;
     currentAccuracy: number;
     elapsedSeconds: number;
     progress: number;
@@ -74,6 +76,8 @@ export function useTypingSession(timeLimitMs?: number): UseTypingSessionReturn {
   const [session, dispatch] = useReducer(sessionReducer, INITIAL_SESSION_STATE);
   const liveMetricsRef = useRef({
     currentGpm: 0,
+    currentWpm: 0,
+    currentSpm: 0,
     currentAccuracy: 100,
     elapsedSeconds: 0,
     progress: 0,

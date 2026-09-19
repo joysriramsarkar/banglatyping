@@ -1,77 +1,163 @@
 import { MetadataRoute } from 'next';
-import { lessons, rowCategories } from '@/lib/lessons';
+import { getAllCurriculumLessons } from '@/lib/curriculum/curriculum-data';
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://typing.onuron.org';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://banglatyping.com';
-  const lastModified = new Date();
+  const lessons = getAllCurriculumLessons();
 
-  // Core static routes
+  // Static core routes
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: `${siteUrl}`,
-      lastModified,
-      changeFrequency: 'daily',
+      url: siteUrl,
+      lastModified: '2026-09-19',
+      changeFrequency: 'weekly',
       priority: 1.0,
     },
+    // P1 SEO Landing Pages
     {
-      url: `${siteUrl}/dashboard/test`,
-      lastModified,
-      changeFrequency: 'daily',
-      priority: 0.9,
+      url: `${siteUrl}/bangla-typing-test`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'weekly',
+      priority: 0.95,
     },
     {
-      url: `${siteUrl}/dashboard/lessons`,
-      lastModified,
+      url: `${siteUrl}/bangla-typing-practice`,
+      lastModified: '2026-09-19',
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: `${siteUrl}/dashboard/practice/mistakes`,
-      lastModified,
+      url: `${siteUrl}/bangla-typing-speed-test`,
+      lastModified: '2026-09-19',
       changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${siteUrl}/avro-typing-test`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    },
+    {
+      url: `${siteUrl}/bijoy-typing-test`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    },
+    {
+      url: `${siteUrl}/bangla-typing-course`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    },
+    {
+      url: `${siteUrl}/bangla-keyboard`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    },
+    {
+      url: `${siteUrl}/bangla-typing-for-jobs`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    },
+    // P2 Learn Hub Pages
+    {
+      url: `${siteUrl}/learn`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'weekly',
+      priority: 0.85,
+    },
+    {
+      url: `${siteUrl}/learn/home-row`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
       priority: 0.8,
     },
+    {
+      url: `${siteUrl}/learn/top-row`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/learn/bottom-row`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/learn/kar`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/learn/hasanta`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/learn/phola`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/learn/juktakkhor`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/learn/numbers`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/learn/words`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.75,
+    },
+    {
+      url: `${siteUrl}/learn/sentences`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: `${siteUrl}/learn/punctuation`,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.75,
+    },
+    // App/utility routes (non-personalised)
     {
       url: `${siteUrl}/game`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 0.8,
+      lastModified: '2026-09-19',
+      changeFrequency: 'monthly',
+      priority: 0.6,
     },
     {
       url: `${siteUrl}/about`,
-      lastModified,
+      lastModified: '2026-09-19',
       changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/login`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${siteUrl}/signup`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.5,
+      priority: 0.6,
     },
   ];
 
-  // Row category pages (e.g. /dashboard/lessons/home-row)
-  const categoryRoutes: MetadataRoute.Sitemap = rowCategories.map(cat => ({
-    url: `${siteUrl}/dashboard/lessons/${cat.id}`,
-    lastModified,
-    changeFrequency: 'weekly',
-    priority: 0.8,
-  }));
-
-  // Individual lesson practice pages
-  const lessonRoutes: MetadataRoute.Sitemap = lessons.map(lesson => ({
-    url: `${siteUrl}/dashboard/practice/${lesson.id}`,
-    lastModified,
-    changeFrequency: 'monthly',
+  // P3 — 61 individual curriculum lesson SEO pages
+  const lessonRoutes: MetadataRoute.Sitemap = lessons.map((lesson) => ({
+    url: `${siteUrl}/lesson/${lesson.id}`,
+    lastModified: '2026-09-19',
+    changeFrequency: 'monthly' as const,
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...categoryRoutes, ...lessonRoutes];
+  return [...staticRoutes, ...lessonRoutes];
 }

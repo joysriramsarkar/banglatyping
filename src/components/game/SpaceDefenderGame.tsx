@@ -186,7 +186,7 @@ export default function SpaceDefenderGame({ onBackToHub }: { onBackToHub?: () =>
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [gameOver, wave, difficulty, enemies.length, bossActive, score, shipsDestroyed]);
+  }, [gameOver, wave, difficulty, enemies, bossActive, score, shipsDestroyed]);
 
   // Clean laser shots
   useEffect(() => {
@@ -283,8 +283,6 @@ export default function SpaceDefenderGame({ onBackToHub }: { onBackToHub?: () =>
       setTargetedEnemyId(null);
     }
   };
-
-  const stats = getArcadeStats();
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-3 select-none">

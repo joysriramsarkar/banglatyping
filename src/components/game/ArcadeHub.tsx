@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { 
@@ -17,12 +17,11 @@ import {
   Volume2, 
   VolumeX, 
   Award, 
-  Clock,
   Sliders,
   Keyboard
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { cn, toBengaliNumber } from '@/lib/utils';
+import { toBengaliNumber } from '@/lib/utils';
 import { getArcadeStats, ArcadeStats } from '@/lib/game/game-storage';
 import { gameAudio } from '@/lib/game/game-audio';
 import { getActiveKeyboardLayout, getKeyboardLayoutConfig } from '@/lib/keyboard-layouts';

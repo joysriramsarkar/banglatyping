@@ -83,6 +83,9 @@ export function computeMetrics(
   );
   const cpm = minutes > 0 ? Math.round(correctUnicodeChars / minutes) : 0;
 
+  // SPM: strokes (keystrokes) per minute
+  const spm = minutes > 0 ? Math.round(totalKeystrokes / minutes) : 0;
+
   // ── Accuracy ────────────────────────────────────────────────
   // Based on graphemes: correct / (correct + uncorrected)
   const totalAttempted = correctGraphemes + uncorrectedErrors;
@@ -116,6 +119,7 @@ export function computeMetrics(
     netWpm,
     gpm,
     cpm,
+    spm,
     accuracy: Math.min(100, accuracy),
     errors: uncorrectedErrors,
     correctedErrors,
@@ -272,6 +276,7 @@ function buildEmptyStats(durationMs: number): ExtendedTypingStats {
     netWpm: 0,
     gpm: 0,
     cpm: 0,
+    spm: 0,
     accuracy: 100,
     errors: 0,
     correctedErrors: 0,

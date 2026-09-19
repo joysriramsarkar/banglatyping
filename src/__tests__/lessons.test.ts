@@ -1,4 +1,4 @@
-import { generateDrills, createDeterministicDrills, getStepsForWord, keyMap, lessons, rowCategories, practiceParagraphs } from '@/lib/lessons';
+import { generateDrills, createDeterministicDrills, getStepsForWord, keyMap, lessons, rowCategories } from '@/lib/lessons';
 
 const HASANTA = '\u09CD';       // ্ Bengali hasanta
 const _DEVANAGARI = /[\u0900-\u097F]/;

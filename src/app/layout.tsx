@@ -23,7 +23,7 @@ const hind_siliguri = Hind_Siliguri({
   variable: '--font-hind-siliguri',
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://banglatyping.com';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://typing.onuron.org';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -70,11 +70,6 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: '/',
-    languages: {
-      'bn-BD': '/',
-      'bn-IN': '/',
-      'en-US': '/',
-    },
   },
   openGraph: {
     title: 'বাংলা টাইপিং মাস্টার - সেরা অনলাইন বাংলা টাইপিং টেস্ট ও প্র্যাকটিস | Bangla Typing Master',
@@ -105,6 +100,7 @@ export const metadata: Metadata = {
 };
 
 const jsonLdSchemas = [
+  // WebApplication — Google-supported SoftwareApplication subtype
   {
     '@context': 'https://schema.org',
     '@type': 'WebApplication',
@@ -113,80 +109,49 @@ const jsonLdSchemas = [
     applicationCategory: 'EducationalApplication',
     operatingSystem: 'All',
     browserRequirements: 'Requires JavaScript. Requires HTML5.',
-    description: 'অনলাইনে বাংলা টাইপিং শেখার ও গতি পরীক্ষার সেরা প্ল্যাটফর্ম। Avro, Bijoy এবং BanglaWord লেআউটে ইন্টারঅ্যাক্টিভ লেসন, লাইভ স্পিড টেস্ট ও ফ্রি সার্টিফিকেট।',
+    description: 'অনলাইনে বাংলা টাইপিং শেখা, অনুশীলন ও গতি পরীক্ষা — এক জায়গায়। Avro, Bijoy এবং BanglaWord লেআউটে ইন্টারঅ্যাক্টিভ লেসন ও লাইভ স্পিড টেস্ট।',
     inLanguage: ['bn', 'en'],
     offers: {
       '@type': 'Offer',
       price: '0',
       priceCurrency: 'BDT',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      ratingCount: '1280',
-      bestRating: '5',
-      worstRating: '1',
-    },
   },
+  // WebSite
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'বাংলা টাইপিং মাস্টার - Bangla Typing Test & Practice',
+    name: 'বাংলা টাইপিং মাস্টার - Bangla Typing Test and Practice',
     url: siteUrl,
     potentialAction: {
       '@type': 'SearchAction',
-      target: `${siteUrl}/dashboard/lessons?search={search_term_string}`,
+      target: `${siteUrl}/learn?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   },
+  // Organization
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Bangla Typing Master',
+    url: siteUrl,
+    sameAs: [siteUrl],
+  },
+  // Course
   {
     '@context': 'https://schema.org',
     '@type': 'Course',
     name: 'বাংলা টাইপিং পূর্ণাঙ্গ কোর্স (১৩টি স্তর)',
-    description: 'হোম রো, টপ রো, বটম রো, কার, হসন্ত, ফলা, যুক্তাক্ষর এবং সরকারি চাকরির পরীক্ষা উপযোগী বাংলা টাইপিং কোর্স।',
+    description: 'হোম রো, টপ রো, বটম রো, কার, হসন্ত, ফলা, যুক্তাক্ষর এবং সরকারি চাকরির পরীক্ষা উপযোগী বাংলা টাইপিং কোর্স। বিনামূল্যে।',
+    url: `${siteUrl}/bangla-typing-course`,
     provider: {
       '@type': 'Organization',
       name: 'Bangla Typing Master',
       sameAs: siteUrl,
     },
-  },
-  {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: 'অনলাইনে বিনামূল্যে বাংলা টাইপিং কীভাবে শিখব?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'বাংলা টাইপিং মাস্টারে ১৩ স্তরের ধাপে ধাপে সাজানো পাঠক্রম রয়েছে। হাতের সঠিক আঙুল রাখার নিয়ম থেকে শুরু করে যুক্তাক্ষর ও গতি বৃদ্ধির জন্য নিয়মিত অনুশীলন করুন।',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'বাংলা টাইপিং টেস্টে WPM ও GPM এর অর্থ কী?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'WPM মানে Words Per Minute (প্রতি মিনিটে শব্দের সংখ্যা) এবং GPM মানে Graphemes Per Minute (প্রতি মিনিটে সঠিক বাংলা অক্ষরের সংখ্যা)। বাংলায় যুক্তাক্ষর নির্ভুলতার জন্য GPM অত্যন্ত কার্যকর।',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'কোন কোন কীবোর্ড লেআউট সাপোর্ট করে?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'আমাদের প্ল্যাটফর্মে বহুল ব্যবহৃত তিনটি লেআউটই রয়েছে: অভ্র (Avro Phonetic), বিজয় ক্লাসিক (Bijoy Classic), এবং বাংলাওয়ার্ড (BanglaWord)।',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: 'টাইপিং শেষে কীভাবে সার্টিফিকেট পাওয়া যায়?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'টাইপিং টেস্ট সম্পন্ন করার পর নির্ধারিত নির্ভুলতা ও গতি অর্জন করলে তৎক্ষণাৎ ভেরিফায়েড সার্টিফিকেট আইডি সহ সনদপত্র ডাউনলোড করা যায়।',
-        },
-      },
-    ],
+    inLanguage: 'bn',
+    isAccessibleForFree: true,
+    courseMode: 'online',
   },
 ];
 

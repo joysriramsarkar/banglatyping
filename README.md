@@ -1,100 +1,129 @@
-# Bangla Typing Master
+# বাংলা টাইপিং মাস্টার (Bangla Typing Master)
 
-A typing practice platform for Bengali learners: lesson-based drills, a virtual
-keyboard for Avro / Bijoy / BanglaWord layouts, progress analytics with
-weak-character recommendations, and certificate generation.
+[![Live Website](https://img.shields.io/badge/Live%20Website-typing.onuron.org-2563eb?style=for-the-badge)](https://typing.onuron.org)
+[![Next.js](https://img.shields.io/badge/Next.js-15.5-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178c6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
-Built with Next.js 15 (App Router), React 18, TypeScript, Tailwind CSS and
-Supabase.
+> **বাংলা টাইপিং শেখা, অনুশীলন ও স্পিড টেস্ট প্ল্যাটফর্ম**  
+> An open-source, full-stack Bengali touch-typing learning, practice, and speed test platform. Featuring 13 curriculum levels (61 structured lessons), real-time virtual keyboard finger guidance, Avro/Bijoy/BanglaWord layouts, adaptive mistake drilling, and government-standard typing exam simulations with downloadable verified certificates.
 
-## Getting started
+🌐 **লাইভ ওয়েবসাইট:** [https://typing.onuron.org](https://typing.onuron.org)
 
-```bash
-# 1. Install dependencies
-npm install
+---
 
-# 2. Configure credentials
-cp .env.example .env.local     # then fill in your Supabase values
+## ✨ প্রধান সুবিধাসমূহ (Key Features)
 
-# 3. Run
-npm run dev                    # http://localhost:3000
-```
+- **১৩-স্তরের পূর্ণাঙ্গ পাঠক্রম (13 Curriculum Levels):** কীবোর্ড পরিচিতি, হোম রো, টপ রো, বটম রো, স্বরচিহ্ন (কার), হসন্ত, ফলা (য, র, ব, ম), যুক্তাক্ষর থেকে শুরু করে সরকারি নিয়োগ পরীক্ষা পর্যন্ত ৬১টি সুবিন্যস্ত পাঠ ও ১৩০টি সেকশন।
+- **মাল্টি-লেআউট ভার্চুয়াল কীবোর্ড (Virtual Keyboard):**
+  - **Avro Phonetic (অভ্র):** স্বজ্ঞাত ধ্বনিভিত্তিক টাইপিং (ami = আমি)।
+  - **Bijoy Classic / Bayanno (বিজয়):** সরকারি দপ্তর ও মুদ্রণশিল্পের মানদণ্ড।
+  - **BanglaWord (বাংলাওয়ার্ড):** পেশাদার নথি টাইপিং লেআউট।
+- **১০০% নির্ভুল বাংলা গ্রাফিম ইঞ্জিন (Grapheme Engine):** যুক্তাক্ষর ও কার-চিহ্নের সঠিক বিভাজন এবং GPM (Graphemes Per Minute) ও WPM নির্ভুল গণনা।
+- **সরকারি চাকরির নিয়োগ পরীক্ষা সিমুলেটর (Govt Exam Simulation):** ৫ মিনিটের কঠোর পরীক্ষা মোড (সাঁটমুদ্রাক্ষরিক, ডাটা এন্ট্রি ও অফিস সহকারী পদের জন্য ২৫-৩০ WPM ও ৯৫% নির্ভুলতা মানদণ্ড)।
+- **ভেরিফায়েড ডিজিটাল সার্টিফিকেট (Verified Certificates):** প্রতিটি টেস্টের জন্য অনন্য ভেরিফিকেশন আইডি (যেমন `BTP-2026-XXXXXX`) সম্বলিত ডাউনলোডযোগ্য ও শেয়ারযোগ্য অফিসিয়াল PDF সনদ।
+- **অ্যাডাপ্টিভ ভুল সংশোধন হাব (Mistake Hub):** ব্যবহারকারীর দুর্বল অক্ষর ও ভুল যুক্তবর্ণ স্বয়ংক্রিয়ভাবে শনাক্ত করে কাস্টম ড্রিল তৈরি।
+- **টাইপিং গেম ও আর্কেড (Typing Games):** নতুন শিক্ষার্থীদের জন্য ফলিং ওয়ার্ডস, স্পেস ডিফেন্ডার ও স্পিড রেসার গেম।
 
-`.env.example` documents the three variables the app needs. The two
-`NEXT_PUBLIC_*` values are shipped to the browser; `SUPABASE_SERVICE_KEY` is
-server-side only and is used by the seed and diagnostic scripts.
+---
 
-## Database setup
+## 🗺️ পাবলিক এসইও ও লার্নিং রুটসমূহ (Public SEO Routes)
 
-Run the migrations in order against your Supabase project (SQL Editor, or any
-Postgres client):
-
-1. `db/migrations/001_initial_schema.sql` — tables, indexes, views, triggers
-2. `db/migrations/002_rls_policies.sql` — Row Level Security policies
-
-Migration 002 matters. Migration 001 creates the tables but never enables RLS,
-which would leave every row readable and writable through the public `anon` key.
-002 enables RLS on all seven tables, makes the per-user tables owner-only, and
-recreates the two views with `security_invoker = true` so they cannot bypass
-those policies.
-
-Then seed the lesson content:
-
-```bash
-npm run db:seed        # imports the lessons from src/lib/lessons.ts
-npm run db:check       # sanity check: prints the lesson count
-npm run db:check-rls   # confirms what the anon key can and cannot read
-```
-
-## Scripts
-
-| Command | What it does |
+| রুট (URL) | বিবরণ |
 | --- | --- |
-| `npm run dev` | Dev server on port 3000 |
-| `npm run build` | Production build |
-| `npm run start` | Serve the production build on port 3000 |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` | ESLint |
-| `npm run lint:fix` | ESLint with autofix |
-| `npm test` | Jest |
-| `npm run test:coverage` | Jest with a coverage report |
-| `npm run test:ci` | What CI runs: tests + coverage against the threshold |
-| `npm run db:seed` | Seed lesson data |
-| `npm run db:check` | Print the lesson count from the database |
-| `npm run db:check-rls` | Compare what the service and anon keys can read |
+| `/` | হোমপেজ ও দ্রুত টাইপিং টেস্ট উইজেট |
+| `/bangla-typing-test` | ১, ৩ ও ৫ মিনিটের বাংলা টাইপিং টেস্ট |
+| `/bangla-typing-practice` | ধাপে ধাপে বাংলা টাইপিং অনুশীলন |
+| `/bangla-typing-speed-test` | WPM, GPM ও নির্ভুলতা পরিমাপক স্পিড টেস্ট |
+| `/avro-typing-test` | অভ্র ফোনেটিক টাইপিং টেস্ট ও গাইড |
+| `/bijoy-typing-test` | বিজয় ক্লাসিক টাইপিং টেস্ট ও গাইড |
+| `/bangla-keyboard` | অভ্র, বিজয় ও বাংলা কীবোর্ড লেআউট পরিচিতি |
+| `/bangla-typing-for-jobs` | সরকারি ও বেসরকারি চাকরির টাইপিং প্রস্তুতি |
+| `/bangla-typing-course` | ১৩ লেভেলের সম্পূর্ণ ফ্রি টাইপিং কোর্স |
+| `/learn` | বাংলা টাইপিং শেখার প্রধান হাব ও রোডম্যাপ |
+| `/learn/home-row` | হোম রো (Home Row) কী ও আঙুলের সঠিক নিয়ম |
+| `/learn/top-row` | টপ রো (Top Row) উপরের সারির কী ও নিয়ম |
+| `/learn/bottom-row` | বটম রো (Bottom Row) নিচের সারির কী ও নিয়ম |
+| `/learn/kar` | বাংলা কার-চিহ্ন (া, ি, ী, ু, ূ, ৃ, ে, ৈ, ো, ৌ) টাইপিং |
+| `/learn/hasanta` | হসন্ত (্) এর সঠিক ব্যবহার ও নিয়মাবলি |
+| `/learn/phola` | বাংলা ফলা (য-ফলা, র-ফলা, ব-ফলা, ম-ফলা) টাইপিং |
+| `/learn/juktakkhor` | যুক্তাক্ষর টাইপিং কৌশল ও ১২টি প্রধান যুক্তবর্ণ |
+| `/learn/numbers` | বাংলা সংখ্যা (১-১০) ও গাণিতিক চিহ্ন |
+| `/learn/words` | সহজ থেকে কঠিন বাংলা শব্দ প্র্যাকটিস তালিকা |
+| `/learn/sentences` | বাক্য ও অনুচ্ছেদ টাইপিং এবং রিদম গাইড |
+| `/learn/punctuation` | বাংলা বিরামচিহ্ন (দাঁড়ি, কমা, সেমিকোলন) টাইপিং |
+| `/lesson/[lessonId]` | প্রতিটি লেসনের জন্য সার্চ-বান্ধব স্ট্যাটিক পেজ (SSG) |
 
-## How API authentication works
+---
 
-Browser calls go through `apiFetch` (`src/lib/api-client.ts`), which attaches
-the signed-in user's Supabase access token. Route handlers verify that token
-with `authenticate` (`src/lib/api-auth.ts`) and then:
+## 🛠️ প্রযুক্তি কাঠামো (Tech Stack)
 
-- reject the request with `401` if there is no valid token,
-- reject it with `403` if it addresses somebody else's data,
-- forward the token to the data layer via `createRequestClient`
-  (`src/lib/db.ts`) so the Row Level Security policies from migration 002 apply.
+- **Frontend:** Next.js 15 (App Router, Turbopack, SSG/SSR), React 18, Tailwind CSS, Lucide Icons, Radix UI.
+- **Language:** TypeScript 5.
+- **Database & Auth:** Supabase (PostgreSQL with Row Level Security).
+- **Audio & Analytics:** Web Audio API synth, canvas-confetti, html2canvas, jsPDF.
+- **Testing:** Jest, React Testing Library.
 
-Use `apiFetch` rather than `fetch` for any route that touches user data. The
-only route that should keep using plain `fetch` is the public
-`/api/lessons/[id]`.
+---
 
-## Quality checks
+## 🚀 লোকাল ডেভেলপমেন্ট সেটআপ (Getting Started)
 
-CI (`.github/workflows/ci.yml`) runs `typecheck`, `lint`, `test:ci` and `build`
-on every push and pull request. Run them locally with the same commands.
+### ১. ডিপেন্ডেন্সি ইনস্টল করুন
+```bash
+npm install
+```
 
-Coverage is measured across every file in `src/lib` and `src/hooks`, and
-`jest.config.js` fails the run below the configured floor. Raise that floor as
-you add tests.
+### ২. এনভায়রনমেন্ট কনফিগার করুন
+`.env.example` থেকে `.env.local` তৈরি করুন:
+```bash
+cp .env.example .env.local
+```
 
-## Documentation
+প্রয়োজনীয় ভেরিয়েবলসমূহ সেট করুন:
+```env
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL="your-supabase-url"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
+SUPABASE_SERVICE_KEY="your-supabase-service-key"
+```
 
-- `QUICK_START.md` — step-by-step Supabase setup
-- `docs/DATABASE_SETUP.md` — schema and configuration details
-- `docs/IMPLEMENTATION_GUIDE.md` — API and hook usage examples
-- `docs/BENGALI_GRAPHEME_FIX.md` — how Bengali grapheme clusters are handled
+### ৩. লোকাল সার্ভার চালু করুন
+```bash
+npm run dev
+```
+ব্রাউজারে [http://localhost:3000](http://localhost:3000) ওপেন করুন।
 
-## Deployment
+---
 
-The app targets Vercel, with Supabase as the data layer. Set the three
-environment variables from `.env.example` in the Vercel project settings.
+## 🗄️ ডাটাবেস মাইগ্রেশন (Database Setup)
+
+আপনার Supabase প্রজেক্টে মাইগ্রেশনগুলো ক্রমানুসারে রান করুন:
+1. `db/migrations/001_initial_schema.sql` — টেবিল, ইনডেক্স, ভিউ এবং ট্রিগার।
+2. `db/migrations/002_rls_policies.sql` — রো লেভেল সিকিউরিটি (RLS) পলিসি।
+
+লেসন ডাটাবেসে সিড করুন:
+```bash
+npm run db:seed        # src/lib/lessons.ts থেকে সিড করে
+npm run db:check       # ডাটাবেস লেসন সংখ্যা চেক করে
+npm run db:check-rls   # RLS পারমিশন যাচাই করে
+```
+
+---
+
+## 🧪 কমান্ড ও স্ক্রিপ্টসমূহ (Available Scripts)
+
+| কমান্ড | বিবরণ |
+| --- | --- |
+| `npm run dev` | লোকাল ডেভেলপমেন্ট সার্ভার চালু করে (Port 3000) |
+| `npm run build` | প্রোডাকশন বান্ডেল তৈরি ও স্ট্যাটিক পেজ জেনারেট করে |
+| `npm run start` | প্রোডাকশন বিল্ড সার্ভ করে |
+| `npm run typecheck` | TypeScript টাইপ চেক (`tsc --noEmit`) |
+| `npm test` | Jest ইউনিট টেস্ট রান করে |
+| `npm run test:ci` | CI পরিবেশের টেস্ট ও কভারেজ রান করে |
+| `npm run lint` | ESLint কোড যাচাই করে |
+
+---
+
+## 📄 লাইসেন্স (License)
+
+এই প্রজেক্টটি MIT লাইসেন্সের অধীনে উন্মুক্ত। বিস্তারিত জানতে [LICENSE](LICENSE) ফাইল দেখুন।

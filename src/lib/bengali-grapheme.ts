@@ -302,7 +302,7 @@ export const SHORT_TO_LONG_VOWEL_MAP: Record<string, { kars: string[]; longVowel
  * Supports BanglaWord Hasanta (্) + Kar -> Independent Vowel composition, and short-to-long vowel extensions.
  */
 export function composeBengaliKeystroke(currentBuffer: string, newChar: string): string {
-  if (!newChar) return currentBuffer;
+  if (!newChar) return normalizeBengaliString(currentBuffer);
 
   // Case 1: Buffer is '্' (or ends with space + '্') and user typed a Kar (া, ি, ী, ু, ূ, ৃ, ে, ৈ, ো, ৌ)
   // In BanglaWord, '্' + Kar transforms into an independent vowel
@@ -311,7 +311,7 @@ export function composeBengaliKeystroke(currentBuffer: string, newChar: string):
     KAR_TO_VOWEL_MAP[newChar]
   ) {
     const prefix = currentBuffer.slice(0, -1);
-    return (prefix + KAR_TO_VOWEL_MAP[newChar]).normalize('NFC');
+    return normalizeBengaliString(prefix + KAR_TO_VOWEL_MAP[newChar]);
   }
 
   // Case 2: Buffer ends with '্' and newChar is an independent vowel (from OS dead-key completion)
@@ -320,7 +320,7 @@ export function composeBengaliKeystroke(currentBuffer: string, newChar: string):
     isBengaliVowel(newChar)
   ) {
     const prefix = currentBuffer.slice(0, -1);
-    return (prefix + newChar).normalize('NFC');
+    return normalizeBengaliString(prefix + newChar);
   }
 
   // Case 3: Short to long vowel extension (e.g. 'ই' + 'ি'/'ী' -> 'ঈ', 'উ' + 'ু'/'ূ' -> 'ঊ')
@@ -328,11 +328,67 @@ export function composeBengaliKeystroke(currentBuffer: string, newChar: string):
     const lastChar = currentBuffer[currentBuffer.length - 1];
     const mapping = SHORT_TO_LONG_VOWEL_MAP[lastChar];
     if (mapping && mapping.kars.includes(newChar)) {
-      return (currentBuffer.slice(0, -1) + mapping.longVowel).normalize('NFC');
+      return normalizeBengaliString(currentBuffer.slice(0, -1) + mapping.longVowel);
     }
   }
 
-  return (currentBuffer + newChar).normalize('NFC');
+  return normalizeBengaliString(currentBuffer + newChar);
+}
+
+/**
+ * Ensures drill items have space characters interspersed so learners practice
+ * the spacebar regularly (every 2 to 4 characters / words).
+ *
+ * Rules:
+ * - If items already contain explicit spaces, preserves them without duplicating.
+ * - If an item is a sentence or contains internal spaces, keeps it as-is.
+ * - Otherwise, automatically adds a " " (space) every 2-4 items (default 3).
+ * - Never adds leading, trailing, or adjacent duplicate spaces.
+ */
+export function ensureSpacedDrillItems(items: string[], maxInterval: number = 3): string[] {
+  if (!items || items.length === 0) return [];
+
+  // Check if items are full sentences / long texts (containing spaces internally)
+  const isFullText = items.some(it => it.length > 20 && it.includes(' '));
+  if (isFullText) {
+    return items;
+  }
+
+  // Check if items already have explicit space items interspersed
+  const explicitSpaceCount = items.filter(it => it === ' ' || it.trim() === '').length;
+  if (explicitSpaceCount >= Math.floor(items.length / 4)) {
+    return items;
+  }
+
+  const result: string[] = [];
+  let itemsSinceLastSpace = 0;
+  const targetInterval = Math.max(2, Math.min(4, maxInterval));
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    if (item === ' ' || item.trim() === '') {
+      if (result.length > 0 && result[result.length - 1] !== ' ') {
+        result.push(' ');
+      }
+      itemsSinceLastSpace = 0;
+      continue;
+    }
+
+    result.push(item);
+    itemsSinceLastSpace++;
+
+    if (itemsSinceLastSpace >= targetInterval && i < items.length - 1) {
+      result.push(' ');
+      itemsSinceLastSpace = 0;
+    }
+  }
+
+  if (result.length > 0 && result[result.length - 1] === ' ') {
+    result.pop();
+  }
+
+  return result;
 }
 
 /**

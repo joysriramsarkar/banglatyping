@@ -3,7 +3,7 @@ import { CheckCircle } from "lucide-react";
 import { cn, toBengaliNumber } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import type { Drill } from "@/lib/types";
-import { getBengaliGraphemeClip } from "@/lib/bengali-grapheme";
+import { getBengaliGraphemeClip, bengaliSegmenter } from "@/lib/bengali-grapheme";
 
 interface DrillPromptDisplayProps {
     drills: Drill[];
@@ -35,20 +35,20 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                 <div
                     key={key}
                     className={cn(
-                        "flex items-center justify-center h-14 sm:h-16 px-4 min-w-[3.75rem] sm:min-w-[4.25rem] rounded-xl border-2 transition-all select-none",
+                        "flex items-center justify-center h-20 sm:h-24 px-5 sm:px-7 min-w-[5rem] sm:min-w-[6.5rem] rounded-2xl border-2 transition-all select-none shadow-sm",
                         boxClass,
                         !isCurrent && !isCompleted && "border-dashed opacity-80"
                     )}
                 >
                     {isCompleted ? (
-                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400 font-bold text-xs">
-                            <span className="font-mono text-base leading-none">␣</span>
-                            <CheckCircle className="h-4 w-4 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400 font-bold text-sm sm:text-base">
+                            <span className="font-mono text-2xl leading-none">␣</span>
+                            <CheckCircle className="h-5 w-5 shrink-0" />
                         </div>
                     ) : (
-                        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium">
-                            <span className="font-mono text-base sm:text-lg leading-none">␣</span>
-                            <span className="text-muted-foreground font-semibold">স্পেস</span>
+                        <div className="flex items-center gap-2 text-sm sm:text-base font-semibold">
+                            <span className="font-mono text-2xl sm:text-3xl leading-none">␣</span>
+                            <span className="text-primary font-bold font-headline">স্পেস</span>
                         </div>
                     )}
                 </div>
@@ -56,48 +56,71 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
         }
 
         const isMultiChar = drillData.prompt.length > 2;
-        const totalSteps = drillData.steps ? drillData.steps.length : 1;
 
         return (
             <div
                 key={key}
                 className={cn(
-                    "flex items-center justify-center h-14 sm:h-16 rounded-xl border-2 font-hind font-bold transition-all select-none shadow-2xs",
-                    isMultiChar ? "px-5 sm:px-6 min-w-[5.5rem] text-2xl sm:text-3xl whitespace-nowrap" : "px-3 min-w-[3.75rem] sm:min-w-[4.25rem] text-3xl sm:text-4xl",
+                    "flex items-center justify-center h-20 sm:h-24 rounded-2xl border-2 font-hind font-black transition-all select-none shadow-sm",
+                    isMultiChar ? "px-6 sm:px-8 min-w-[7rem] sm:min-w-[8.5rem] text-3xl sm:text-4xl md:text-5xl whitespace-nowrap" : "px-4 min-w-[5rem] sm:min-w-[6rem] text-4xl sm:text-5xl md:text-6xl",
                     boxClass
                 )}
             >
                 {isCompleted ? (
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
                         <span>{drillData.prompt}</span>
-                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                     </div>
                 ) : isCurrent ? (
                     <span className="relative inline-flex items-center justify-center leading-none">
-                        {/* Base layer: renders the COMPLETE unbroken Bengali character */}
-                        <span className={cn(
-                            "transition-colors select-none leading-none",
-                            currentStepIndex > 0 ? "text-muted-foreground/35 dark:text-muted-foreground/45" : "text-primary"
-                        )}>
-                            {drillData.prompt}
-                        </span>
+                        {(() => {
+                            const clusters = bengaliSegmenter.segmentString(drillData.prompt);
+                            let remainingSteps = currentStepIndex;
 
-                        {/* Progress overlay layer: same complete unbroken character in green, clipped to show the typed portion */}
-                        {currentStepIndex > 0 && (
-                            <span
-                                className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-extrabold select-none pointer-events-none leading-none transition-all duration-150"
-                                style={{
-                                    clipPath: getBengaliGraphemeClip(
-                                        drillData.prompt,
-                                        currentStepIndex,
-                                        totalSteps
-                                    )
-                                }}
-                                aria-hidden="true"
-                            >
-                                {drillData.prompt}
-                            </span>
-                        )}
+                            return clusters.map((cluster, cIdx) => {
+                                const clusterLength = cluster.length;
+                                const typedInCluster = Math.min(Math.max(0, remainingSteps), clusterLength);
+                                remainingSteps -= clusterLength;
+
+                                if (typedInCluster === clusterLength) {
+                                    return (
+                                        <span key={`drill-c-${cIdx}`} className="text-green-600 dark:text-green-400 font-black">
+                                            {cluster}
+                                        </span>
+                                    );
+                                }
+
+                                if (typedInCluster === 0) {
+                                    return (
+                                        <span
+                                            key={`drill-c-${cIdx}`}
+                                            className={cn(
+                                                currentStepIndex > 0 ? "text-muted-foreground/35 dark:text-muted-foreground/45" : "text-primary"
+                                            )}
+                                        >
+                                            {cluster}
+                                        </span>
+                                    );
+                                }
+
+                                return (
+                                    <span key={`drill-c-${cIdx}`} className="relative inline-flex items-center justify-center leading-none">
+                                        <span className="text-muted-foreground/35 dark:text-muted-foreground/45 select-none leading-none">
+                                            {cluster}
+                                        </span>
+                                        <span
+                                            className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-black select-none pointer-events-none leading-none transition-all duration-150"
+                                            style={{
+                                                clipPath: getBengaliGraphemeClip(cluster, typedInCluster, clusterLength)
+                                            }}
+                                            aria-hidden="true"
+                                        >
+                                            {cluster}
+                                        </span>
+                                    </span>
+                                );
+                            });
+                        })()}
                     </span>
                 ) : (
                     <span>{drillData.prompt}</span>

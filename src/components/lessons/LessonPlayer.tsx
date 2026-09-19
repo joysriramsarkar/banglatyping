@@ -38,6 +38,7 @@ import {
   getNextExpectedKeyChar,
   bengaliSegmenter,
   getBengaliGraphemeClip,
+  ensureSpacedDrillItems,
 } from "@/lib/bengali-grapheme";
 
 interface LessonPlayerProps {
@@ -72,6 +73,15 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
   // Next curriculum lesson resolution
   const nextLesson = useMemo(() => getNextCurriculumLesson(lesson.id), [lesson.id]);
 
+  // Pre-fetch next lesson immediately for zero-lag instant navigation
+  useEffect(() => {
+    if (nextLesson) {
+      router.prefetch(`/dashboard/practice/${nextLesson.id}`);
+    } else {
+      router.prefetch("/dashboard/lessons");
+    }
+  }, [nextLesson, router]);
+
   const goToNextLesson = useCallback(() => {
     if (nextLesson) {
       router.push(`/dashboard/practice/${nextLesson.id}`);
@@ -80,19 +90,27 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     }
   }, [nextLesson, router]);
 
-  // Global Enter key handler when lesson is finished
+  // Global Enter key handler when lesson is finished (with 400ms cooldown to prevent accidental key-repeat auto-skip)
   useEffect(() => {
     if (!lessonFinished) return;
 
+    let canPressEnter = false;
+    const timer = setTimeout(() => {
+      canPressEnter = true;
+    }, 400);
+
     const handleFinishedKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter") {
+      if (e.key === "Enter" && canPressEnter) {
         e.preventDefault();
         goToNextLesson();
       }
     };
 
     window.addEventListener("keydown", handleFinishedKeyDown);
-    return () => window.removeEventListener("keydown", handleFinishedKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("keydown", handleFinishedKeyDown);
+    };
   }, [lessonFinished, goToNextLesson]);
 
   // Typing practice state for active interactive sections
@@ -103,16 +121,32 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
   const [lastWrongChar, setLastWrongChar] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+  const [sectionResultStats, setSectionResultStats] = useState<{
+    gpm: number;
+    wpm: number;
+    spm: number;
+    accuracy: number;
+  } | null>(null);
 
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const lastKeyHandledTimeRef = useRef<number>(0);
   const currentSection = lesson.sections[currentSectionIndex];
 
-  // List of items to type in this section
+  // Live timer ticker to update speed continuously during active typing
+  useEffect(() => {
+    if (!startTime || endTime || sectionPassed || sectionFailed) return;
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 500);
+    return () => clearInterval(interval);
+  }, [startTime, endTime, sectionPassed, sectionFailed]);
+
+  // List of items to type in this section (with regular spacebar practice interspersed)
   const sectionItems = useMemo(() => {
     if (!currentSection) return [];
     if (currentSection.items && currentSection.items.length > 0) {
-      return currentSection.items;
+      return ensureSpacedDrillItems(currentSection.items);
     }
     return [];
   }, [currentSection]);
@@ -146,6 +180,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     setLastWrongChar(null);
     setStartTime(null);
     setEndTime(null);
+    setNow(Date.now());
+    setSectionResultStats(null);
     setSectionPassed(false);
     setSectionFailed(false);
     if (hiddenInputRef.current) {
@@ -168,18 +204,16 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
   const timeElapsedSec = useMemo(() => {
     if (!startTime) return 0;
-    const end = endTime || Date.now();
+    const end = endTime || now;
     return Math.max(1, Math.round((end - startTime) / 1000));
-  }, [startTime, endTime]);
+  }, [startTime, endTime, now]);
 
   // Total graphemes typed so far in this section (completed items + current input)
+  // Clean grapheme counting without phantom spaces
   const totalCompletedGraphemes = useMemo(() => {
     let count = 0;
     for (let i = 0; i < drillIndex && i < sectionItems.length; i++) {
       count += bengaliSegmenter.segmentString(sectionItems[i]).length;
-      if (i < sectionItems.length - 1) {
-        count += 1; // space between drill items
-      }
     }
     if (currentInput) {
       count += bengaliSegmenter.segmentString(currentInput).length;
@@ -190,14 +224,36 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
   // GPM = Graphemes Per Minute (Bengali-accurate metric)
   const gpm = useMemo(() => {
     if (timeElapsedSec <= 0 || totalCompletedGraphemes <= 0) return 0;
+    // Damping for the initial 2 seconds to avoid extreme instant spikes
+    if (timeElapsedSec < 2) {
+      return Math.min(60, Math.round(totalCompletedGraphemes * 30));
+    }
     return Math.round(totalCompletedGraphemes / (timeElapsedSec / 60));
   }, [totalCompletedGraphemes, timeElapsedSec]);
 
   // WPM approximation for display (1 Bengali word ≈ 4 graphemes on average)
   const wpm = useMemo(() => {
-    if (timeElapsedSec <= 0 || totalCompletedGraphemes <= 0) return 0;
-    return Math.round((totalCompletedGraphemes / 4) / (timeElapsedSec / 60));
-  }, [totalCompletedGraphemes, timeElapsedSec]);
+    if (gpm <= 0) return 0;
+    return Math.max(1, Math.round(gpm / 4));
+  }, [gpm]);
+
+  // SPM = Strokes (correct keystrokes) Per Minute — stroke meter methodology
+  // Counts only useful keystrokes (errors excluded) to match stroke meter's eventCount logic
+  const spm = useMemo(() => {
+    if (timeElapsedSec <= 0 || totalAttempts <= 0) return 0;
+    const correctStrokes = Math.max(0, totalAttempts - errorsCount);
+    if (correctStrokes <= 0) return 0;
+    if (timeElapsedSec < 2) {
+      return Math.min(120, Math.round(correctStrokes * 30));
+    }
+    return Math.round(correctStrokes / (timeElapsedSec / 60));
+  }, [totalAttempts, errorsCount, timeElapsedSec]);
+
+  // Authoritative display metrics: uses frozen snapshot once section passes/fails
+  const displayGpm = sectionResultStats ? sectionResultStats.gpm : gpm;
+  const displayWpm = sectionResultStats ? sectionResultStats.wpm : wpm;
+  const displaySpm = sectionResultStats ? sectionResultStats.spm : spm;
+  const displayAccuracy = sectionResultStats ? sectionResultStats.accuracy : accuracy;
 
   // Focus input automatically
   useEffect(() => {
@@ -216,7 +272,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
       playSuccess();
 
       const state = getStoredCurriculumState();
-      recordLessonCompletion(state, lesson.id, accuracy, wpm, gpm);
+      recordLessonCompletion(state, lesson.id, displayAccuracy, displayWpm, displayGpm);
 
       // Save to Supabase if authenticated
       if (user) {
@@ -227,8 +283,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
             body: JSON.stringify({
               userId: user.id,
               lessonId: lesson.id,
-              wpm,
-              accuracy,
+              wpm: displayWpm,
+              accuracy: displayAccuracy,
               errors: errorsCount,
               timeElapsed: timeElapsedSec,
               erredCharacters: [],
@@ -246,9 +302,9 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     lesson.sections.length,
     lesson.id,
     initSection,
-    accuracy,
-    wpm,
-    gpm,
+    displayAccuracy,
+    displayWpm,
+    displayGpm,
     errorsCount,
     timeElapsedSec,
     user,
@@ -319,11 +375,32 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
             setCurrentInput("");
           } else {
             // Finished all items in current section
-            setEndTime(Date.now());
+            const finalEndTime = Date.now();
+            setEndTime(finalEndTime);
+            const totalDurationSec = Math.max(1, Math.round((finalEndTime - (startTime || finalEndTime)) / 1000));
+
+            // Cleanly sum actual graphemes of all items in this section
+            let finalGraphemes = 0;
+            for (let i = 0; i < sectionItems.length; i++) {
+              finalGraphemes += bengaliSegmenter.segmentString(sectionItems[i]).length;
+            }
+            const finalGpm = Math.round(finalGraphemes / (totalDurationSec / 60));
+            const finalWpm = Math.max(1, Math.round(finalGpm / 4));
+
             const requiredAcc = currentSection?.requiredAccuracy || 90;
             const finalAttempts = totalAttempts + 1;
             const correctCount = Math.max(0, finalAttempts - errorsCount);
             const currentAcc = Math.round((correctCount / finalAttempts) * 100);
+
+            // SPM: correct strokes per minute (stroke meter methodology)
+            const finalSpm = Math.round(correctCount / (totalDurationSec / 60));
+
+            setSectionResultStats({
+              gpm: finalGpm,
+              wpm: finalWpm,
+              spm: finalSpm,
+              accuracy: currentAcc,
+            });
 
             if (currentAcc >= requiredAcc) {
               setSectionPassed(true);
@@ -331,7 +408,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
               playSuccess();
               toast({
                 title: "চমৎকার!",
-                description: `ধাপটি সফলভাবে সম্পন্ন হয়েছে (${toBengaliNumber(currentAcc)}% নির্ভুলতা)।`,
+                description: `ধাপটি সফলভাবে সম্পন্ন হয়েছে (${toBengaliNumber(currentAcc)}% নির্ভুলতা • ${toBengaliNumber(finalGpm)} GPM)।`,
               });
             } else {
               setSectionFailed(true);
@@ -401,9 +478,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
         setLastWrongChar(null);
         setCurrentInput((prev) => {
           if (!prev) return prev;
-          // Grapheme-safe backspace: use segmenter to avoid splitting multi-byte chars
-          const segments = bengaliSegmenter.segmentString(prev);
-          return segments.slice(0, -1).join('');
+          // Step-by-step character / modifier deletion (e.g. বাংলা -> বাংল -> বাং -> বা -> ব)
+          return Array.from(prev).slice(0, -1).join('');
         });
         return;
       }
@@ -525,20 +601,24 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
           <p className="text-muted-foreground text-sm mt-1">{lesson.title} সফলভাবে আয়ত্ত করেছেন।</p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 max-w-2xl mx-auto">
           <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
             <p className="text-[11px] text-muted-foreground font-semibold">গতি (GPM)</p>
-            <p className="text-xl font-bold text-primary">{toBengaliNumber(gpm)}</p>
+            <p className="text-xl font-bold text-primary">{toBengaliNumber(displayGpm)}</p>
           </div>
           <div className="p-3 bg-secondary rounded-xl">
             <p className="text-[11px] text-muted-foreground font-semibold">WPM (আনুমানিক)</p>
-            <p className="text-xl font-bold text-foreground">{toBengaliNumber(wpm)}</p>
+            <p className="text-xl font-bold text-foreground">{toBengaliNumber(displayWpm)}</p>
+          </div>
+          <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+            <p className="text-[11px] text-muted-foreground font-semibold">স্ট্রোক (SPM)</p>
+            <p className="text-xl font-bold text-amber-500 dark:text-amber-400">{toBengaliNumber(displaySpm)}</p>
           </div>
           <div className="p-3 bg-secondary rounded-xl">
             <p className="text-[11px] text-muted-foreground font-semibold">নির্ভুলতা</p>
-            <p className="text-xl font-bold text-primary">{toBengaliNumber(accuracy)}%</p>
+            <p className="text-xl font-bold text-primary">{toBengaliNumber(displayAccuracy)}%</p>
           </div>
-          <div className="p-3 bg-secondary rounded-xl">
+          <div className="p-3 bg-secondary rounded-xl col-span-2 sm:col-span-1">
             <p className="text-[11px] text-muted-foreground font-semibold">সময়কাল</p>
             <p className="text-xl font-bold text-primary">{toBengaliNumber(timeElapsedSec)}s</p>
           </div>
@@ -556,25 +636,29 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
           {nextLesson ? (
             <Button
-              onClick={goToNextLesson}
+              asChild
               className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-2 text-xs shadow-md ring-2 ring-primary/30"
             >
-              পরবর্তী লেসন ({nextLesson.title.split(':')[0]})
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-primary-foreground/20 rounded">
-                Enter ↵
-              </kbd>
-              <ArrowRight className="h-3.5 w-3.5" />
+              <Link href={`/dashboard/practice/${nextLesson.id}`} prefetch={true}>
+                পরবর্তী লেসন ({nextLesson.title.split(':')[0]})
+                <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-primary-foreground/20 rounded">
+                  Enter ↵
+                </kbd>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </Button>
           ) : (
             <Button
-              onClick={goToNextLesson}
+              asChild
               className="w-full sm:w-auto bg-primary text-primary-foreground font-bold gap-2 text-xs shadow-md"
             >
-              পাঠ্যতালিকায় ফিরে যান
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-primary-foreground/20 rounded">
-                Enter ↵
-              </kbd>
-              <ArrowRight className="h-3.5 w-3.5" />
+              <Link href="/dashboard/lessons" prefetch={true}>
+                পাঠ্যতালিকায় ফিরে যান
+                <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-primary-foreground/20 rounded">
+                  Enter ↵
+                </kbd>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </Button>
           )}
 
@@ -583,7 +667,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
             variant="ghost"
             className="w-full sm:w-auto text-xs text-muted-foreground hover:text-foreground"
           >
-            <Link href="/dashboard/lessons">
+            <Link href="/dashboard/lessons" prefetch={true}>
               পাঠ্যতালিকা
             </Link>
           </Button>
@@ -817,72 +901,114 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
           {/* INTERACTIVE TYPING SECTIONS (Guided / Isolated / Pattern / Word / Mastery) */}
           {currentSection?.type !== "explanation" && currentSection?.type !== "demonstration" && (
-            <div className="space-y-3">
-              {/* Target Character / Word Display Box */}
+            <div className="space-y-4">
+              {/* Target Character / Word Display Box - Prominent, Large, High Contrast */}
               <div
                 className={cn(
-                  "py-2.5 px-4 sm:px-6 rounded-xl border flex flex-col items-center justify-center min-h-[82px] text-center transition-all duration-200",
+                  "py-6 px-6 sm:px-10 rounded-2xl border-2 flex flex-col items-center justify-center min-h-[140px] sm:min-h-[170px] text-center transition-all duration-200 shadow-sm",
                   lastWrongChar
-                    ? "bg-red-500/10 border-red-500/40 ring-2 ring-red-500/20"
+                    ? "bg-red-500/10 border-red-500/50 ring-4 ring-red-500/20"
                     : sectionPassed
-                    ? "bg-green-500/10 border-green-500/40 ring-2 ring-green-500/20"
-                    : "bg-secondary/30 border-border"
+                    ? "bg-green-500/10 border-green-500/50 ring-4 ring-green-500/20"
+                    : "bg-secondary/25 border-primary/20 hover:border-primary/40"
                 )}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="text-[10px] font-semibold py-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="text-xs font-semibold py-0.5 px-2 bg-background/60">
                     অক্ষর {toBengaliNumber(drillIndex + 1)} / {toBengaliNumber(sectionItems.length)}
                   </Badge>
                   {resolvedKeyInfo?.bengaliFingerLabel && (
-                    <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] py-0">
+                    <Badge className="bg-primary/15 text-primary border-primary/30 text-xs py-0.5 px-2">
                       আঙুল: {resolvedKeyInfo.bengaliFingerLabel}
                     </Badge>
                   )}
                 </div>
 
-                {/* Target String Stream Display: Active Set + Upcoming 3-4 Sets */}
-                <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap my-0.5 max-w-full overflow-hidden">
+                {/* Target String Stream Display: Active Set + Upcoming Sets */}
+                <div className="flex items-center justify-center gap-3 sm:gap-5 flex-wrap my-2 max-w-full overflow-hidden">
                   {/* Previous Completed Item (if any) */}
                   {drillIndex > 0 && (
-                    <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-lg text-sm text-muted-foreground/35 bg-muted/20 border border-border/30 select-none">
-                      {sectionItems[drillIndex - 1] === " " ? "␣" : sectionItems[drillIndex - 1]}
+                    <span className="hidden md:inline-flex items-center px-3 py-1 rounded-xl text-lg sm:text-xl text-muted-foreground/35 bg-muted/20 border border-border/30 select-none">
+                      {sectionItems[drillIndex - 1] === " " ? "␣ স্পেস" : sectionItems[drillIndex - 1]}
                     </span>
                   )}
 
-                  {/* Current Active Item with live grapheme progress coloring */}
-                  <div className="relative inline-flex items-center justify-center px-3 py-1 rounded-xl bg-primary/10 border-2 border-primary/40 shadow-xs">
+                  {/* Current Active Item with live grapheme cluster-aware progress coloring */}
+                  <div className="relative inline-flex items-center justify-center px-5 py-2.5 sm:px-8 sm:py-3.5 rounded-2xl bg-primary/10 border-2 border-primary/60 shadow-md ring-2 ring-primary/20">
                     {currentTarget === " " ? (
-                      <span className="text-xl sm:text-2xl font-bold font-headline text-primary">␣ (Space)</span>
+                      <div className="flex items-center gap-2 py-1">
+                        <span className="font-mono text-3xl sm:text-4xl text-primary font-bold">␣</span>
+                        <span className="text-2xl sm:text-3xl md:text-4xl font-black font-headline text-primary">স্পেস (Space)</span>
+                      </div>
                     ) : (
-                      <span className="relative inline-flex items-center justify-center text-3xl sm:text-4xl font-extrabold font-headline tracking-wide leading-none">
-                        {/* Base layer: full unbroken target in muted color when partially typed, or text-primary */}
-                        <span
-                          className={cn(
-                            "transition-colors select-none leading-none",
-                            currentInput.length > 0
-                              ? "text-muted-foreground/35 dark:text-muted-foreground/45"
-                              : "text-primary"
-                          )}
-                        >
-                          {currentTarget}
-                        </span>
+                      <span className="relative inline-flex items-center justify-center text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black font-headline tracking-wide leading-none select-none">
+                        {(() => {
+                          const normTarget = normalizeBengaliString(currentTarget);
+                          const normInput = normalizeBengaliString(currentInput);
+                          const targetClusters = bengaliSegmenter.segmentString(normTarget);
+                          const inputClusters = bengaliSegmenter.segmentString(normInput);
 
-                        {/* Progress overlay layer: same full unbroken target in green, clipped to the typed portion */}
-                        {currentInput.length > 0 && (
-                          <span
-                            className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-extrabold select-none pointer-events-none leading-none transition-all duration-150"
-                            style={{
-                              clipPath: getBengaliGraphemeClip(
-                                currentTarget,
-                                currentInput.length,
-                                currentTarget.length
-                              ),
-                            }}
-                            aria-hidden="true"
-                          >
-                            {currentTarget}
-                          </span>
-                        )}
+                          return targetClusters.map((cluster, cIdx) => {
+                            const normCluster = normalizeBengaliString(cluster);
+
+                            // 1. Fully typed matching cluster -> pure green
+                            if (cIdx < inputClusters.length) {
+                              const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
+                              if (typedCluster === normCluster) {
+                                return (
+                                  <span
+                                    key={`cluster-${cIdx}`}
+                                    className="text-green-600 dark:text-green-400 font-black"
+                                  >
+                                    {cluster}
+                                  </span>
+                                );
+                              }
+                            }
+
+                            // 2. Intra-cluster partial progress (e.g. 'ড' in 'ডা', or 'ক' in 'ক্ষ')
+                            if (cIdx === inputClusters.length - 1 && inputClusters.length > 0) {
+                              const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
+                              if (normCluster.startsWith(typedCluster) && typedCluster.length < normCluster.length) {
+                                const currentStep = typedCluster.length;
+                                const totalSteps = normCluster.length;
+                                return (
+                                  <span
+                                    key={`cluster-${cIdx}`}
+                                    className="relative inline-flex items-center justify-center leading-none"
+                                  >
+                                    <span className="text-muted-foreground/35 dark:text-muted-foreground/45 select-none leading-none">
+                                      {cluster}
+                                    </span>
+                                    <span
+                                      className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-black select-none pointer-events-none leading-none transition-all duration-150"
+                                      style={{
+                                        clipPath: getBengaliGraphemeClip(normCluster, currentStep, totalSteps),
+                                      }}
+                                      aria-hidden="true"
+                                    >
+                                      {cluster}
+                                    </span>
+                                  </span>
+                                );
+                              }
+                            }
+
+                            // 3. Untyped cluster -> muted if typing started, or primary if empty
+                            return (
+                              <span
+                                key={`cluster-${cIdx}`}
+                                className={cn(
+                                  normInput.length > 0
+                                    ? "text-muted-foreground/35 dark:text-muted-foreground/45"
+                                    : "text-primary"
+                                )}
+                              >
+                                {cluster}
+                              </span>
+                            );
+                          });
+                        })()}
                       </span>
                     )}
                   </div>
@@ -892,10 +1018,10 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                     <span
                       key={`upcoming-${drillIndex}-${idx}`}
                       className={cn(
-                        "inline-flex items-center px-2.5 py-0.5 rounded-lg text-base sm:text-xl font-medium select-none transition-all",
+                        "inline-flex items-center px-3 py-1 rounded-xl text-xl sm:text-2xl md:text-3xl font-semibold select-none transition-all",
                         idx === 0
                           ? "bg-secondary/80 text-foreground/80 border border-border/60"
-                          : "bg-muted/30 text-muted-foreground/60 border border-transparent"
+                          : "bg-muted/30 text-muted-foreground/50 border border-transparent"
                       )}
                     >
                       {item === " " ? "␣" : item}
@@ -904,7 +1030,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
                   {/* Remaining items count indicator */}
                   {drillIndex + 5 < sectionItems.length && (
-                    <span className="text-xs text-muted-foreground/40 font-mono self-center">
+                    <span className="text-sm text-muted-foreground/40 font-mono self-center">
                       +{toBengaliNumber(sectionItems.length - (drillIndex + 5))}
                     </span>
                   )}
@@ -912,16 +1038,16 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
                 {/* Live Input Progress Display */}
                 {currentInput.length > 0 && (
-                  <div className="text-xs font-mono text-muted-foreground min-h-[1.2rem] flex items-center gap-1.5 mt-0.5">
+                  <div className="text-sm font-mono text-muted-foreground min-h-[1.5rem] flex items-center gap-2 mt-2">
                     <span className="text-muted-foreground/70">টাইপ করেছেন:</span>
-                    <span className="text-green-600 dark:text-green-400 font-bold bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">
+                    <span className="text-green-600 dark:text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/20 text-base">
                       {currentInput}
                     </span>
                   </div>
                 )}
 
                 {lastWrongChar && (
-                  <p className="text-[11px] text-red-500 font-semibold mt-0.5">
+                  <p className="text-xs sm:text-sm text-red-500 font-semibold mt-1">
                     ভুল হয়েছে! &quot;{lastWrongChar}&quot; চাপার বদলে সঠিক কী চাপুন।
                   </p>
                 )}
@@ -929,13 +1055,13 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
               {/* FAILED BANNER WITH RETRY ACTION */}
               {sectionFailed && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex flex-col sm:flex-row items-center justify-between gap-2 text-red-900 dark:text-red-200 animate-in fade-in">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+                <div className="p-3.5 sm:p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-red-900 dark:text-red-200 animate-in fade-in">
+                  <div className="flex items-center gap-2.5">
+                    <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
                     <div>
-                      <p className="font-bold text-xs">ধাপটি উত্তীর্ণ হতে পারেনি</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        অর্জিত নির্ভুলতা {toBengaliNumber(accuracy)}% (প্রয়োজন {toBengaliNumber(currentSection?.requiredAccuracy || 90)}%)।
+                      <p className="font-bold text-sm">ধাপটি উত্তীর্ণ হতে পারেনি</p>
+                      <p className="text-xs text-foreground/80 font-medium mt-0.5">
+                        অর্জিত নির্ভুলতা <span className="font-bold text-red-600 dark:text-red-400">{toBengaliNumber(displayAccuracy)}%</span> (প্রয়োজন {toBengaliNumber(currentSection?.requiredAccuracy || 90)}%) • গতি <span className="font-bold text-foreground">{toBengaliNumber(displayGpm)} GPM</span> <span className="text-muted-foreground font-normal">({toBengaliNumber(displayWpm)} WPM • {toBengaliNumber(displaySpm)} SPM)</span>
                       </p>
                     </div>
                   </div>
@@ -947,22 +1073,22 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                       e.stopPropagation();
                       initSection(currentSectionIndex);
                     }}
-                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs gap-1.5 shrink-0 h-7"
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm gap-1.5 shrink-0 h-8"
                   >
-                    <RotateCcw className="h-3 w-3" /> পুনরায় চেষ্টা করুন (Enter চাপুন)
+                    <RotateCcw className="h-3.5 w-3.5" /> পুনরায় চেষ্টা করুন (Enter চাপুন)
                   </Button>
                 </div>
               )}
 
               {/* PASSED BANNER WITH NEXT ACTION */}
               {sectionPassed && (
-                <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/30 flex flex-col sm:flex-row items-center justify-between gap-2 text-green-900 dark:text-green-200 animate-in fade-in">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                <div className="p-3.5 sm:p-4 rounded-xl bg-green-500/10 border border-green-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-green-900 dark:text-green-200 animate-in fade-in">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                     <div>
-                      <p className="font-bold text-xs">ধাপটি সফলভাবে সম্পন্ন হয়েছে 🎉</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        অর্জিত নির্ভুলতা {toBengaliNumber(accuracy)}% • গতি {toBengaliNumber(gpm)} GPM
+                      <p className="font-bold text-sm">ধাপটি সফলভাবে সম্পন্ন হয়েছে 🎉</p>
+                      <p className="text-xs text-foreground/80 font-medium mt-0.5">
+                        অর্জিত নির্ভুলতা <span className="font-bold text-green-600 dark:text-green-400">{toBengaliNumber(displayAccuracy)}%</span> • গতি <span className="font-bold text-primary">{toBengaliNumber(displayGpm)} GPM</span> <span className="text-muted-foreground font-normal">({toBengaliNumber(displayWpm)} WPM • {toBengaliNumber(displaySpm)} SPM)</span>
                       </p>
                     </div>
                   </div>
@@ -974,9 +1100,9 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                       e.stopPropagation();
                       advanceSection();
                     }}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold gap-1.5 shrink-0 px-5 text-xs shadow-xs h-7"
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold gap-1.5 shrink-0 px-5 text-xs sm:text-sm shadow-xs h-8"
                   >
-                    পরবর্তী ধাপে যান <ArrowRight className="h-3.5 w-3.5" />
+                    পরবর্তী ধাপে যান <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
               )}
@@ -990,19 +1116,22 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
               />
 
               {/* Status footer bar */}
-              <div className="flex items-center justify-between py-2 px-3 bg-muted/40 rounded-xl text-xs font-semibold">
+              <div className="flex items-center justify-between py-2.5 px-4 bg-muted/40 rounded-xl text-xs sm:text-sm font-semibold border border-border/40">
                 <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1 text-primary">
-                    <Zap className="h-3.5 w-3.5" /> {toBengaliNumber(gpm)} GPM
+                  <span className="flex items-center gap-1.5 text-primary font-bold">
+                    <Zap className="h-4 w-4" /> {toBengaliNumber(displayGpm)} GPM
                   </span>
-                  <span className="flex items-center gap-1 text-muted-foreground text-[11px]">
-                    ({toBengaliNumber(wpm)} WPM)
+                  <span className="flex items-center gap-1 text-muted-foreground text-xs font-normal">
+                    ({toBengaliNumber(displayWpm)} WPM)
                   </span>
-                  <span className="flex items-center gap-1 text-foreground">
-                    <Target className="h-3.5 w-3.5 text-green-500" /> {toBengaliNumber(accuracy)}% নির্ভুলতা
+                  <span className="flex items-center gap-1 text-amber-500 dark:text-amber-400 text-xs font-semibold">
+                    {toBengaliNumber(displaySpm)} SPM
+                  </span>
+                  <span className="flex items-center gap-1.5 text-foreground">
+                    <Target className="h-4 w-4 text-green-500" /> {toBengaliNumber(displayAccuracy)}% নির্ভুলতা
                   </span>
                   {errorsCount > 0 && (
-                    <span className="flex items-center gap-1 text-red-500 text-[11px] font-mono">
+                    <span className="flex items-center gap-1 text-red-500 text-xs font-mono">
                       ({toBengaliNumber(errorsCount)}টি ভুল)
                     </span>
                   )}
@@ -1017,9 +1146,9 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                         e.stopPropagation();
                         advanceSection();
                       }}
-                      className="bg-green-600 hover:bg-green-700 text-white font-bold gap-1.5 shadow-xs text-xs h-7"
+                      className="bg-green-600 hover:bg-green-700 text-white font-bold gap-1.5 shadow-xs text-xs sm:text-sm h-8"
                     >
-                      পরবর্তী ধাপ <ArrowRight className="h-3.5 w-3.5" />
+                      পরবর্তী ধাপ <ArrowRight className="h-4 w-4" />
                     </Button>
                   ) : (
                     <Button
@@ -1031,9 +1160,9 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                       }}
                       variant="ghost"
                       size="sm"
-                      className="text-xs gap-1 h-7 px-2"
+                      className="text-xs gap-1 h-8 px-2.5"
                     >
-                      <RefreshCw className="h-3 w-3" /> প্রথম থেকে শুরু করুন
+                      <RefreshCw className="h-3.5 w-3.5" /> প্রথম থেকে শুরু করুন
                     </Button>
                   )}
                 </div>

@@ -1,10 +1,9 @@
 import type { Lesson, RowDrillCategory, Drill, SingleDrill } from "./types";
-import { 
-  bengaliSegmenter, 
-  isConjunct, 
-  parseConjunct, 
-  isBengaliVowelSign, 
-  normalizeBengaliString 
+import {
+  bengaliSegmenter,
+  isConjunct,
+  parseConjunct,
+  normalizeBengaliString
 } from "./bengali-grapheme";
 
 // Finger position mapping: 1-5 left hand, 6-10 right hand

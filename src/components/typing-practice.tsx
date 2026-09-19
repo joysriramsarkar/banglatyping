@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTimer } from "@/hooks/use-timer";
 import { useTypingPractice } from "@/hooks/use-typing-practice";
-import { Zap, Target, Timer, XCircle, Pause, Play, Home } from "lucide-react";
+import { Zap, Target, Timer, XCircle, Pause, Play, Home, Activity } from "lucide-react";
 import { cn, toBengaliNumber } from "@/lib/utils";
 import TestResults from "./test-results";
 import { practiceParagraphs } from "@/lib/lessons";
@@ -284,6 +284,7 @@ export default function TypingPractice({
       <TestResults
         stats={{
           wpm: state.wpm,
+          spm: state.spm,
           accuracy: state.accuracy,
           errors: state.totalErrors,
           timeElapsed: time,
@@ -299,7 +300,7 @@ export default function TypingPractice({
     );
   }
 
-  const textDisplayFontSize = 'text-3xl';
+  const textDisplayFontSize = 'text-4xl sm:text-5xl font-semibold';
 
   return (
     <div className="space-y-6 flex flex-col items-center w-full max-w-6xl 2xl:max-w-7xl mx-auto">
@@ -338,6 +339,7 @@ export default function TypingPractice({
       <Card className="w-full">
         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
           <StatDisplay icon={Zap} value={toBengaliNumber(state.wpm)} label="WPM" />
+          <StatDisplay icon={Activity} value={toBengaliNumber(state.spm)} label="SPM (স্ট্রোক)" />
           <StatDisplay icon={Target} value={`${toBengaliNumber(state.accuracy)}%`} label="নির্ভুলতা" />
           <StatDisplay
             icon={Timer}
@@ -352,22 +354,22 @@ export default function TypingPractice({
         </CardContent>
       </Card>
 
-      {/* Text Display Card - Now with Virtualization */}
-      <Card className="w-full">
+      {/* Text Display Card - Now with Virtualization and Larger Clear Typography */}
+      <Card className="w-full shadow-sm border-2">
         <VirtualizedWordDisplay 
           visibleWords={getVisibleWords(2)}
           currentWordIndex={state.currentWordIndex}
           totalWords={state.words.length}
           getWordClass={getWordClass}
-          textDisplayFontSize="text-3xl"
+          textDisplayFontSize={textDisplayFontSize}
         />
       </Card>
 
       {/* Input Preview and Input Display */}
-      <div className="w-full h-24 flex flex-col items-center justify-center">
+      <div className="w-full min-h-[7rem] flex flex-col items-center justify-center">
         <div
           className={cn(
-            "font-hind p-2 flex items-center justify-center min-h-[3rem] w-full",
+            "font-hind p-2 flex items-center justify-center min-h-[3.5rem] w-full",
             textDisplayFontSize
           )}
           role="status"
@@ -377,8 +379,8 @@ export default function TypingPractice({
         </div>
         <div
           className={cn(
-            "w-full text-center font-hind p-6 border border-t-0 rounded-t-none bg-background min-h-[3rem] flex items-center justify-center",
-            isInputError ? "border-red-500" : "border-green-500",
+            "w-full text-center font-hind p-6 border-2 border-t-0 rounded-b-xl bg-background min-h-[4rem] flex items-center justify-center",
+            isInputError ? "border-red-500 bg-red-500/5" : "border-green-500/80 bg-green-500/5",
             textDisplayFontSize
           )}
           role="textbox"
