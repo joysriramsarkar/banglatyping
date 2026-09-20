@@ -12,6 +12,9 @@ import {
   isValidBengaliTypingPrefix,
   getNextExpectedKeyChar,
   getBengaliGraphemeClip,
+  getUpcomingIndependentVowel,
+  INDEPENDENT_VOWEL_PROCESS_MAP,
+  ensureSpacedDrillItems,
   VOWEL_TO_KAR_MAP as _VOWEL_TO_KAR_MAP,
   KAR_TO_VOWEL_MAP as _KAR_TO_VOWEL_MAP,
 } from '@/lib/bengali-grapheme';
@@ -50,6 +53,13 @@ describe('BengaliSegmenter', () => {
 
     it('handles space', () => {
       expect(segmenter.segmentString(' ')).toEqual([' ']);
+    });
+
+    it('segments sentence containing spaces into words and separate space clusters', () => {
+      const sentence = 'রুটি খাও।';
+      const segments = segmenter.segmentString(sentence);
+      expect(segments).toContain(' ');
+      expect(segments).toEqual(['রু', 'টি', ' ', 'খা', 'ও', '।']);
     });
   });
 
@@ -237,6 +247,9 @@ describe('composeBengaliKeystroke', () => {
     expect(composeBengaliKeystroke('্', 'ৈ')).toBe('ঐ');
     expect(composeBengaliKeystroke('্', 'ো')).toBe('ও');
     expect(composeBengaliKeystroke('্', 'ৌ')).toBe('ঔ');
+    // Mid-word BanglaWord vowel composition
+    expect(composeBengaliKeystroke('পুঁ্', 'ি')).toBe('পুঁই');
+    expect(composeBengaliKeystroke('ব্', 'ই')).toBe('বই');
   });
 
   it('handles OS dead-key resolution where Hasanta is followed by independent vowel', () => {
@@ -270,6 +283,8 @@ describe('isValidBengaliTypingPrefix', () => {
     expect(isValidBengaliTypingPrefix('্', 'ইট')).toBe(true);
     expect(isValidBengaliTypingPrefix('্', 'ঈদ')).toBe(true);
     expect(isValidBengaliTypingPrefix('আজকের ্', 'আজকের আলো')).toBe(true);
+    expect(isValidBengaliTypingPrefix('পুঁ্', 'পুঁই')).toBe(true);
+    expect(isValidBengaliTypingPrefix('ব্', 'বই')).toBe(true);
   });
 
   it('rejects mismatching prefixes', () => {
@@ -280,7 +295,7 @@ describe('isValidBengaliTypingPrefix', () => {
   });
 });
 
-describe('getNextExpectedKeyChar', () => {
+describe('getNextExpectedKeyChar and getUpcomingIndependentVowel', () => {
   it('returns next expected character directly from target string', () => {
     expect(getNextExpectedKeyChar('', 'ঈ')).toBe('ঈ');
     expect(getNextExpectedKeyChar('', 'আ')).toBe('আ');
@@ -298,12 +313,41 @@ describe('getNextExpectedKeyChar', () => {
     expect(getNextExpectedKeyChar('্', 'আম')).toBe('া');
     expect(getNextExpectedKeyChar('্', 'ইট')).toBe('ি');
     expect(getNextExpectedKeyChar('্', 'ঈদ')).toBe('ী');
+    expect(getNextExpectedKeyChar('পুঁ্', 'পুঁই')).toBe('ি');
+  });
+
+  it('guides step-by-step dead key when expandIndependentVowels is true', () => {
+    expect(getNextExpectedKeyChar('', 'ই', true)).toBe('্');
+    expect(getNextExpectedKeyChar('্', 'ই', true)).toBe('ি');
+    expect(getNextExpectedKeyChar('পুঁ', 'পুঁই', true)).toBe('্');
+    expect(getNextExpectedKeyChar('পুঁ্', 'পুঁই', true)).toBe('ি');
+  });
+
+  it('detects upcoming independent vowel process info', () => {
+    expect(getUpcomingIndependentVowel('পুঁ', 'পুঁই')?.processLabel).toBe('h,্ + i,ি = ই');
+    expect(getUpcomingIndependentVowel('পুঁ্', 'পুঁই')?.processLabel).toBe('h,্ + i,ি = ই');
+    expect(getUpcomingIndependentVowel('', 'আম')?.processLabel).toBe('h,্ + a,া = আ');
+    expect(getUpcomingIndependentVowel('ক', 'কা')).toBeNull();
   });
 
   it('returns empty string when input is fully matched', () => {
     expect(getNextExpectedKeyChar('ঈ', 'ঈ')).toBe('');
     expect(getNextExpectedKeyChar('কা', 'কা')).toBe('');
     expect(getNextExpectedKeyChar('কীর্তি', 'কীর্তি')).toBe('');
+  });
+});
+
+describe('ensureSpacedDrillItems', () => {
+  it('preserves sentences with internal spaces without adding duplicate space items', () => {
+    const sentences = ['রুটি খাও।', 'পাখি গান গায়।', 'গোরু ঘাস খায়।'];
+    const result = ensureSpacedDrillItems(sentences);
+    expect(result).toEqual(sentences);
+  });
+
+  it('inserts space items every 2-4 items for isolated words', () => {
+    const words = ['রুটি', 'ক্ষীর', 'পুঁই', 'পৈতে'];
+    const result = ensureSpacedDrillItems(words, 3);
+    expect(result).toContain(' ');
   });
 });
 
@@ -314,12 +358,33 @@ describe('getBengaliGraphemeClip', () => {
     expect(getBengaliGraphemeClip('ডা', 3, 2)).toBe('inset(0)');
   });
 
-  it('correctly clips post-base Aa-kar (া) at 76% so consonant is 100% covered and aa-kar stem remains clean', () => {
-    // For 'ডা', 'ড' occupies 0 to 76%, 'া' occupies 76% to 100%
-    expect(getBengaliGraphemeClip('ডা', 1, 2)).toBe('polygon(0 0, 76% 0, 76% 100%, 0 100%)');
-    expect(getBengaliGraphemeClip('ফা', 1, 2)).toBe('polygon(0 0, 76% 0, 76% 100%, 0 100%)');
-    expect(getBengaliGraphemeClip('সা', 1, 2)).toBe('polygon(0 0, 76% 0, 76% 100%, 0 100%)');
-    expect(getBengaliGraphemeClip('কা', 1, 2)).toBe('polygon(0 0, 76% 0, 76% 100%, 0 100%)');
+  it('notches polygon for টি, ঠি to preserve top horn (টিঁকি) without coloring i-kar umbrella', () => {
+    expect(getBengaliGraphemeClip('টি', 1, 2)).toBe(
+      'polygon(31% 10%, 46% 10%, 46% 0, 78% 0, 78% 10%, 100% 10%, 100% 100%, 31% 100%)'
+    );
+    expect(getBengaliGraphemeClip('ঠি', 1, 2)).toBe(
+      'polygon(32% 10%, 46% 10%, 46% 0, 78% 0, 78% 10%, 100% 10%, 100% 100%, 32% 100%)'
+    );
+  });
+
+  it('correctly clips post-base Aa-kar (া) without spilling into aa-kar stem', () => {
+    // Narrow consonants (চ, দ, ব, র) stop at 68%
+    expect(getBengaliGraphemeClip('চা', 1, 2)).toBe('polygon(0 0, 68% 0, 68% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('দা', 1, 2)).toBe('polygon(0 0, 68% 0, 68% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('বা', 1, 2)).toBe('polygon(0 0, 68% 0, 68% 100%, 0 100%)');
+    // 'স' stops at 71%
+    expect(getBengaliGraphemeClip('সা', 1, 2)).toBe('polygon(0 0, 71% 0, 71% 100%, 0 100%)');
+    // 'ট' stops at 70%
+    expect(getBengaliGraphemeClip('টা', 1, 2)).toBe('polygon(0 0, 70% 0, 70% 100%, 0 100%)');
+    // 'ড' stops at 73%, 'ক' stops at 75%
+    expect(getBengaliGraphemeClip('ডা', 1, 2)).toBe('polygon(0 0, 73% 0, 73% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('কা', 1, 2)).toBe('polygon(0 0, 75% 0, 75% 100%, 0 100%)');
+  });
+
+  it('correctly clips post-base Anusvara (ং) and Visarga (ঃ) without spilling into mark', () => {
+    expect(getBengaliGraphemeClip('টং', 1, 2)).toBe('polygon(0 0, 60% 0, 60% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('রং', 1, 2)).toBe('polygon(0 0, 60% 0, 60% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('চং', 1, 2)).toBe('polygon(0 0, 58% 0, 58% 100%, 0 100%)');
   });
 
   it('correctly clips below-base marks at top 68%', () => {
@@ -327,13 +392,56 @@ describe('getBengaliGraphemeClip', () => {
     expect(getBengaliGraphemeClip('কু', 1, 2)).toBe('polygon(0 0, 100% 0, 100% 68%, 0 68%)');
   });
 
-  it('correctly clips pre-base marks on right 66%', () => {
-    expect(getBengaliGraphemeClip('টি', 1, 2)).toBe('polygon(34% 0, 100% 0, 100% 100%, 34% 100%)');
-    expect(getBengaliGraphemeClip('টে', 1, 2)).toBe('polygon(34% 0, 100% 0, 100% 100%, 34% 100%)');
+  it('correctly clips pre-base marks preserving uncolored e-kar, oi-kar, and hroshwo-i kar without slicing matra', () => {
+    // 'টি' uses 10% top margin for 'ট' with notched horn
+    expect(getBengaliGraphemeClip('টি', 1, 2)).toBe('polygon(31% 10%, 46% 10%, 46% 0, 78% 0, 78% 10%, 100% 10%, 100% 100%, 31% 100%)');
+    // 'রি' uses 12% top margin for 'র', keeping full matra while keeping hroshwo-i umbrella uncolored
+    expect(getBengaliGraphemeClip('রি', 1, 2)).toBe('polygon(31% 12%, 100% 12%, 100% 100%, 31% 100%)');
+    // 'তৈ' keeps upper plume uncolored and matra full
+    expect(getBengaliGraphemeClip('তৈ', 1, 2)).toBe('polygon(35% 12%, 100% 12%, 100% 100%, 35% 100%)');
+    // 'টে' and 'চে' have horizontal e-kar
+    expect(getBengaliGraphemeClip('টে', 1, 2)).toBe('polygon(41% 0, 100% 0, 100% 100%, 41% 100%)');
+    expect(getBengaliGraphemeClip('চে', 1, 2)).toBe('polygon(42% 0, 100% 0, 100% 100%, 42% 100%)');
+  });
+
+  it('correctly clips post-base Dirgho-I kar (ী) keeping full consonant matra and top arch/loop uncolored', () => {
+    expect(getBengaliGraphemeClip('দী', 1, 2)).toBe('polygon(0 12%, 68% 12%, 68% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('কী', 1, 2)).toBe('polygon(0 12%, 76% 12%, 76% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('টী', 1, 2)).toBe('polygon(0 10%, 69% 10%, 69% 100%, 0 100%)');
+  });
+
+  it('correctly clips multi-step clusters with Chandrabindu (ঁ) without slicing consonant matra', () => {
+    // দাঁ: step 1 (দ only, full matra, no chandrabindu, no aa-kar)
+    expect(getBengaliGraphemeClip('দাঁ', 1, 3)).toBe('polygon(0 12%, 68% 12%, 68% 100%, 0 100%)');
+    // দাঁ: step 2 (দ + া, both full height, chandrabindu uncolored)
+    expect(getBengaliGraphemeClip('দাঁ', 2, 3)).toBe('polygon(0 12%, 68% 12%, 68% 0, 100% 0, 100% 100%, 0 100%)');
+    // দাঁ: step 3 (দ + া + ঁ)
+    expect(getBengaliGraphemeClip('দাঁ', 3, 3)).toBe('inset(0)');
+
+    // চাঁদ: step 1 and step 2
+    expect(getBengaliGraphemeClip('চাঁ', 1, 3)).toBe('polygon(0 12%, 68% 12%, 68% 100%, 0 100%)');
+    expect(getBengaliGraphemeClip('চাঁ', 2, 3)).toBe('polygon(0 12%, 68% 12%, 68% 0, 100% 0, 100% 100%, 0 100%)');
+  });
+
+  it('correctly clips circumfix marks with Chandrabindu (ধোঁ in ধোঁয়া)', () => {
+    // ধোঁ: step 1 (ধ only) -> middle consonant highlighted, e-kar and aa-kar and chandrabindu uncolored
+    expect(getBengaliGraphemeClip('ধোঁ', 1, 3)).toBe('polygon(33% 12%, 73% 12%, 73% 100%, 33% 100%)');
+    // ধোঁ: step 2 (ধ + ো = ধো typed) -> e-kar, ধ, and aa-kar ALL highlighted, ONLY chandrabindu uncolored!
+    expect(getBengaliGraphemeClip('ধোঁ', 2, 3)).toBe('polygon(0 0, 33% 0, 33% 12%, 73% 12%, 73% 0, 100% 0, 100% 100%, 0 100%)');
+    // ধোঁ: step 3 (ধোঁ completed)
+    expect(getBengaliGraphemeClip('ধোঁ', 3, 3)).toBe('inset(0)');
+  });
+
+  it('correctly clips multi-step clusters with Below-base and Visarga (দুঃ)', () => {
+    // দুঃ: step 1 (দ only)
+    expect(getBengaliGraphemeClip('দুঃ', 1, 3)).toBe('polygon(0 0, 58% 0, 58% 68%, 0 68%)');
+    // দুঃ: step 2 (দ + ু)
+    expect(getBengaliGraphemeClip('দুঃ', 2, 3)).toBe('polygon(0 0, 58% 0, 58% 100%, 0 100%)');
   });
 
   it('correctly clips circumfix marks in center', () => {
-    expect(getBengaliGraphemeClip('টো', 1, 2)).toBe('polygon(27% 0, 73% 0, 73% 100%, 27% 100%)');
+    expect(getBengaliGraphemeClip('টো', 1, 2)).toBe('polygon(33% 0, 73% 0, 73% 100%, 33% 100%)');
+    expect(getBengaliGraphemeClip('মৌ', 1, 2)).toBe('polygon(30% 12%, 75% 12%, 75% 100%, 30% 100%)');
   });
 
   it('correctly clips multi-character words proportionally rather than sticking at single-character kar ratio', () => {

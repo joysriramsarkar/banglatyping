@@ -3,7 +3,8 @@ import { CheckCircle } from "lucide-react";
 import { cn, toBengaliNumber } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import type { Drill } from "@/lib/types";
-import { getBengaliGraphemeClip, bengaliSegmenter } from "@/lib/bengali-grapheme";
+import { buildGraphemeRenderModel, bengaliSegmenter, normalizeBengaliString } from "@/lib/bengali-grapheme";
+import { GraphemeDisplay } from "@/components/lessons/GraphemeDisplay";
 
 interface DrillPromptDisplayProps {
     drills: Drill[];
@@ -72,17 +73,40 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                         <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                     </div>
                 ) : isCurrent ? (
-                    <span className="relative inline-flex items-center justify-center leading-none">
+                    <span className="relative inline-flex items-center justify-center leading-none whitespace-pre">
                         {(() => {
-                            const clusters = bengaliSegmenter.segmentString(drillData.prompt);
-                            let remainingSteps = currentStepIndex;
+                            const clusters = bengaliSegmenter.segmentString(normalizeBengaliString(drillData.prompt));
+                            // টাইপ করা characters সংখ্যা grapheme-aware পদ্ধতিতে বের করা
+                            const typedClusters = clusters.slice(0, currentStepIndex);
+                            const typedSoFar = typedClusters.join('');
 
                             return clusters.map((cluster, cIdx) => {
-                                const clusterLength = cluster.length;
-                                const typedInCluster = Math.min(Math.max(0, remainingSteps), clusterLength);
-                                remainingSteps -= clusterLength;
+                                const normCluster = normalizeBengaliString(cluster);
 
-                                if (typedInCluster === clusterLength) {
+                                // Inter-word space character
+                                if (cluster === ' ' || cluster === '\u00A0' || !cluster.trim()) {
+                                    const isTyped = cIdx < currentStepIndex;
+                                    return (
+                                        <span
+                                            key={`drill-c-${cIdx}`}
+                                            className={cn(
+                                                "inline-block select-none shrink-0",
+                                                isTyped
+                                                    ? "text-green-600 dark:text-green-400"
+                                                    : currentStepIndex > 0
+                                                    ? "text-muted-foreground/35 dark:text-muted-foreground/45"
+                                                    : "text-primary"
+                                            )}
+                                            style={{ width: '0.35em' }}
+                                            aria-hidden="true"
+                                        >
+                                            {'\u00A0'}
+                                        </span>
+                                    );
+                                }
+
+                                // Fully typed cluster → pure green
+                                if (cIdx < currentStepIndex) {
                                     return (
                                         <span key={`drill-c-${cIdx}`} className="text-green-600 dark:text-green-400 font-black">
                                             {cluster}
@@ -90,33 +114,38 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                                     );
                                 }
 
-                                if (typedInCluster === 0) {
+                                // Untyped cluster → next active or muted
+                                if (cIdx > currentStepIndex) {
                                     return (
                                         <span
                                             key={`drill-c-${cIdx}`}
-                                            className={cn(
-                                                currentStepIndex > 0 ? "text-muted-foreground/35 dark:text-muted-foreground/45" : "text-primary"
-                                            )}
+                                            className="text-muted-foreground/40 dark:text-muted-foreground/45"
                                         >
                                             {cluster}
                                         </span>
                                     );
                                 }
 
+                                // cIdx === currentStepIndex → current cluster being typed
+                                // Check for intra-cluster partial progress
+                                const partialTyped = typedSoFar.slice(typedClusters.join('').length);
+                                if (partialTyped && normCluster.startsWith(normalizeBengaliString(partialTyped)) && normalizeBengaliString(partialTyped) !== normCluster) {
+                                    const renderModel = buildGraphemeRenderModel(normCluster, normalizeBengaliString(partialTyped));
+                                    return (
+                                        <GraphemeDisplay
+                                            key={`drill-c-${cIdx}`}
+                                            model={renderModel}
+                                        />
+                                    );
+                                }
+
+                                // Current cluster, not yet started → foreground
                                 return (
-                                    <span key={`drill-c-${cIdx}`} className="relative inline-flex items-center justify-center leading-none">
-                                        <span className="text-muted-foreground/35 dark:text-muted-foreground/45 select-none leading-none">
-                                            {cluster}
-                                        </span>
-                                        <span
-                                            className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-black select-none pointer-events-none leading-none transition-all duration-150"
-                                            style={{
-                                                clipPath: getBengaliGraphemeClip(cluster, typedInCluster, clusterLength)
-                                            }}
-                                            aria-hidden="true"
-                                        >
-                                            {cluster}
-                                        </span>
+                                    <span
+                                        key={`drill-c-${cIdx}`}
+                                        className="text-foreground font-black"
+                                    >
+                                        {cluster}
                                     </span>
                                 );
                             });

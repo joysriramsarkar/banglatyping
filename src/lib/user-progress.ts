@@ -2,6 +2,8 @@
 import { createRequestClient } from './db';
 import type { UserProgress, CharacterError, WeakCharacterView, UserStatistics, ErredCharacter } from './types';
 
+export const DEFAULT_PRACTICE_LESSON_ID = '00000000-0000-0000-0000-000000000000';
+
 /**
  * Save a typing session to the database
  * @param accessToken The caller's Supabase access token, so RLS applies
@@ -19,16 +21,19 @@ export async function saveTypingSession(
   try {
     const db = createRequestClient(accessToken);
     // Format erred characters for storage
-    const formattedErrors = erredCharacters.map(item => ({
+    const formattedErrors = (erredCharacters || []).map(item => ({
       char: item.char,
       count: item.count
     }));
+
+    // Target lesson ID: if none provided, use the universal practice lesson UUID
+    const targetLessonId = lessonId || DEFAULT_PRACTICE_LESSON_ID;
 
     const { data, error } = await (db as any)
       .from('user_progress')
       .insert({
         user_id: userId,
-        lesson_id: lessonId,
+        lesson_id: targetLessonId,
         wpm,
         accuracy,
         errors,
@@ -39,6 +44,30 @@ export async function saveTypingSession(
       .single();
 
     if (error) {
+      // If error was a foreign key or null constraint on lesson_id, retry with DEFAULT_PRACTICE_LESSON_ID
+      if ((error.code === '23502' || error.code === '23503') && targetLessonId !== DEFAULT_PRACTICE_LESSON_ID) {
+        console.warn(`Foreign key/not-null error with lesson_id (${targetLessonId}). Retrying with default practice lesson...`);
+        const { data: retryData, error: retryError } = await (db as any)
+          .from('user_progress')
+          .insert({
+            user_id: userId,
+            lesson_id: DEFAULT_PRACTICE_LESSON_ID,
+            wpm,
+            accuracy,
+            errors,
+            time_elapsed: timeElapsed,
+            erred_characters: formattedErrors,
+          })
+          .select()
+          .single();
+
+        if (retryError) {
+          console.error('Error saving typing session on fallback retry:', retryError);
+          return null;
+        }
+        return retryData as UserProgress;
+      }
+
       console.error('Error saving typing session:', error);
       return null;
     }

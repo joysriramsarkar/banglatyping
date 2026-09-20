@@ -197,6 +197,12 @@ export const SimplifiedKeyboard = ({
                 ⇧ Shift বোতাম চাপুন
               </Badge>
             )}
+
+            {resolvedKeyInfo?.processHint && (
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-semibold px-2.5 py-0.5 text-xs sm:text-sm">
+                প্রসেস: {resolvedKeyInfo.processHint}
+              </Badge>
+            )}
           </div>
 
           {activeFingerLabel && (

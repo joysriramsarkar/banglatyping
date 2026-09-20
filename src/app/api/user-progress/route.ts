@@ -1,6 +1,6 @@
 // API endpoint to save user typing session progress
 import { NextRequest, NextResponse } from 'next/server';
-import { saveTypingSession, updateLessonCompletion } from '@/lib/user-progress';
+import { saveTypingSession, updateLessonCompletion, DEFAULT_PRACTICE_LESSON_ID } from '@/lib/user-progress';
 import type { ErredCharacter } from '@/lib/types';
 import { authenticate, isOwnResource } from '@/lib/api-auth';
 
@@ -38,14 +38,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate lessonId is a valid UUID, otherwise use null
+    // Validate lessonId is a valid UUID, otherwise use default practice lesson UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const validLessonId = lessonId && uuidRegex.test(lessonId) ? lessonId : null;
+    const sessionLessonId = validLessonId || DEFAULT_PRACTICE_LESSON_ID;
 
     // Save the typing session
     const progress = await saveTypingSession(
       auth.user.id,
-      validLessonId,
+      sessionLessonId,
       wpm,
       accuracy,
       errors,

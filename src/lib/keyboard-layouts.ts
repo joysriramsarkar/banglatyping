@@ -1,3 +1,5 @@
+import { INDEPENDENT_VOWEL_PROCESS_MAP } from './bengali-grapheme';
+
 export type KeyboardLayoutKey = 'banglaword' | 'khipro' | 'probhat' | 'bijoy' | 'avro' | 'unijoy';
 
 export type KeyboardLayoutConfig = {
@@ -400,6 +402,7 @@ export interface ResolvedKeyInfo {
   fingerName: string;
   hand: 'left' | 'right';
   bengaliFingerLabel: string;
+  processHint?: string;
 }
 
 export const FINGER_BENGALI_NAMES: Record<number, string> = {
@@ -523,8 +526,20 @@ const KHIPRO_CHAR_KEY_MAP: Record<
   '৯': { keyCode: 'Digit9', key: '9', needsShift: false, fingerPosition: 9, fingerName: 'Ring' },
 };
 
-export function findKeyInfoForChar(char: string, layoutName?: string): ResolvedKeyInfo | null {
+export function findKeyInfoForChar(
+  char: string,
+  layoutName?: string,
+  processHint?: string
+): ResolvedKeyInfo | null {
   if (!char) return null;
+
+  const normalized = normalizeKeyboardLayout(layoutName);
+  const effectiveProcessHint =
+    processHint ||
+    (normalized === 'banglaword' && INDEPENDENT_VOWEL_PROCESS_MAP[char]
+      ? INDEPENDENT_VOWEL_PROCESS_MAP[char].processLabel
+      : undefined);
+
   if (char === ' ') {
     return {
       keyCode: 'Space',
@@ -535,10 +550,9 @@ export function findKeyInfoForChar(char: string, layoutName?: string): ResolvedK
       fingerName: 'Thumb',
       hand: 'left',
       bengaliFingerLabel: 'বৃদ্ধাঙ্গুল (Spacebar)',
+      ...(effectiveProcessHint ? { processHint: effectiveProcessHint } : {}),
     };
   }
-
-  const normalized = normalizeKeyboardLayout(layoutName);
 
   // Check Khipro zero-shift mapping
   if (normalized === 'khipro') {
@@ -554,6 +568,7 @@ export function findKeyInfoForChar(char: string, layoutName?: string): ResolvedK
         fingerName: khiproMapping.fingerName,
         hand: pos <= 5 ? 'left' : 'right',
         bengaliFingerLabel: FINGER_BENGALI_NAMES[pos] || 'অজানা',
+        ...(effectiveProcessHint ? { processHint: effectiveProcessHint } : {}),
       };
     }
   }
@@ -572,6 +587,7 @@ export function findKeyInfoForChar(char: string, layoutName?: string): ResolvedK
         fingerName: vowelMapping.fingerName,
         hand: pos <= 5 ? 'left' : 'right',
         bengaliFingerLabel: FINGER_BENGALI_NAMES[pos] || 'অজানা',
+        ...(effectiveProcessHint ? { processHint: effectiveProcessHint } : {}),
       };
     }
   }
@@ -594,6 +610,7 @@ export function findKeyInfoForChar(char: string, layoutName?: string): ResolvedK
         fingerName: k.fingerName || 'Index',
         hand: pos <= 5 ? 'left' : 'right',
         bengaliFingerLabel: FINGER_BENGALI_NAMES[pos] || 'অজানা',
+        ...(effectiveProcessHint ? { processHint: effectiveProcessHint } : {}),
       };
     }
 
@@ -609,6 +626,7 @@ export function findKeyInfoForChar(char: string, layoutName?: string): ResolvedK
         fingerName: k.fingerName || 'Index',
         hand: pos <= 5 ? 'left' : 'right',
         bengaliFingerLabel: FINGER_BENGALI_NAMES[pos] || 'অজানা',
+        ...(effectiveProcessHint ? { processHint: effectiveProcessHint } : {}),
       };
     }
 
@@ -625,6 +643,7 @@ export function findKeyInfoForChar(char: string, layoutName?: string): ResolvedK
         fingerName: k.fingerName || 'Index',
         hand: pos <= 5 ? 'left' : 'right',
         bengaliFingerLabel: FINGER_BENGALI_NAMES[pos] || 'অজানা',
+        ...(effectiveProcessHint ? { processHint: effectiveProcessHint } : {}),
       };
     }
   }

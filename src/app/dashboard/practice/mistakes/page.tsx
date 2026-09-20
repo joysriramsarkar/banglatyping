@@ -25,10 +25,20 @@ import {
 } from "@/lib/learning/recommender";
 import type { WeakCharacterView } from "@/lib/types";
 import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
-import { toBengaliNumber } from "@/lib/utils";
+import { cn, toBengaliNumber } from "@/lib/utils";
 import DifficultyFeedback from "@/components/typing/DifficultyFeedback";
 import { useToast } from "@/hooks/use-toast";
-import { normalizeBengaliString } from "@/lib/bengali-grapheme";
+import { findKeyInfoForChar, getKeyboardLayoutConfig } from "@/lib/keyboard-layouts";
+import {
+  normalizeBengaliString,
+  composeBengaliKeystroke,
+  isValidBengaliTypingPrefix,
+  getNextExpectedKeyChar,
+  bengaliSegmenter,
+  getBengaliGraphemeClip,
+  getUpcomingIndependentVowel,
+} from "@/lib/bengali-grapheme";
+import { apiFetch } from "@/lib/api-client";
 
 // Default fallback weak characters for new/guest users to try immediately
 const FALLBACK_WEAK_CHARS: WeakCharacterView[] = [
@@ -99,6 +109,20 @@ export default function MistakesPracticePage() {
   const currentDrillItem = activeDrill?.items[itemIndex];
   const targetText = currentDrillItem?.text || "";
 
+  // Compute next character needed from current target
+  const nextCharToType = useMemo(() => {
+    return getNextExpectedKeyChar(currentInput, targetText, true);
+  }, [targetText, currentInput]);
+
+  const upcomingVowel = useMemo(() => {
+    return getUpcomingIndependentVowel(currentInput, targetText);
+  }, [targetText, currentInput]);
+
+  // Resolve keyboard key position and finger guidance
+  const resolvedKeyInfo = useMemo(() => {
+    return findKeyInfoForChar(nextCharToType, undefined, upcomingVowel?.processLabel);
+  }, [nextCharToType, upcomingVowel]);
+
   // Live stats calculation
   const accuracy = useMemo(() => {
     if (totalKeystrokes === 0) return 100;
@@ -127,20 +151,41 @@ export default function MistakesPracticePage() {
       }
 
       setTotalKeystrokes((prev) => prev + 1);
-      const nextInput = currentInput + char;
-      const normNextInput = normalizeBengaliString(nextInput);
-      const normTarget = normalizeBengaliString(targetText);
+      const nextInput = composeBengaliKeystroke(currentInput, char);
+      const isPrefixValid = isValidBengaliTypingPrefix(nextInput, targetText);
 
-      if (normTarget.startsWith(normNextInput)) {
+      if (isPrefixValid) {
         setCurrentInput(nextInput);
+        const normNextInput = normalizeBengaliString(nextInput);
+        const normTarget = normalizeBengaliString(targetText);
 
         if (normNextInput === normTarget) {
           if (itemIndex < activeDrill.items.length - 1) {
             setItemIndex((prev) => prev + 1);
             setCurrentInput("");
           } else {
-            setEndTime(Date.now());
+            const finalEndTime = Date.now();
+            setEndTime(finalEndTime);
             setIsDrillFinished(true);
+
+            // Persist drill results to user_progress
+            if (user) {
+              const timeSec = Math.max(1, Math.round((finalEndTime - (startTime || finalEndTime)) / 1000));
+              apiFetch("/api/user-progress", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: user.id,
+                  lessonId: "weakness-practice",
+                  wpm,
+                  accuracy,
+                  errors: errorCount,
+                  timeElapsed: timeSec,
+                  erredCharacters: [],
+                }),
+              }).catch((err) => console.error("Failed to save weakness practice progress:", err));
+            }
+
             toast({
               title: "অভিনন্দন! দুর্বলতা অনুশীলন সম্পন্ন 🎉",
               description: `আপনার অর্জিত নির্ভুলতা ${toBengaliNumber(accuracy)}%।`,
@@ -151,7 +196,7 @@ export default function MistakesPracticePage() {
         setErrorCount((prev) => prev + 1);
       }
     },
-    [isDrillFinished, activeDrill, startTime, currentInput, targetText, itemIndex, accuracy, toast]
+    [isDrillFinished, activeDrill, startTime, currentInput, targetText, itemIndex, accuracy, errorCount, wpm, user, toast]
   );
 
   // Focus input automatically
@@ -162,7 +207,10 @@ export default function MistakesPracticePage() {
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace") {
       e.preventDefault();
-      setCurrentInput((prev) => prev.slice(0, -1));
+      setCurrentInput((prev) => {
+        if (!prev) return prev;
+        return Array.from(prev).slice(0, -1).join("");
+      });
       return;
     }
 
@@ -173,8 +221,7 @@ export default function MistakesPracticePage() {
       return;
     }
 
-    const nextChar = targetText ? targetText.slice(currentInput.length, currentInput.length + 1) : "";
-    const isExpectingHasanta = nextChar === "্";
+    const isExpectingHasanta = nextCharToType === "্";
     const isHasantaKey =
       e.key === "্" ||
       (e.code === "KeyH" && !e.shiftKey) ||
@@ -202,9 +249,26 @@ export default function MistakesPracticePage() {
     }
 
     // Modifier / IME keys are ignored
-    const skipKeys = ["Shift", "Control", "Alt", "Meta", "CapsLock", "Tab", "Dead", "Process", "Unidentified"];
+    const skipKeys = [
+      "Shift", "Control", "Alt", "Meta", "CapsLock", "Tab", "Dead", "Process",
+      "Unidentified", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+      "Home", "End", "PageUp", "PageDown"
+    ];
     if (skipKeys.includes(e.key)) {
       return;
+    }
+
+    // Physical keyboard (QWERTY) fallback using BanglaWord layout
+    const layout = getKeyboardLayoutConfig("banglaword");
+    const allKeys = [...layout.top, ...layout.home, ...layout.bottom];
+    const keyEntry = allKeys.find((k) => k.keyCode === e.code);
+    if (keyEntry) {
+      e.preventDefault();
+      const mappedChar = e.shiftKey ? (keyEntry.bnShift ?? keyEntry.bn) : keyEntry.bn;
+      if (mappedChar && mappedChar !== "Shift") {
+        lastKeyHandledTimeRef.current = performance.now();
+        handleCharInput(mappedChar);
+      }
     }
   };
 
@@ -301,22 +365,121 @@ export default function MistakesPracticePage() {
           </CardHeader>
 
           <CardContent className="p-6 space-y-6" onClick={() => hiddenInputRef.current?.focus()}>
-            {/* Target Display Box */}
+            {/* Target Display Box with progressive in-place coloring */}
             <div className="p-8 bg-secondary/30 rounded-2xl border flex flex-col items-center justify-center min-h-[160px] text-center">
               <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">
                 ধরন: {currentDrillItem?.category}
               </span>
-              <div className="text-6xl font-extrabold font-headline text-primary tracking-wide">
-                {targetText}
+              <div className="text-6xl sm:text-7xl font-extrabold font-headline tracking-wide leading-none select-none whitespace-pre">
+                {(() => {
+                  const normTarget = normalizeBengaliString(targetText);
+                  const normInput = normalizeBengaliString(currentInput);
+                  const targetClusters = bengaliSegmenter.segmentString(normTarget);
+                  const inputClusters = bengaliSegmenter.segmentString(normInput);
+
+                  return targetClusters.map((cluster, cIdx) => {
+                    const normCluster = normalizeBengaliString(cluster);
+
+                    // Inter-word space character: preserve full proportional space width in flex container
+                    if (cluster === ' ' || cluster === '\u00A0' || !cluster.trim()) {
+                      const isTyped = cIdx < inputClusters.length && normalizeBengaliString(inputClusters[cIdx]) === normCluster;
+                      const isNextSpace = cIdx === inputClusters.length;
+                      return (
+                        <span
+                          key={`m-cluster-${cIdx}`}
+                          className={cn(
+                            "inline-block select-none shrink-0",
+                            isTyped
+                              ? "text-green-600 dark:text-green-400"
+                              : isNextSpace
+                              ? "text-foreground/70"
+                              : "text-muted-foreground/35 dark:text-muted-foreground/45"
+                          )}
+                          style={{ width: '0.35em' }}
+                          aria-hidden="true"
+                        >
+                          {'\u00A0'}
+                        </span>
+                      );
+                    }
+
+                    // 1. Fully typed matching cluster -> pure green
+                    if (cIdx < inputClusters.length) {
+                      const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
+                      if (typedCluster === normCluster) {
+                        return (
+                          <span
+                            key={`m-cluster-${cIdx}`}
+                            className="text-green-600 dark:text-green-400 font-black"
+                          >
+                            {cluster}
+                          </span>
+                        );
+                      }
+                    }
+
+                    // 2. Intra-cluster partial progress (e.g. 'ক' in 'ক্ষ')
+                    if (cIdx === inputClusters.length - 1 && inputClusters.length > 0) {
+                      const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
+                      if (normCluster.startsWith(typedCluster) && typedCluster.length < normCluster.length) {
+                        const currentStep = typedCluster.length;
+                        const totalSteps = normCluster.length;
+                        return (
+                          <span
+                            key={`m-cluster-${cIdx}`}
+                            className="relative inline-flex items-center justify-center leading-none"
+                          >
+                            <span className="text-muted-foreground/35 dark:text-muted-foreground/45 select-none leading-none">
+                              {cluster}
+                            </span>
+                            <span
+                              className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-black select-none pointer-events-none leading-none transition-all duration-150"
+                              style={{
+                                clipPath: getBengaliGraphemeClip(normCluster, currentStep, totalSteps),
+                              }}
+                              aria-hidden="true"
+                            >
+                              {cluster}
+                            </span>
+                          </span>
+                        );
+                      }
+                    }
+
+                    // 3. Untyped cluster -> crisp foreground for current target cluster, neutral muted for upcoming
+                    const isNextActive = cIdx === inputClusters.length;
+                    return (
+                      <span
+                        key={`m-cluster-${cIdx}`}
+                        className={cn(
+                          isNextActive
+                            ? "text-foreground font-black"
+                            : "text-muted-foreground/40 dark:text-muted-foreground/45"
+                        )}
+                      >
+                        {cluster}
+                      </span>
+                    );
+                  });
+                })()}
               </div>
-              <div className="mt-4 text-3xl font-mono text-muted-foreground min-h-[2.5rem]">
-                <span className="text-green-500 font-bold">{currentInput}</span>
-                <span className="opacity-30">{targetText.slice(currentInput.length)}</span>
-              </div>
+              {currentInput.length > 0 && (
+                <div className="mt-4 text-sm font-mono text-muted-foreground flex items-center gap-2">
+                  <span className="text-muted-foreground/70">টাইপ করেছেন:</span>
+                  <span className="text-green-600 dark:text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/20 text-base whitespace-pre">
+                    {currentInput}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Live Virtual Keyboard */}
-            <SimplifiedKeyboard needsShift={false} />
+            {/* Live Virtual Keyboard with active target key */}
+            <SimplifiedKeyboard
+              highlightKeyCode={resolvedKeyInfo?.keyCode}
+              needsShift={!!resolvedKeyInfo?.needsShift}
+              resolvedKeyInfo={resolvedKeyInfo}
+              showFingerGuide={true}
+            />
 
             {/* Status Footer */}
             <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl text-sm font-semibold">

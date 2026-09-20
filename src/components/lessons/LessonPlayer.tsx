@@ -37,9 +37,11 @@ import {
   isValidBengaliTypingPrefix,
   getNextExpectedKeyChar,
   bengaliSegmenter,
-  getBengaliGraphemeClip,
+  buildGraphemeRenderModel,
+  getUpcomingIndependentVowel,
   ensureSpacedDrillItems,
 } from "@/lib/bengali-grapheme";
+import { GraphemeDisplay } from "@/components/lessons/GraphemeDisplay";
 
 interface LessonPlayerProps {
   lesson: CurriculumLesson;
@@ -153,15 +155,36 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
   const currentTarget = sectionItems[drillIndex] || "";
 
+  // Check if current drill/section contains full sentences (or phrases with spaces/dari)
+  const isSentenceDrill = useMemo(() => {
+    return (
+      currentSection?.id?.includes("sentence") ||
+      currentSection?.title?.includes("বাক্য") ||
+      currentTarget.trim().includes(" ") ||
+      currentTarget.includes("।") ||
+      sectionItems.some((it) => it.trim().includes(" ") || it.includes("।"))
+    );
+  }, [currentSection, currentTarget, sectionItems]);
+
+  const sentenceFontSize = useMemo(() => {
+    if (currentTarget.length > 25) return "text-2xl sm:text-3xl md:text-4xl lg:text-5xl";
+    if (currentTarget.length > 14) return "text-3xl sm:text-4xl md:text-5xl lg:text-6xl";
+    return "text-4xl sm:text-5xl md:text-6xl lg:text-7xl";
+  }, [currentTarget]);
+
   // Compute next character needed from current target
   const nextCharToType = useMemo(() => {
-    return getNextExpectedKeyChar(currentInput, currentTarget);
+    return getNextExpectedKeyChar(currentInput, currentTarget, true);
+  }, [currentTarget, currentInput]);
+
+  const upcomingVowel = useMemo(() => {
+    return getUpcomingIndependentVowel(currentInput, currentTarget);
   }, [currentTarget, currentInput]);
 
   // Resolve keyboard key position and finger guidance
   const resolvedKeyInfo = useMemo(() => {
-    return findKeyInfoForChar(nextCharToType);
-  }, [nextCharToType]);
+    return findKeyInfoForChar(nextCharToType, undefined, upcomingVowel?.processLabel);
+  }, [nextCharToType, upcomingVowel]);
 
   // Focus input helper
   const focusHiddenInput = useCallback(() => {
@@ -915,7 +938,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className="text-xs font-semibold py-0.5 px-2 bg-background/60">
-                    অক্ষর {toBengaliNumber(drillIndex + 1)} / {toBengaliNumber(sectionItems.length)}
+                    {isSentenceDrill ? "বাক্য" : "অক্ষর"} {toBengaliNumber(drillIndex + 1)} / {toBengaliNumber(sectionItems.length)}
                   </Badge>
                   {resolvedKeyInfo?.bengaliFingerLabel && (
                     <Badge className="bg-primary/15 text-primary border-primary/30 text-xs py-0.5 px-2">
@@ -924,24 +947,32 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                   )}
                 </div>
 
-                {/* Target String Stream Display: Active Set + Upcoming Sets */}
+                {/* Target String Stream Display: Active Set + Upcoming Sets (Upcoming hidden for sentences) */}
                 <div className="flex items-center justify-center gap-3 sm:gap-5 flex-wrap my-2 max-w-full overflow-hidden">
-                  {/* Previous Completed Item (if any) */}
-                  {drillIndex > 0 && (
+                  {/* Previous Completed Item (if any - hidden for sentence drills) */}
+                  {!isSentenceDrill && drillIndex > 0 && (
                     <span className="hidden md:inline-flex items-center px-3 py-1 rounded-xl text-lg sm:text-xl text-muted-foreground/35 bg-muted/20 border border-border/30 select-none">
                       {sectionItems[drillIndex - 1] === " " ? "␣ স্পেস" : sectionItems[drillIndex - 1]}
                     </span>
                   )}
 
                   {/* Current Active Item with live grapheme cluster-aware progress coloring */}
-                  <div className="relative inline-flex items-center justify-center px-5 py-2.5 sm:px-8 sm:py-3.5 rounded-2xl bg-primary/10 border-2 border-primary/60 shadow-md ring-2 ring-primary/20">
+                  <div className={cn(
+                    "relative inline-flex items-center justify-center rounded-2xl bg-primary/10 border-2 border-primary/60 shadow-md ring-2 ring-primary/20",
+                    isSentenceDrill
+                      ? "px-6 py-4 sm:px-10 sm:py-5 max-w-full"
+                      : "px-5 py-2.5 sm:px-8 sm:py-3.5"
+                  )}>
                     {currentTarget === " " ? (
                       <div className="flex items-center gap-2 py-1">
                         <span className="font-mono text-3xl sm:text-4xl text-primary font-bold">␣</span>
                         <span className="text-2xl sm:text-3xl md:text-4xl font-black font-headline text-primary">স্পেস (Space)</span>
                       </div>
                     ) : (
-                      <span className="relative inline-flex items-center justify-center text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black font-headline tracking-wide leading-none select-none">
+                      <span className={cn(
+                        "relative inline-flex items-center justify-center font-black font-headline tracking-wide leading-none select-none whitespace-pre",
+                        isSentenceDrill ? sentenceFontSize : "text-5xl sm:text-6xl md:text-7xl lg:text-8xl"
+                      )}>
                         {(() => {
                           const normTarget = normalizeBengaliString(currentTarget);
                           const normInput = normalizeBengaliString(currentInput);
@@ -950,6 +981,29 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
                           return targetClusters.map((cluster, cIdx) => {
                             const normCluster = normalizeBengaliString(cluster);
+
+                            // Inter-word space character: preserve full proportional space width in flex container
+                            if (cluster === ' ' || cluster === '\u00A0' || !cluster.trim()) {
+                              const isTyped = cIdx < inputClusters.length && normalizeBengaliString(inputClusters[cIdx]) === normCluster;
+                              const isNextSpace = cIdx === inputClusters.length;
+                              return (
+                                <span
+                                  key={`cluster-${cIdx}`}
+                                  className={cn(
+                                    "inline-block select-none shrink-0",
+                                    isTyped
+                                      ? "text-green-600 dark:text-green-400"
+                                      : isNextSpace
+                                      ? "text-foreground/70"
+                                      : "text-muted-foreground/35 dark:text-muted-foreground/45"
+                                  )}
+                                  style={{ width: '0.35em' }}
+                                  aria-hidden="true"
+                                >
+                                  {'\u00A0'}
+                                </span>
+                              );
+                            }
 
                             // 1. Fully typed matching cluster -> pure green
                             if (cIdx < inputClusters.length) {
@@ -967,41 +1021,29 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                             }
 
                             // 2. Intra-cluster partial progress (e.g. 'ড' in 'ডা', or 'ক' in 'ক্ষ')
+                            // পরিকল্পনা.md §৬–৯: clipPath বাদ দিয়ে semantic-parts ভিত্তিক GraphemeDisplay
                             if (cIdx === inputClusters.length - 1 && inputClusters.length > 0) {
                               const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
-                              if (normCluster.startsWith(typedCluster) && typedCluster.length < normCluster.length) {
-                                const currentStep = typedCluster.length;
-                                const totalSteps = normCluster.length;
+                              if (normCluster.startsWith(typedCluster) && typedCluster !== normCluster) {
+                                const renderModel = buildGraphemeRenderModel(normCluster, typedCluster);
                                 return (
-                                  <span
+                                  <GraphemeDisplay
                                     key={`cluster-${cIdx}`}
-                                    className="relative inline-flex items-center justify-center leading-none"
-                                  >
-                                    <span className="text-muted-foreground/35 dark:text-muted-foreground/45 select-none leading-none">
-                                      {cluster}
-                                    </span>
-                                    <span
-                                      className="absolute inset-0 flex items-center justify-center text-green-600 dark:text-green-400 font-black select-none pointer-events-none leading-none transition-all duration-150"
-                                      style={{
-                                        clipPath: getBengaliGraphemeClip(normCluster, currentStep, totalSteps),
-                                      }}
-                                      aria-hidden="true"
-                                    >
-                                      {cluster}
-                                    </span>
-                                  </span>
+                                    model={renderModel}
+                                  />
                                 );
                               }
                             }
 
-                            // 3. Untyped cluster -> muted if typing started, or primary if empty
+                            // 3. Untyped cluster -> crisp foreground for current target cluster, neutral muted for upcoming
+                            const isNextActive = cIdx === inputClusters.length;
                             return (
                               <span
                                 key={`cluster-${cIdx}`}
                                 className={cn(
-                                  normInput.length > 0
-                                    ? "text-muted-foreground/35 dark:text-muted-foreground/45"
-                                    : "text-primary"
+                                  isNextActive
+                                    ? "text-foreground font-black"
+                                    : "text-muted-foreground/40 dark:text-muted-foreground/45"
                                 )}
                               >
                                 {cluster}
@@ -1013,8 +1055,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                     )}
                   </div>
 
-                  {/* Upcoming Sets (next 3 to 4 items) */}
-                  {sectionItems.slice(drillIndex + 1, drillIndex + 5).map((item, idx) => (
+                  {/* Upcoming Sets (next 3 to 4 items) - Hidden for sentence drills */}
+                  {!isSentenceDrill && sectionItems.slice(drillIndex + 1, drillIndex + 5).map((item, idx) => (
                     <span
                       key={`upcoming-${drillIndex}-${idx}`}
                       className={cn(
@@ -1028,8 +1070,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                     </span>
                   ))}
 
-                  {/* Remaining items count indicator */}
-                  {drillIndex + 5 < sectionItems.length && (
+                  {/* Remaining items count indicator - Hidden for sentence drills */}
+                  {!isSentenceDrill && drillIndex + 5 < sectionItems.length && (
                     <span className="text-sm text-muted-foreground/40 font-mono self-center">
                       +{toBengaliNumber(sectionItems.length - (drillIndex + 5))}
                     </span>
@@ -1040,7 +1082,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                 {currentInput.length > 0 && (
                   <div className="text-sm font-mono text-muted-foreground min-h-[1.5rem] flex items-center gap-2 mt-2">
                     <span className="text-muted-foreground/70">টাইপ করেছেন:</span>
-                    <span className="text-green-600 dark:text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/20 text-base">
+                    <span className="text-green-600 dark:text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/20 text-base whitespace-pre">
                       {currentInput}
                     </span>
                   </div>

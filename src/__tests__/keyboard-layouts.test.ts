@@ -60,6 +60,13 @@ describe('keyboard layout helpers', () => {
     const vowelInfo = findKeyInfoForChar('আ');
     expect(vowelInfo?.keyCode).toBe('KeyA');
     expect(vowelInfo?.needsShift).toBe(false);
+    expect(vowelInfo?.processHint).toBe('h,্ + a,া = আ');
+
+    const hasantaWithHint = findKeyInfoForChar('্', 'banglaword', 'h,্ + i,ি = ই');
+    expect(hasantaWithHint?.keyCode).toBe('KeyH');
+    expect(hasantaWithHint?.key).toBe('h');
+    expect(hasantaWithHint?.processHint).toBe('h,্ + i,ি = ই');
+    expect(hasantaWithHint?.bengaliFingerLabel).toContain('ডান হাতের তর্জনী');
 
     const normalInfo = findKeyInfoForChar('ক', 'banglaword');
     expect(normalInfo?.key).toBe('k');

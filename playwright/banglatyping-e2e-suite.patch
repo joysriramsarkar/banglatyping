@@ -1,0 +1,625 @@
+--- a/package.json
++++ b/package.json
+@@ -1,4 +1,8 @@
+     "lint:fix": "eslint . --fix",
+     "typecheck": "tsc --noEmit",
+     "test": "jest",
++    "test:e2e": "playwright test",
++    "test:e2e:ui": "playwright test --ui",
++    "test:e2e:debug": "playwright test --debug",
++    "test:e2e:report": "playwright show-report",
+     "test:coverage": "jest --coverage",
+--- /dev/null
++++ b/INSTALL.md
+@@ -0,0 +1,19 @@
++# ইনস্টলেশন
++
++GitHub integration থেকে সরাসরি আপনার repo-তে write permission পাওয়া যায়নি (403), তাই এই bundle-এ সম্পূর্ণ Playwright E2E suite দেওয়া হয়েছে।
++
++Repo root-এ এই bundle extract করুন। তারপর:
++
++1. `playwright.config.ts` repo root-এ রাখুন।
++2. `e2e/` directory repo root-এ রাখুন।
++3. `package.json.e2e.patch` apply করুন:
++   `git apply package.json.e2e.patch`
++4. Browser install:
++   `npx playwright install chromium`
++5. Test:
++   `npm run test:e2e`
++
++Live deployment:
++`PLAYWRIGHT_BASE_URL=https://typing.onuron.org npm run test:e2e`
++
++বর্তমান code-এর একটি পরিচিত bug-কে `test.fail()` হিসেবে ধরা হয়েছে—এটি report-এ expected failure হিসেবে দেখা যাবে।
+
+--- /dev/null
++++ b/e2e/00-smoke.spec.ts
+@@ -0,0 +1,36 @@
++import { test, expect } from "@playwright/test";
++import { preparePage } from "./support";
++
++test.describe("Public navigation smoke", () => {
++  test("home exposes the main learning and arcade entry points", async ({ page }) => {
++    await preparePage(page);
++    await page.goto("/");
++
++    await expect(
++      page.getByRole("heading", { name: /বাংলা টাইপিং মাস্টার ও স্পিড টেস্ট/i }),
++    ).toBeVisible();
++
++    await expect(page.getByRole("link", { name: "টাইপিং টেস্ট" })).toBeVisible();
++    await expect(page.getByRole("link", { name: "অনুশীলন" })).toBeVisible();
++    await expect(page.getByRole("link", { name: "শিখুন" })).toBeVisible();
++    await expect(page.getByRole("link", { name: "গেম" })).toBeVisible();
++
++    await page.getByRole("link", { name: "গেম" }).click();
++    await expect(
++      page.getByRole("heading", { name: /বাংলা টাইপিং আর্কেড/i }),
++    ).toBeVisible();
++  });
++
++  test("login page offers guest practice without requiring an account", async ({ page }) => {
++    await preparePage(page);
++    await page.goto("/login");
++
++    await expect(page.getByRole("heading", { name: "লগইন করুন" })).toBeVisible();
++
++    await page.getByRole("link", { name: /গেস্ট হিসেবে অনুশীলন করুন/i }).click();
++    await expect(page).toHaveURL(/\/dashboard\/lessons$/);
++    await expect(
++      page.getByRole("heading", { name: /টাইপিং পাঠক্রম ও দক্ষতা মানচিত্র/i }),
++    ).toBeVisible();
++  });
++});
+
+--- /dev/null
++++ b/e2e/10-layouts.spec.ts
+@@ -0,0 +1,41 @@
++import { test, expect } from "@playwright/test";
++import { LAYOUT_STORAGE_KEY, preparePage, readLocalStorage } from "./support";
++
++test.describe("Keyboard layout selection", () => {
++  test.beforeEach(async ({ page }) => {
++    await preparePage(page);
++    await page.goto("/layouts");
++  });
++
++  test("switches to Probhat and keeps the choice after reload", async ({ page }) => {
++    await page.getByText("প্রভাত (Probhat)", { exact: true }).click();
++
++    await expect.poll(() => readLocalStorage(page, LAYOUT_STORAGE_KEY)).toBe("probhat");
++    await page.reload();
++
++    await expect(
++      page.getByText(/লাইভ কীবোর্ড প্রিভিউ:\s*প্রভাত/i),
++    ).toBeVisible();
++
++    await page.goto("/game");
++    await expect(
++      page.getByText(/সক্রিয় কীবোর্ড লেআউট:/i).locator(".."),
++    ).toContainText("প্রভাত");
++  });
++
++  test("can cycle through all supported layout values", async ({ page }) => {
++    const layouts = [
++      ["লিপিঘর বাংলাওয়ার্ড (BanglaWord)", "banglaword"],
++      ["ক্ষিপ্র (Khipro)", "khipro"],
++      ["প্রভাত (Probhat)", "probhat"],
++      ["বিজয় ক্লাসিক (Bijoy Classic)", "bijoy"],
++      ["অভ্র ফোনেটিক (Avro Phonetic)", "avro"],
++      ["ইউনিজয় (Unijoy)", "unijoy"],
++    ] as const;
++
++    for (const [label, value] of layouts) {
++      await page.getByText(label, { exact: true }).click();
++      await expect.poll(() => readLocalStorage(page, LAYOUT_STORAGE_KEY)).toBe(value);
++    }
++  });
++});
+
+--- /dev/null
++++ b/e2e/20-lesson.spec.ts
+@@ -0,0 +1,106 @@
++import { test, expect } from "@playwright/test";
++import {
++  expectLessonTypingInput,
++  preparePage,
++  pressBanglaWordChar,
++  typeBanglaWordText,
++  waitForLessonReady,
++  withInsertedSpaces,
++} from "./support";
++
++test.describe("Curriculum lesson end-to-end flows", () => {
++  test("guest can complete the Level 0 lesson with physical BanglaWord keys", async ({ page }) => {
++    await preparePage(page);
++    await page.goto("/dashboard/practice/lesson-0-1");
++
++    await expect(page.getByText(/হাতের সঠিক পজিশন/i)).toBeVisible();
++    await page.getByRole("button", { name: /পরবর্তী ধাপে যান/i }).first().click();
++    await waitForLessonReady(page);
++
++    const guidedItems = [
++      "ক", " ", "ল", " ", "স", " ", "া", " ", "ক", "ল", " ", "স", "া",
++      " ", "ড", "ফ", " ", "গ", "হ", " ", "জ", "ক", " ", "ল", "স", " ",
++      "ক", " ", "স", " ", "ল", " ", "া", " ", "ড", " ", "ফ", " ",
++    ];
++    await typeBanglaWordText(page, guidedItems.join(""));
++
++    await expect(page.getByText(/ধাপটি সফলভাবে সম্পন্ন হয়েছে/i)).toBeVisible();
++
++    await page.getByRole("button", { name: /পরবর্তী ধাপে যান/i }).last().click();
++    await waitForLessonReady(page);
++
++    const masteryItems = [
++      "ক", "ল", "স", "া", "ড", "ফ", "গ", "হ", "জ", "ক", "া", "ল", "স", "া",
++      "ড", "ফ", "া", "গ", "জ", "ক", "ল", "া", "স", "ড", "ফ", "গ", "হ",
++      "ক", "ল", "স", "া", "দ", "া", "ক", "া", "ল",
++    ];
++
++    await typeBanglaWordText(page, withInsertedSpaces(masteryItems, 3).join(""));
++
++    await expect(page.getByText(/ধাপটি সফলভাবে সম্পন্ন হয়েছে/i)).toBeVisible();
++
++    await page.getByRole("button", { name: /পরবর্তী ধাপে যান/i }).last().click();
++    await expect(
++      page.getByRole("heading", { name: /অভিনন্দন! পাঠ সম্পন্ন হয়েছে/i }),
++    ).toBeVisible();
++
++    await page.keyboard.press("Enter");
++    await expect(page).toHaveURL(/\/dashboard\/practice\/lesson-1-1$/);
++  });
++
++  test("wrong physical key does not advance the target, and the correct key then advances", async ({ page }) => {
++    await preparePage(page);
++    await page.goto("/dashboard/practice/lesson-0-1");
++
++    await page.getByRole("button", { name: /পরবর্তী ধাপে যান/i }).first().click();
++    const input = await expectLessonTypingInput(page);
++
++    await pressBanglaWordChar(page, "স");
++    await expect(page.getByText(/অক্ষর\s+১\s*\/\s*৩৮/i)).toBeVisible();
++
++    await pressBanglaWordChar(page, "ক");
++    await expect(page.getByText(/অক্ষর\s+২\s*\/\s*৩৮/i)).toBeVisible();
++
++    await expect(input).toBeAttached();
++  });
++
++  test("backspace removes a partial multi-key syllable before it is committed", async ({ page }) => {
++    // lesson-1-1 is unlocked by seeding the prerequisite completion.
++    await preparePage(page, { completedLessons: ["lesson-0-1"] });
++    await page.goto("/dashboard/practice/lesson-1-1");
++
++    await expect(page.getByText(/বাম হাতের হোম কী/i)).toBeVisible();
++    await page.getByRole("button", { name: /অনুশীলন শুরু করুন/i }).click();
++    await waitForLessonReady(page);
++
++    // First four targets in HR-01 sec-1-1-2 are: া, স, ড, ফ.
++    for (const char of ["া", "স", "ড", "ফ"]) {
++      await pressBanglaWordChar(page, char);
++    }
++
++    // Fifth target is ফা. Type ফ partially, then undo it.
++    await pressBanglaWordChar(page, "ফ");
++    await page.keyboard.press("Backspace");
++
++    // Now complete ফা. The next target is সা.
++    await pressBanglaWordChar(page, "ফ");
++    await pressBanglaWordChar(page, "া");
++
++    await expect(page.getByText(/অক্ষর\s+৬\s*\/\s*\d+/)).toBeVisible();
++  });
++
++  test("future lesson section bypass is blocked", async ({ page }) => {
++    test.fail(
++      true,
++      "Known defect: LessonPlayer currently lets users click future section pills.",
++    );
++
++    await preparePage(page, { completedLessons: ["lesson-0-1"] });
++    await page.goto("/dashboard/practice/lesson-1-1");
++
++    await expect(page.getByText(/বাম হাতের হোম কী/i)).toBeVisible();
++    await page.getByRole("button", { name: /আইসোলেটেড প্যাটার্ন ড্রিল/i }).click();
++
++    await expect(page.getByText(/বাম হাতের হোম কী/i)).toBeVisible();
++  });
++});
+
+--- /dev/null
++++ b/e2e/30-games.spec.ts
+@@ -0,0 +1,76 @@
++import { test, expect } from "@playwright/test";
++import { preparePage } from "./support";
++
++test.describe("Typing arcade end-to-end smoke", () => {
++  test.beforeEach(async ({ page }) => {
++    await preparePage(page);
++    await page.goto("/game");
++    await expect(
++      page.getByRole("heading", { name: /বাংলা টাইপিং আর্কেড/i }),
++    ).toBeVisible();
++  });
++
++  test("opens Falling Words and exposes the active typing control", async ({ page }) => {
++    await page.getByRole("button", { name: "খেলুন" }).nth(0).click();
++
++    await expect(
++      page.getByText(/ঝরন্ত শব্দ \(Falling Meteors\)/i),
++    ).toBeVisible();
++    await expect(page.getByPlaceholder("শব্দ টাইপ করুন...")).toBeVisible();
++
++    await page.getByRole("button", { name: /আর্কেড মেন্যু/i }).click();
++    await expect(
++      page.getByRole("heading", { name: /বাংলা টাইপিং আর্কেড/i }),
++    ).toBeVisible();
++  });
++
++  test("opens Space Defender and exposes the target input", async ({ page }) => {
++    await page.getByRole("button", { name: "খেলুন" }).nth(1).click();
++
++    await expect(
++      page.getByText(/শব্দ শিকারী \(Space Defender\)/i),
++    ).toBeVisible();
++    await expect(
++      page.getByPlaceholder(/শত্রু জাহাজ লক করে টাইপ করুন/i),
++    ).toBeVisible();
++  });
++
++  test("opens Speed Racer and accepts the first sentence prefix", async ({ page }) => {
++    await page.getByRole("button", { name: "খেলুন" }).nth(2).click();
++
++    await expect(
++      page.getByText(/টাইপ দৌড় \(Speed Racer\)/i),
++    ).toBeVisible();
++
++    // The racer intentionally captures keyboard input through an invisible input.
++    // Send real keyboard events rather than locator.fill(), so this tests the
++    // same browser event path a user uses.
++    await page.keyboard.type("জ্ঞান");
++
++    await expect(page.getByText(/গতি:/i).first()).toContainText("WPM");
++    await expect(page.getByText(/রেস টেক্সট/i)).toBeVisible();
++  });
++
++  test("Falling Words and Space Defender expose a reset path", async ({ page }) => {
++    const games = [
++      {
++        index: 0,
++        heading: /ঝরন্ত শব্দ \(Falling Meteors\)/i,
++        resetTitle: "নতুন করে শুরু",
++      },
++      {
++        index: 1,
++        heading: /শব্দ শিকারী \(Space Defender\)/i,
++        resetTitle: "নতুন করে শুরু",
++      },
++    ];
++
++    for (const game of games) {
++      await page.goto("/game");
++      await page.getByRole("button", { name: "খেলুন" }).nth(game.index).click();
++
++      await expect(page.getByText(game.heading)).toBeVisible();
++      await expect(page.getByTitle(game.resetTitle)).toBeVisible();
++    }
++  });
++});
+
+--- /dev/null
++++ b/e2e/40-auth.spec.ts
+@@ -0,0 +1,32 @@
++import { test, expect } from "@playwright/test";
++import { preparePage } from "./support";
++
++test.describe("Authentication smoke", () => {
++  test("login form renders and rejects an empty submission", async ({ page }) => {
++    await preparePage(page);
++    await page.goto("/login");
++
++    await expect(page.getByLabel("ইমেল")).toBeVisible();
++    await expect(page.getByLabel("পাসওয়ার্ড")).toBeVisible();
++
++    // HTML required validation prevents submission; URL therefore stays on login.
++    await page.getByRole("button", { name: "লগইন করুন" }).click();
++    await expect(page).toHaveURL(/\/login$/);
++  });
++
++  test("real credential login is available as an opt-in E2E check", async ({ page }) => {
++    test.skip(
++      !process.env.E2E_TEST_EMAIL || !process.env.E2E_TEST_PASSWORD,
++      "Set E2E_TEST_EMAIL and E2E_TEST_PASSWORD to enable the live Supabase login check.",
++    );
++
++    await preparePage(page);
++    await page.goto("/login");
++
++    await page.getByLabel("ইমেল").fill(process.env.E2E_TEST_EMAIL!);
++    await page.getByLabel("পাসওয়ার্ড").fill(process.env.E2E_TEST_PASSWORD!);
++    await page.getByRole("button", { name: "লগইন করুন" }).click();
++
++    await expect(page).toHaveURL(/\/dashboard$/);
++  });
++});
+
+--- /dev/null
++++ b/e2e/README.md
+@@ -0,0 +1,72 @@
++# বাংলা টাইপিং মাস্টার — Playwright E2E
++
++এই suite-এর লক্ষ্য হলো UI শুধু render হয়েছে কিনা নয়, একজন ব্যবহারকারী যে গুরুত্বপূর্ণ flow-গুলো সম্পূর্ণ করে সেগুলো যাচাই করা।
++
++## প্রথমবার
++
++```bash
++npx playwright install chromium
++```
++
++তারপর:
++
++```bash
++npx playwright test
++```
++
++UI mode:
++
++```bash
++npx playwright test --ui
++```
++
++Debug:
++
++```bash
++npx playwright test --debug
++```
++
++HTML report:
++
++```bash
++npx playwright show-report
++```
++
++## Live deployment যাচাই
++
++নিজের মেশিনে live site চালাতে:
++
++PowerShell:
++
++```powershell
++$env:PLAYWRIGHT_BASE_URL="https://typing.onuron.org"
++npx playwright test
++```
++
++Linux/macOS:
++
++```bash
++PLAYWRIGHT_BASE_URL=https://typing.onuron.org npx playwright test
++```
++
++এই mode-এ `webServer` চালু হবে না।
++
++## Opt-in authenticated test
++
++```powershell
++$env:E2E_TEST_EMAIL="test@example.com"
++$env:E2E_TEST_PASSWORD="your-password"
++npx playwright test e2e/40-auth.spec.ts
++```
++
++বাস্তব test account ছাড়া credential test চালাবেন না।
++
++## বর্তমান codebase-এর ইচ্ছাকৃত expected failure
++
++`e2e/20-lesson.spec.ts`-এ “future lesson section bypass is blocked” test-টি `test.fail()` দিয়ে চিহ্নিত। বর্তমান `LessonPlayer`-এ ভবিষ্যৎ section pill সরাসরি clickable, তাই test-টি known defect হিসেবে রাখা হয়েছে।
++
++Bug ঠিক হওয়ার পরে ওই test থেকে `test.fail(...)` সরিয়ে দিন। তখন CI-তে এটি স্বাভাবিক passing regression test হবে।
++
++## গুরুত্বপূর্ণ
++
++এই suite physical BanglaWord key presses ব্যবহার করে lesson flow পরীক্ষা করে। সরাসরি Bengali text `fill()`/`keyboard.type()` ব্যবহার করা হয়নি যেখানে physical layout behaviour যাচাই করাই উদ্দেশ্য।
+
+--- /dev/null
++++ b/e2e/support.ts
+@@ -0,0 +1,154 @@
++import { expect, Page } from "@playwright/test";
++
++export const CURRICULUM_STORAGE_KEY = "banglatyping_curriculum_state";
++export const LAYOUT_STORAGE_KEY = "banglatyping_active_layout";
++
++type CurriculumState = {
++  completedLessons: Record<
++    string,
++    {
++      lessonId: string;
++      completed: boolean;
++      mastered: boolean;
++      bestAccuracy: number;
++      bestWpm: number;
++      bestGpm: number;
++      timesCompleted: number;
++      lastAttemptAt: string;
++    }
++  >;
++  currentLessonId: string;
++  unlockedLevel: number;
++};
++
++const BANGLAWORD_KEYS: Record<string, string> = {
++  "া": "KeyA",
++  "স": "KeyS",
++  "ড": "KeyD",
++  "ফ": "KeyF",
++  "গ": "KeyG",
++  "জ": "KeyJ",
++  "ক": "KeyK",
++  "ল": "KeyL",
++  "দ": "KeyV",
++  "ত": "KeyX",
++  "হ": "Shift+KeyH",
++  "ব": "KeyB",
++  "ন": "KeyN",
++  "ম": "KeyM",
++  "র": "KeyR",
++  "য": "KeyY",
++  "্": "KeyH",
++  "ি": "KeyI",
++  "ী": "Shift+KeyI",
++  "ু": "KeyU",
++  "ূ": "Shift+KeyU",
++  "ে": "KeyE",
++  "ৈ": "Shift+KeyE",
++  "ো": "KeyO",
++  "ৌ": "Shift+KeyO",
++  "ৃ": "Backslash",
++  "ঁ": "Shift+KeyQ",
++  "ং": "Shift+KeyM",
++  "ঃ": "Shift+KeyW",
++  "।": "Period",
++  " ": "Space",
++};
++
++export function emptyCurriculumState(): CurriculumState {
++  return {
++    completedLessons: {},
++    currentLessonId: "lesson-0-1",
++    unlockedLevel: 0,
++  };
++}
++
++export function stateWithCompletedLessons(ids: string[]): CurriculumState {
++  const now = new Date().toISOString();
++  const state = emptyCurriculumState();
++
++  for (const id of ids) {
++    state.completedLessons[id] = {
++      lessonId: id,
++      completed: true,
++      mastered: true,
++      bestAccuracy: 100,
++      bestWpm: 30,
++      bestGpm: 120,
++      timesCompleted: 1,
++      lastAttemptAt: now,
++    };
++  }
++
++  state.currentLessonId = ids.length ? ids[ids.length - 1] : "lesson-0-1";
++  state.unlockedLevel = ids.some((id) => id.startsWith("lesson-1-")) ? 1 : 0;
++  return state;
++}
++
++export async function preparePage(
++  page: Page,
++  options: { completedLessons?: string[]; layout?: string } = {},
++) {
++  const state = stateWithCompletedLessons(options.completedLessons ?? []);
++
++  await page.addInitScript(
++    ({ curriculumKey, layoutKey, curriculumState, layout }) => {
++      localStorage.removeItem(curriculumKey);
++      localStorage.removeItem(layoutKey);
++      localStorage.setItem(curriculumKey, JSON.stringify(curriculumState));
++      if (layout) localStorage.setItem(layoutKey, layout);
++    },
++    {
++      curriculumKey: CURRICULUM_STORAGE_KEY,
++      layoutKey: LAYOUT_STORAGE_KEY,
++      curriculumState: state,
++      layout: options.layout ?? "banglaword",
++    },
++  );
++}
++
++export async function readLocalStorage(page: Page, key: string) {
++  return page.evaluate((storageKey) => localStorage.getItem(storageKey), key);
++}
++
++export async function pressBanglaWordChar(page: Page, char: string) {
++  const key = BANGLAWORD_KEYS[char];
++  if (!key) {
++    throw new Error(`No BanglaWord E2E key mapping for ${JSON.stringify(char)}`);
++  }
++  await page.keyboard.press(key);
++}
++
++export async function typeBanglaWordText(page: Page, text: string) {
++  for (const char of text) {
++    await pressBanglaWordChar(page, char);
++  }
++}
++
++export function withInsertedSpaces(items: string[], interval = 3): string[] {
++  const result: string[] = [];
++  let sinceSpace = 0;
++
++  for (const item of items) {
++    result.push(item);
++    sinceSpace += 1;
++
++    if (sinceSpace >= interval && item !== " ") {
++      result.push(" ");
++      sinceSpace = 0;
++    }
++  }
++
++  return result;
++}
++
++export async function expectLessonTypingInput(page: Page) {
++  const input = page.locator('input[type="text"][autocomplete="off"]').first();
++  await expect(input).toBeAttached();
++  return input;
++}
++
++export async function waitForLessonReady(page: Page) {
++  await expect(page.getByText(/অক্ষর\s+১\s*\/\s*\d+/)).toBeVisible();
++  await expectLessonTypingInput(page);
++}
+
+--- /dev/null
++++ b/playwright.config.ts
+@@ -0,0 +1,43 @@
++import { defineConfig, devices } from "@playwright/test";
++
++const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:3000";
++const useExternalBaseURL = Boolean(process.env.PLAYWRIGHT_BASE_URL);
++
++export default defineConfig({
++  testDir: "./e2e",
++  fullyParallel: true,
++  forbidOnly: Boolean(process.env.CI),
++  retries: process.env.CI ? 2 : 0,
++  workers: process.env.CI ? 2 : undefined,
++  timeout: 30_000,
++  expect: {
++    timeout: 5_000,
++  },
++  reporter: [
++    ["list"],
++    ["html", { open: "never" }],
++  ],
++  use: {
++    baseURL,
++    trace: "retain-on-failure",
++    screenshot: "only-on-failure",
++    video: "retain-on-failure",
++    ...devices["Desktop Chrome"],
++  },
++  projects: [
++    {
++      name: "chromium",
++      use: {
++        ...devices["Desktop Chrome"],
++      },
++    },
++  ],
++  webServer: useExternalBaseURL
++    ? undefined
++    : {
++        command: "npm run dev -- --hostname 127.0.0.1",
++        url: baseURL,
++        reuseExistingServer: !process.env.CI,
++        timeout: 120_000,
++      },
++});

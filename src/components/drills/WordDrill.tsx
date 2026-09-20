@@ -10,7 +10,8 @@ import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { DrillProgress } from "./DrillProgress";
 import { useWordDrill } from "./use-word-drill";
 
-import { normalizeBengaliString, bengaliSegmenter, getBengaliGraphemeClip } from "@/lib/bengali-grapheme";
+import { normalizeBengaliString, bengaliSegmenter, buildGraphemeRenderModel } from "@/lib/bengali-grapheme";
+import { GraphemeDisplay } from "@/components/lessons/GraphemeDisplay";
 import { cn } from "@/lib/utils";
 
 const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; isCurrent: boolean; userInput: string; isError: boolean }) => {
@@ -34,9 +35,27 @@ const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; is
         const inputClusters = bengaliSegmenter.segmentString(normInput);
 
         return (
-            <span className="text-4xl sm:text-5xl md:text-6xl font-black font-headline mr-5 sm:mr-7 relative inline-flex items-center justify-center px-4 py-2 rounded-2xl bg-primary/10 border-2 border-primary/50 shadow-md ring-2 ring-primary/20">
+            <span className="text-4xl sm:text-5xl md:text-6xl font-black font-headline mr-5 sm:mr-7 relative inline-flex items-center justify-center px-4 py-2 rounded-2xl bg-primary/10 border-2 border-primary/50 shadow-md ring-2 ring-primary/20 whitespace-pre">
                 {targetClusters.map((cluster, cIdx) => {
                     const normCluster = normalizeBengaliString(cluster);
+
+                    // Inter-word space character: preserve full proportional space width in flex container
+                    if (cluster === ' ' || cluster === '\u00A0' || !cluster.trim()) {
+                        const isTyped = cIdx < inputClusters.length && normalizeBengaliString(inputClusters[cIdx]) === normCluster;
+                        return (
+                            <span
+                                key={`wd-${cIdx}`}
+                                className={cn(
+                                    "inline-block select-none shrink-0",
+                                    isTyped ? (isError ? "text-red-500 font-black" : "text-green-600 dark:text-green-400 font-black") : "text-muted-foreground/35"
+                                )}
+                                style={{ width: '0.35em' }}
+                                aria-hidden="true"
+                            >
+                                {'\u00A0'}
+                            </span>
+                        );
+                    }
 
                     if (cIdx < inputClusters.length) {
                         const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
@@ -51,23 +70,14 @@ const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; is
 
                     if (cIdx === inputClusters.length - 1 && inputClusters.length > 0) {
                         const typedCluster = normalizeBengaliString(inputClusters[cIdx]);
-                        if (normCluster.startsWith(typedCluster) && typedCluster.length < normCluster.length) {
+                        if (normCluster.startsWith(typedCluster) && typedCluster !== normCluster) {
+                            const renderModel = buildGraphemeRenderModel(normCluster, typedCluster);
                             return (
-                                <span key={`wd-${cIdx}`} className="relative inline-flex items-center justify-center leading-none">
-                                    <span className="text-muted-foreground/35 select-none leading-none">{cluster}</span>
-                                    <span
-                                        className={cn(
-                                            "absolute inset-0 flex items-center justify-center font-black select-none pointer-events-none leading-none",
-                                            isError ? "text-red-500" : "text-green-600 dark:text-green-400"
-                                        )}
-                                        style={{
-                                            clipPath: getBengaliGraphemeClip(normCluster, typedCluster.length, normCluster.length)
-                                        }}
-                                        aria-hidden="true"
-                                    >
-                                        {cluster}
-                                    </span>
-                                </span>
+                                <GraphemeDisplay
+                                    key={`wd-${cIdx}`}
+                                    model={renderModel}
+                                    isError={isError}
+                                />
                             );
                         }
                     }
@@ -75,7 +85,7 @@ const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; is
                     return (
                         <span
                             key={`wd-${cIdx}`}
-                            className={normInput.length > 0 ? "text-muted-foreground/40" : "text-primary"}
+                            className={cIdx === inputClusters.length ? "text-foreground font-black" : "text-muted-foreground/40"}
                         >
                             {cluster}
                         </span>
@@ -134,15 +144,20 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                  <div className="flex-1 w-full min-w-0 space-y-5">
                       {/* Word Display */}
                     <div className="flex items-center justify-center gap-2 bg-background p-4 sm:p-6 rounded-xl min-h-[90px] flex-wrap border shadow-xs">
-                       {drills.slice(currentDrillIndex, currentDrillIndex + 4).map((drill, index) => (
-                           <WordDisplay
-                                key={`${drill.prompt}-${currentDrillIndex + index}`}
-                                word={drill.prompt}
-                                isCurrent={index === 0}
-                                userInput={userInput}
-                                isError={isError}
-                           />
-                       ))}
+                       {(() => {
+                           const currentPrompt = drills[currentDrillIndex]?.prompt;
+                           const isSentence = currentPrompt?.trim().includes(" ") || currentPrompt?.includes("।");
+                           const visibleCount = isSentence ? 1 : 4;
+                           return drills.slice(currentDrillIndex, currentDrillIndex + visibleCount).map((drill, index) => (
+                               <WordDisplay
+                                    key={`${drill.prompt}-${currentDrillIndex + index}`}
+                                    word={drill.prompt}
+                                    isCurrent={index === 0}
+                                    userInput={userInput}
+                                    isError={isError}
+                               />
+                           ));
+                       })()}
                        <Input
                         type="text"
                         className="absolute w-0 h-0 p-0 m-0 border-0 opacity-0"
