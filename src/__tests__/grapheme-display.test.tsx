@@ -61,4 +61,31 @@ describe('GraphemeDisplay', () => {
 
     expect(screen.getByText(/বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক \+ ্ \+ ষ/)).toBeInTheDocument();
   });
+
+  it('progressively renders conjunct with Aa-kar (স্বা) stage-by-stage without prematurely coloring ব or া', () => {
+    // Stage 1: 'স' typed -> only 'স' clipped in green
+    const model1 = buildGraphemeRenderModel('স্বা', 'স');
+    const { container, rerender } = render(<GraphemeDisplay model={model1} />);
+    const spans = container.querySelectorAll('span');
+    const clippedSpan1 = Array.from(spans).find(s => (s as HTMLElement).style.clipPath);
+    expect(clippedSpan1).toBeDefined();
+    expect((clippedSpan1 as HTMLElement).style.clipPath).toBe('polygon(0 0, 70% 0, 70% 54%, 0 54%)');
+
+    // Stage 2: 'স্' typed -> halant dot active
+    const model2 = buildGraphemeRenderModel('স্বা', 'স্');
+    rerender(<GraphemeDisplay model={model2} />);
+    expect(screen.getByTitle('হসন্ত (্) সক্রিয়')).toBeInTheDocument();
+
+    // Stage 3: 'স্ব' typed -> 'স্ব' revealed, 'া' still cut off
+    const model3 = buildGraphemeRenderModel('স্বা', 'স্ব');
+    rerender(<GraphemeDisplay model={model3} />);
+    const clippedSpan3 = Array.from(container.querySelectorAll('span')).find(s => (s as HTMLElement).style.clipPath);
+    expect((clippedSpan3 as HTMLElement).style.clipPath).toBe('polygon(0 0, 70% 0, 70% 100%, 0 100%)');
+
+    // Stage 4: 'স্বা' typed -> fully revealed
+    const model4 = buildGraphemeRenderModel('স্বা', 'স্বা');
+    rerender(<GraphemeDisplay model={model4} />);
+    const clippedSpan4 = Array.from(container.querySelectorAll('span')).find(s => (s as HTMLElement).style.clipPath);
+    expect((clippedSpan4 as HTMLElement).style.clipPath).toBe('inset(0)');
+  });
 });

@@ -161,8 +161,10 @@ normalizeBengaliString() উভয় ফর্ম একই করে তোল
 | Simple conjunct | 'ক্ষ' | ✅ কাজ করছে |
 | Multi-halant conjunct | 'ক্ষ্ম' | ✅ কাজ করছে |
 | Consonant with nukta | 'ঢ়', 'য়' | ✅ কাজ করছে |
-| Conjunct + kar | 'ক্ষা' | ✅ কাজ করছে |
+| Conjunct + kar | 'ক্ষা', 'স্বা' | ✅ কাজ করছে (স-ব-া ধাপে ধাপে রঙিন) |
 | Complex words | 'ক্ষয়', 'ধন্য' | ✅ কাজ করছে |
+| Anusvara / Visarga words | 'বাংলাদেশ', 'বাংলা', 'দুঃখ' | ✅ কাজ করছে (ং/ঃ পৃথক গ্রাফিম হিসেবে আলাদা রঙিন) |
+
 
 ## পরবর্তী ধাপ (এবং কেন)
 

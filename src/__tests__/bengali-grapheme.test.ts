@@ -66,6 +66,14 @@ describe('BengaliSegmenter', () => {
       expect(segments).toContain(' ');
       expect(segments).toEqual(['রু', 'টি', ' ', 'খা', 'ও', '।']);
     });
+
+    it('preserves Anusvara (ং) and Visarga (ঃ) bound to base cluster to prevent font-shaping breakage (বাংলাদেশ, বাংলা, দুঃখ)', () => {
+      expect(segmenter.segmentString('বাংলাদেশ')).toEqual(['বাং', 'লা', 'দে', 'শ']);
+      expect(segmenter.segmentString('বাংলা')).toEqual(['বাং', 'লা']);
+      expect(segmenter.segmentString('রং')).toEqual(['রং']);
+      expect(segmenter.segmentString('অংশ')).toEqual(['অং', 'শ']);
+      expect(segmenter.segmentString('দুঃখ')).toEqual(['দুঃ', 'খ']);
+    });
   });
 
   describe('graphemeLength', () => {
@@ -392,6 +400,15 @@ describe('getBengaliGraphemeClip', () => {
     expect(getBengaliGraphemeClip('চং', 1, 2)).toBe('polygon(0 0, 58% 0, 58% 100%, 0 100%)');
   });
 
+  it('correctly clips Aa-kar + Anusvara (e.g. বাং in বাংলাদেশ) across all 3 typing steps', () => {
+    // Step 1: Only 'ব' is revealed (42% width), 'া' and 'ং' remain gray
+    expect(getBengaliGraphemeClip('বাং', 1, 3)).toBe('polygon(0 0, 42% 0, 42% 100%, 0 100%)');
+    // Step 2: 'বা' is revealed (74% width), 'ং' remains gray
+    expect(getBengaliGraphemeClip('বাং', 2, 3)).toBe('polygon(0 0, 74% 0, 74% 100%, 0 100%)');
+    // Step 3: Entire 'বাং' is revealed
+    expect(getBengaliGraphemeClip('বাং', 3, 3)).toBe('inset(0)');
+  });
+
   it('correctly clips below-base marks at top 68%', () => {
     expect(getBengaliGraphemeClip('টূ', 1, 2)).toBe('polygon(0 0, 100% 0, 100% 68%, 0 68%)');
     expect(getBengaliGraphemeClip('কু', 1, 2)).toBe('polygon(0 0, 100% 0, 100% 68%, 0 68%)');
@@ -473,6 +490,16 @@ describe('getBengaliGraphemeClip', () => {
     // জ্ব: step 1 clips top 72%
     expect(getBengaliGraphemeClip('জ্ব', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 72%, 0 72%)');
     expect(getBengaliGraphemeClip('জ্ব', 3, 3)).toBe('inset(0)');
+
+    // স্বা: 4-step progressive stages (স -> স্ -> স্ব -> স্বা)
+    // Step 1: 'স' typed -> reveals ONLY 'স' (top 54% height, left 70% width)
+    expect(getBengaliGraphemeClip('স্বা', 1, 4)).toBe('polygon(0 0, 70% 0, 70% 54%, 0 54%)');
+    // Step 2: 'স্' typed -> same clip, halant dot indicator shown below
+    expect(getBengaliGraphemeClip('স্বা', 2, 4)).toBe('polygon(0 0, 70% 0, 70% 54%, 0 54%)');
+    // Step 3: 'স্ব' typed -> reveals entire 'স্ব' (both 'স' and '্ব'), but NOT 'া'
+    expect(getBengaliGraphemeClip('স্বা', 3, 4)).toBe('polygon(0 0, 70% 0, 70% 100%, 0 100%)');
+    // Step 4: 'স্বা' typed -> 100% complete
+    expect(getBengaliGraphemeClip('স্বা', 4, 4)).toBe('inset(0)');
   });
 });
 

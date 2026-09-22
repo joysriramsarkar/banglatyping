@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Keyboard, Brain, Trophy, Users, Globe, BookOpen } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/use-auth';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -20,6 +21,8 @@ const itemVariants = {
 };
 
 export default function AboutPage() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
@@ -77,38 +80,67 @@ export default function AboutPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Brain className="h-5 w-5 text-primary" />
-                  <span>স্মার্ট</span>
+                  <span>ইন্টেলিজেন্ট</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                AI-চালিত শেখার পদ্ধতি
+                স্মার্ট অ্যালগরিদম ভিত্তিক
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Trophy className="h-5 w-5 text-primary" />
-                  <span>গেম</span>
+                  <span>গেমিফাইড</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                মজার মাধ্যমে শেখা
+                মজার ছলে টাইপিং শেখা
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-primary" />
-                  <span>সবার জন্য</span>
+                  <Users className="h-5 w-5 text-primary" />
+                  <span>কমিউনিটি</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                বিনামূল্যে এবং উন্মুক্ত
+                সবার জন্য উন্মুক্ত
               </CardContent>
             </Card>
           </motion.div>
         </div>
       </motion.div>
+
+      <Separator className="my-8" />
+
+      {/* Stats Section */}
+      <motion.section
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
+        className="container mx-auto px-4 py-12"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+          <motion.div variants={itemVariants} className="space-y-2">
+            <Globe className="h-10 w-10 mx-auto text-primary" />
+            <h3 className="text-2xl font-bold">১০০% ফ্রি</h3>
+            <p className="text-muted-foreground">কোনো লুকানো খরচ নেই</p>
+          </motion.div>
+          <motion.div variants={itemVariants} className="space-y-2">
+            <BookOpen className="h-10 w-10 mx-auto text-primary" />
+            <h3 className="text-2xl font-bold">১৩টি স্তর</h3>
+            <p className="text-muted-foreground">সহজ থেকে কঠিন ধাপ</p>
+          </motion.div>
+          <motion.div variants={itemVariants} className="space-y-2">
+            <Trophy className="h-10 w-10 mx-auto text-primary" />
+            <h3 className="text-2xl font-bold">সার্টিফিকেট</h3>
+            <p className="text-muted-foreground">সাফল্যের স্বীকৃতি</p>
+          </motion.div>
+        </div>
+      </motion.section>
 
       {/* Features Section */}
       <motion.section
@@ -158,7 +190,9 @@ export default function AboutPage() {
           বিনামূল্যে রেজিস্ট্রেশন করুন এবং আপনার বাংলা টাইপিং যাত্রা শুরু করুন।
         </p>
         <Button size="lg" className="text-lg px-8" asChild>
-          <Link href="/signup">অ্যাকাউন্ট তৈরি করুন</Link>
+          <Link href={user ? "/dashboard" : "/signup"}>
+            {user ? "ড্যাশবোর্ডে প্রবেশ করুন" : "অ্যাকাউন্ট তৈরি করুন"}
+          </Link>
         </Button>
       </section>
     </div>

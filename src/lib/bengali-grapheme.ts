@@ -824,6 +824,15 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
 
       // 6. Post-base Aa-kar 'া' alone (e.g. 'ডা', 'ফা', 'সা', 'কা', 'মা', 'বা', 'লা', 'চা', 'দা'):
       if (hasAaKar && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides && !hasTopMark) {
+        if (hasAnusvaraOrVisarga) {
+          if (currentStep === 1) {
+            return `polygon(0 0, 42% 0, 42% 100%, 0 100%)`;
+          }
+          if (currentStep === 2) {
+            return `polygon(0 0, 74% 0, 74% 100%, 0 100%)`;
+          }
+          return `polygon(0 0, 100% 0, 100% 100%, 0 100%)`;
+        }
         const pct = getConsonantAaRatio(baseChar);
         return `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
       }
@@ -886,14 +895,56 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
       }
     }
 
-    // 14. Conjunct clusters (with halants, e.g. 'প্ত', 'চ্ছ', 'জ্ব', 'প্র', 'দ্র', 'ব্দ', 'স্প', 'স্থ', 'শ্রে', 'ব্রা'):
+    // 14. Conjunct clusters (with halants, e.g. 'প্ত', 'চ্ছ', 'জ্ব', 'প্র', 'দ্র', 'ব্দ', 'স্প', 'স্থ', 'শ্রে', 'স্বা', 'ব্রা'):
     if (hasHalant && isConjunct(text)) {
       if (currentStep >= totalSteps) {
         return `polygon(0 0, 100% 0, 100% 100%, 0 100%)`;
       }
+
+      const hasPostBaseKar = /[\u09BE\u09C0]/.test(text); // া (Aa-kar) or ী (Dirgho-I kar)
+      const hasPreBaseKar = /[\u09BF\u09C7\u09C8]/.test(text); // ি, ে, ৈ
+      const isVerticalStacked = text.includes('\u09CD\u09AC') || text.includes('্ব') ||
+                                text.includes('\u09CD\u09B0') || text.includes('্র') ||
+                                /^[পদচজশসবলমতম্নছটঠডঢ]/.test(baseChar);
+
+      // Conjuncts with trailing post-base marks like 'স্বা', 'ব্রা', 'প্রা', 'দ্বা', 'শ্বা', 'স্পা', 'স্থা':
+      // The conjunct base is on the left (0% to ~70%), while the post-base mark (া, ী) is on the right (~70% to 100%).
+      if (hasPostBaseKar) {
+        const baseWidth = 70;
+        if (currentStep <= 2) {
+          // Step 1 or 2 (e.g. 'স' or 'স্' in 'স্বা'): Reveal only the top consonant C1, without bleeding into '্ব' or 'া'
+          if (isVerticalStacked) {
+            const splitHeight = (baseChar === 'স' || text.includes('্ব')) ? 54 : 56;
+            return `polygon(0 0, ${baseWidth}% 0, ${baseWidth}% ${splitHeight}%, 0 ${splitHeight}%)`;
+          }
+          return `polygon(0 0, 38% 0, 38% 100%, 0 100%)`;
+        }
+        if (currentStep === 3) {
+          // Step 3 (e.g. 'স্ব' in 'স্বা'): Reveal the entire completed conjunct base 'স্ব', while 'া' remains gray!
+          return `polygon(0 0, ${baseWidth}% 0, ${baseWidth}% 100%, 0 100%)`;
+        }
+        return `polygon(0 0, 100% 0, 100% 100%, 0 100%)`;
+      }
+
+      // Conjuncts with pre-base marks like 'শ্রে' (ে on left, শ্র on right):
+      if (hasPreBaseKar) {
+        const leftOffset = 38;
+        if (currentStep <= 2) {
+          const splitHeight = (baseChar === 'স' || text.includes('্ব')) ? 54 : 56;
+          return `polygon(${leftOffset}% 0, 100% 0, 100% ${splitHeight}%, ${leftOffset}% ${splitHeight}%)`;
+        }
+        if (currentStep === 3) {
+          return `polygon(${leftOffset}% 0, 100% 0, 100% 100%, ${leftOffset}% 100%)`;
+        }
+        return `polygon(0 0, 100% 0, 100% 100%, 0 100%)`;
+      }
+
+      // Bare conjuncts without trailing kar (e.g. 'স্ব', 'প্র', 'প্ত', 'চ্ছ', 'জ্ব', 'স্প', 'স্থ'):
       if (currentStep <= 2) {
-        if (/^[পদচজ]/.test(baseChar) || text.includes('্র') || text.includes('্ব')) {
-          const splitHeight = (text.includes('্র') || text.includes('্ব')) ? 72 : 58;
+        if (isVerticalStacked) {
+          const splitHeight = (baseChar === 'স' && text.includes('্ব'))
+            ? 54
+            : (text.includes('্র') || text.includes('্ব')) ? 72 : 58;
           return `polygon(0 0, 100% 0, 100% ${splitHeight}%, 0 ${splitHeight}%)`;
         }
         return `polygon(0 0, 52% 0, 52% 100%, 0 100%)`;

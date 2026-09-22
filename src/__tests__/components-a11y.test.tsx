@@ -40,11 +40,10 @@ describe('Accessibility (a11y) & UI Component Tests', () => {
       expect(link.getAttribute('aria-label')).toContain('হোম পেজে যান');
     });
 
-    it('marks the decorative character icon as aria-hidden', () => {
+    it('marks the decorative SVG logo icon as aria-hidden', () => {
       const { container } = render(<Logo />);
-      const decorativeDiv = container.querySelector('[aria-hidden="true"]');
-      expect(decorativeDiv).toBeInTheDocument();
-      expect(decorativeDiv).toHaveTextContent('টা');
+      const decorativeSvg = container.querySelector('svg[aria-hidden="true"]');
+      expect(decorativeSvg).toBeInTheDocument();
     });
   });
 

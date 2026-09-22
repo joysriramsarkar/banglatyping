@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,9 +13,13 @@ import {
   AlertTriangle,
   Sparkles,
   PlayCircle,
+  LayoutDashboard,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { toBengaliNumber } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const features = [
   {
@@ -57,6 +61,12 @@ const stats = [
 ];
 
 export default function Home() {
+  const { user, loading, signOut } = useAuth();
+  const displayName =
+    user?.user_metadata?.display_name ||
+    user?.email?.split("@")[0] ||
+    "ব্যবহারকারী";
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Top Navbar */}
@@ -90,12 +100,59 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">লগইন</Link>
-            </Button>
-            <Button size="sm" asChild className="bg-primary text-primary-foreground font-bold">
-              <Link href="/signup">সাইন আপ</Link>
-            </Button>
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-20 bg-muted/60 animate-pulse rounded-md" />
+              </div>
+            ) : user ? (
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Link
+                  href="/dashboard/profile"
+                  className="flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition-colors group"
+                  title="প্রোফাইল দেখুন"
+                >
+                  <Avatar className="h-8 w-8 border border-border group-hover:border-primary transition-colors">
+                    <AvatarImage
+                      src={user.user_metadata?.avatar_url || "https://picsum.photos/100"}
+                      alt={displayName}
+                    />
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                      {displayName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden sm:inline-block max-w-[120px] truncate text-xs sm:text-sm font-medium">
+                    {displayName}
+                  </span>
+                </Link>
+
+                <Button size="sm" asChild className="bg-primary text-primary-foreground font-bold shadow-xs">
+                  <Link href="/dashboard" className="gap-1.5">
+                    <LayoutDashboard className="h-3.5 w-3.5" />
+                    <span>ড্যাশবোর্ড</span>
+                  </Link>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => signOut()}
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs px-2 sm:px-2.5"
+                  title="লগআউট"
+                >
+                  <LogOut className="h-3.5 w-3.5 sm:mr-1" />
+                  <span className="hidden sm:inline">লগআউট</span>
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/login">লগইন</Link>
+                </Button>
+                <Button size="sm" asChild className="bg-primary text-primary-foreground font-bold">
+                  <Link href="/signup">সাইন আপ</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -125,8 +182,9 @@ export default function Home() {
                 className="w-full sm:w-auto bg-primary text-primary-foreground font-bold gap-2 text-base px-8 shadow-md hover:shadow-lg"
                 asChild
               >
-                <Link href="/dashboard/lessons">
-                  <PlayCircle className="h-5 w-5" aria-hidden="true" /> বিনামূল্যে টাইপিং শিখুন
+                <Link href={user ? "/dashboard" : "/dashboard/lessons"}>
+                  <PlayCircle className="h-5 w-5" aria-hidden="true" />
+                  {user ? "অনুশীলন ড্যাশবোর্ডে যান" : "বিনামূল্যে টাইপিং শিখুন"}
                 </Link>
               </Button>
               <Button
@@ -375,8 +433,8 @@ export default function Home() {
             </p>
             <div className="pt-2 flex flex-wrap justify-center gap-3">
               <Button size="lg" className="bg-primary text-primary-foreground font-bold px-8 shadow-md" asChild>
-                <Link href="/bangla-typing-course">
-                  সম্পূর্ণ কোর্স দেখুন <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                <Link href={user ? "/dashboard" : "/bangla-typing-course"}>
+                  {user ? "আপনার ড্যাশবোর্ডে যান" : "সম্পূর্ণ কোর্স দেখুন"} <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="font-semibold px-6" asChild>
@@ -438,7 +496,11 @@ export default function Home() {
                 <li><Link href="/bangla-typing-for-jobs" className="hover:text-primary transition-colors">চাকরির পরীক্ষার প্রস্তুতি</Link></li>
                 <li><Link href="/layouts" className="hover:text-primary transition-colors">ভার্চুয়াল কীবোর্ড লেআউট</Link></li>
                 <li><Link href="/about" className="hover:text-primary transition-colors">আমাদের সম্পর্কে</Link></li>
-                <li><Link href="/login" className="hover:text-primary transition-colors">লগইন ও অ্যাকাউন্ট</Link></li>
+                <li>
+                  <Link href={user ? "/dashboard" : "/login"} className="hover:text-primary transition-colors">
+                    {user ? "ড্যাশবোর্ড ও প্রোফাইল" : "লগইন ও অ্যাকাউন্ট"}
+                  </Link>
+                </li>
               </ul>
             </nav>
           </div>
