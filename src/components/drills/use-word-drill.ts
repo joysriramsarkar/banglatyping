@@ -39,6 +39,20 @@ export const useWordDrill = (initialDrills: Drill[], accuracyGoal: number) => {
     const currentDrill = drills[currentDrillIndex];
     const currentWord = currentDrill?.prompt || '';
 
+    const totalCharsRef = useRef(totalCharsTyped);
+    const timeRef = useRef(time);
+    const isActiveRef = useRef(isActive);
+    const isPausedRef = useRef(isPaused);
+    const pauseRef = useRef(pause);
+
+    useEffect(() => {
+        totalCharsRef.current = totalCharsTyped;
+        timeRef.current = time;
+        isActiveRef.current = isActive;
+        isPausedRef.current = isPaused;
+        pauseRef.current = pause;
+    }, [totalCharsTyped, time, isActive, isPaused, pause]);
+
     const finishDrill = useCallback(() => {
         if (isFinished) return;
         pause();
@@ -50,22 +64,33 @@ export const useWordDrill = (initialDrills: Drill[], accuracyGoal: number) => {
         const finalAccuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 100;
         setAccuracy(Math.round(finalAccuracy));
 
-        const finalWpm = time > 0 ? ((totalCharsTyped / 5) / (time / 60)) : 0;
-        setWpm(Math.round(finalWpm));
+        const finalWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
+        setWpm(finalWpm);
+        if (time > 0) {
+            setWpmHistory(prev => {
+                if (prev.length > 0 && prev[prev.length - 1].time === time) return prev;
+                return [...prev, { time, wpm: finalWpm }];
+            });
+        }
     }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
 
     const startDrill = useCallback(() => {
         start();
+        if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
         wpmIntervalRef.current = setInterval(() => {
+            if (!isActiveRef.current || isPausedRef.current) return;
+            const currentTime = timeRef.current;
+            const currentChars = totalCharsRef.current;
+            if (currentTime <= 0) return;
+            const currentWpm = Math.round(((currentChars / 5) / (currentTime / 60)));
             setWpmHistory(prevHistory => {
-                const latestTime = prevHistory.length > 0 ? prevHistory[prevHistory.length - 1].time : 0;
-                const newTime = latestTime + 30;
-
-                const currentWpm = newTime > 0 ? Math.round(((totalCharsTyped / 5) / (newTime / 60))) : 0;
-                return [...prevHistory, { time: newTime, wpm: currentWpm }];
+                if (prevHistory.length > 0 && prevHistory[prevHistory.length - 1].time === currentTime) {
+                    return prevHistory;
+                }
+                return [...prevHistory, { time: currentTime, wpm: currentWpm }];
             });
-        }, 30000);
-    }, [start, totalCharsTyped]);
+        }, 5000);
+    }, [start]);
 
 
     useEffect(() => {
@@ -94,11 +119,11 @@ export const useWordDrill = (initialDrills: Drill[], accuracyGoal: number) => {
     const resetInactivityTimer = useCallback(() => {
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         inactivityTimerRef.current = setTimeout(() => {
-            if (isActive && !isPaused) {
-                pause();
+            if (isActiveRef.current && !isPausedRef.current) {
+                pauseRef.current();
             }
-        }, 4000);
-    }, [isActive, isPaused, pause]);
+        }, 1800);
+    }, []);
 
     const handleInputChange = useCallback((newValue: string) => {
         if (isFinished) return;

@@ -38,10 +38,11 @@ import {
   getNextExpectedKeyChar,
   bengaliSegmenter,
   buildGraphemeRenderModel,
+  isComplexConjunct,
   getUpcomingIndependentVowel,
   ensureSpacedDrillItems,
 } from "@/lib/bengali-grapheme";
-import { GraphemeDisplay } from "@/components/lessons/GraphemeDisplay";
+import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
 
 interface LessonPlayerProps {
   lesson: CurriculumLesson;
@@ -124,6 +125,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
+  const [activeElapsedMs, setActiveElapsedMs] = useState<number>(0);
+  const [isTypingPaused, setIsTypingPaused] = useState<boolean>(false);
   const [sectionResultStats, setSectionResultStats] = useState<{
     gpm: number;
     wpm: number;
@@ -133,14 +136,25 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
   const hiddenInputRef = useRef<HTMLInputElement>(null);
   const lastKeyHandledTimeRef = useRef<number>(0);
+  const activeTimeMsRef = useRef<number>(0);
+  const lastActiveTimestampRef = useRef<number>(0);
+  const isPausedRef = useRef<boolean>(false);
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentSection = lesson.sections[currentSectionIndex];
 
   // Live timer ticker to update speed continuously during active typing
   useEffect(() => {
     if (!startTime || endTime || sectionPassed || sectionFailed) return;
     const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 500);
+      if (!isPausedRef.current && lastActiveTimestampRef.current > 0) {
+        const nowTime = Date.now();
+        const delta = nowTime - lastActiveTimestampRef.current;
+        lastActiveTimestampRef.current = nowTime;
+        activeTimeMsRef.current += delta;
+        setActiveElapsedMs(activeTimeMsRef.current);
+        setNow(nowTime);
+      }
+    }, 250);
     return () => clearInterval(interval);
   }, [startTime, endTime, sectionPassed, sectionFailed]);
 
@@ -204,6 +218,12 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     setStartTime(null);
     setEndTime(null);
     setNow(Date.now());
+    activeTimeMsRef.current = 0;
+    lastActiveTimestampRef.current = 0;
+    isPausedRef.current = false;
+    setActiveElapsedMs(0);
+    setIsTypingPaused(false);
+    if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
     setSectionResultStats(null);
     setSectionPassed(false);
     setSectionFailed(false);
@@ -227,9 +247,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
   const timeElapsedSec = useMemo(() => {
     if (!startTime) return 0;
-    const end = endTime || now;
-    return Math.max(1, Math.round((end - startTime) / 1000));
-  }, [startTime, endTime, now]);
+    return Math.max(1, Math.round(activeElapsedMs / 1000));
+  }, [startTime, activeElapsedMs]);
 
   // Total graphemes typed so far in this section (completed items + current input)
   // Clean grapheme counting without phantom spaces
@@ -372,9 +391,28 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
         return;
       }
 
+      const currentNow = Date.now();
       if (!startTime) {
-        setStartTime(Date.now());
+        setStartTime(currentNow);
+        lastActiveTimestampRef.current = currentNow;
+      } else if (isPausedRef.current) {
+        isPausedRef.current = false;
+        setIsTypingPaused(false);
+        lastActiveTimestampRef.current = currentNow;
       }
+
+      if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = setTimeout(() => {
+        if (!isPausedRef.current) {
+          const nowTime = Date.now();
+          if (lastActiveTimestampRef.current > 0) {
+            activeTimeMsRef.current += (nowTime - lastActiveTimestampRef.current);
+          }
+          lastActiveTimestampRef.current = 0;
+          isPausedRef.current = true;
+          setIsTypingPaused(true);
+        }
+      }, 1800);
 
       setTotalAttempts((prev) => prev + 1);
 
@@ -398,9 +436,15 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
             setCurrentInput("");
           } else {
             // Finished all items in current section
+            if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
             const finalEndTime = Date.now();
             setEndTime(finalEndTime);
-            const totalDurationSec = Math.max(1, Math.round((finalEndTime - (startTime || finalEndTime)) / 1000));
+            if (!isPausedRef.current && lastActiveTimestampRef.current > 0) {
+              activeTimeMsRef.current += (finalEndTime - lastActiveTimestampRef.current);
+            }
+            lastActiveTimestampRef.current = 0;
+            isPausedRef.current = true;
+            const totalDurationSec = Math.max(1, Math.round(activeTimeMsRef.current / 1000));
 
             // Cleanly sum actual graphemes of all items in this section
             let finalGraphemes = 0;
@@ -1035,8 +1079,18 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                               }
                             }
 
-                            // 3. Untyped cluster -> crisp foreground for current target cluster, neutral muted for upcoming
+                            // 3. Untyped cluster -> show breakdown simulation screen if active cluster is a complex conjunct
                             const isNextActive = cIdx === inputClusters.length;
+                            if (isNextActive && isComplexConjunct(normCluster)) {
+                              const renderModel = buildGraphemeRenderModel(normCluster, "");
+                              return (
+                                <GraphemeDisplay
+                                  key={`cluster-${cIdx}`}
+                                  model={renderModel}
+                                />
+                              );
+                            }
+
                             return (
                               <span
                                 key={`cluster-${cIdx}`}
@@ -1055,28 +1109,73 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                     )}
                   </div>
 
-                  {/* Upcoming Sets (next 3 to 4 items) - Hidden for sentence drills */}
-                  {!isSentenceDrill && sectionItems.slice(drillIndex + 1, drillIndex + 5).map((item, idx) => (
-                    <span
-                      key={`upcoming-${drillIndex}-${idx}`}
-                      className={cn(
-                        "inline-flex items-center px-3 py-1 rounded-xl text-xl sm:text-2xl md:text-3xl font-semibold select-none transition-all",
-                        idx === 0
-                          ? "bg-secondary/80 text-foreground/80 border border-border/60"
-                          : "bg-muted/30 text-muted-foreground/50 border border-transparent"
-                      )}
-                    >
-                      {item === " " ? "␣" : item}
-                    </span>
-                  ))}
+                  {/* Upcoming Sets: Exactly 2 words displayed together at a time */}
+                  {(() => {
+                    if (isSentenceDrill) return null;
+                    // For word drills, display only 1 upcoming word (+ intervening space if present)
+                    let upcomingCount = 1;
+                    if (sectionItems[drillIndex + 1] === " " && drillIndex + 2 < sectionItems.length) {
+                      upcomingCount = 2;
+                    }
+                    const upcomingItems = sectionItems.slice(drillIndex + 1, drillIndex + 1 + upcomingCount);
+                    const remainingCount = sectionItems.length - (drillIndex + 1 + upcomingItems.length);
 
-                  {/* Remaining items count indicator - Hidden for sentence drills */}
-                  {!isSentenceDrill && drillIndex + 5 < sectionItems.length && (
-                    <span className="text-sm text-muted-foreground/40 font-mono self-center">
-                      +{toBengaliNumber(sectionItems.length - (drillIndex + 5))}
-                    </span>
-                  )}
+                    return (
+                      <>
+                        {upcomingItems.map((item, idx) => (
+                          <span
+                            key={`upcoming-${drillIndex}-${idx}`}
+                            className={cn(
+                              "inline-flex items-center px-3 py-1 rounded-xl text-xl sm:text-2xl md:text-3xl font-semibold select-none transition-all",
+                              idx === 0 || (idx === 1 && upcomingItems[0] === " ")
+                                ? "bg-secondary/80 text-foreground/80 border border-border/60"
+                                : "bg-muted/30 text-muted-foreground/50 border border-transparent"
+                            )}
+                          >
+                            {item === " " ? "␣" : item}
+                          </span>
+                        ))}
+                        {remainingCount > 0 && (
+                          <span className="text-sm text-muted-foreground/40 font-mono self-center">
+                            +{toBengaliNumber(remainingCount)}
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
+
+                {/* Standalone Conjunct Simulation Box (docked cleanly below word prompt) */}
+                {(() => {
+                  if (!currentTarget || currentTarget === " ") return null;
+                  const normTarget = normalizeBengaliString(currentTarget);
+                  const normInput = normalizeBengaliString(currentInput);
+                  const targetClusters = bengaliSegmenter.segmentString(normTarget);
+                  const inputClusters = bengaliSegmenter.segmentString(normInput);
+
+                  let activeIdx = inputClusters.length;
+                  if (inputClusters.length > 0) {
+                    const lastInput = normalizeBengaliString(inputClusters[inputClusters.length - 1]);
+                    const targetClusterAtLast = normalizeBengaliString(targetClusters[inputClusters.length - 1] || "");
+                    if (targetClusterAtLast.startsWith(lastInput) && lastInput !== targetClusterAtLast) {
+                      activeIdx = inputClusters.length - 1;
+                    }
+                  }
+
+                  const activeCluster = targetClusters[activeIdx];
+                  if (!activeCluster) return null;
+                  const normCluster = normalizeBengaliString(activeCluster);
+                  if (isComplexConjunct(normCluster)) {
+                    const typedInCluster = activeIdx < inputClusters.length ? normalizeBengaliString(inputClusters[activeIdx]) : "";
+                    const simModel = buildGraphemeRenderModel(normCluster, typedInCluster);
+                    return (
+                      <div className="flex justify-center mt-3 mb-1">
+                        <ConjunctSimulationBox model={simModel} />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 {/* Live Input Progress Display */}
                 {currentInput.length > 0 && (

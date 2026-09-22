@@ -215,7 +215,11 @@ export const SimplifiedKeyboard = ({
       )}
 
       {/* Keyboard Grid */}
-      <div className="space-y-1.5 overflow-x-auto px-1 sm:px-2 pb-1 max-w-full">
+      <div
+        className="space-y-1.5 overflow-x-auto px-1 sm:px-2 pb-1 max-w-full"
+        role="img"
+        aria-label={`বাংলা কীবোর্ড লেআউট${activeFingerLabel ? ` — সক্রিয় আঙুল: ${activeFingerLabel}` : ''}`}
+      >
         {/* Top Row */}
         <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
           {rows.top.map((keyData) => {

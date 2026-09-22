@@ -55,7 +55,7 @@ function ProfilePageContent() {
   };
 
   if (loading) {
-      return <div>লোড হচ্ছে...</div>
+      return <div role="status" aria-live="polite" className="p-4">লোড হচ্ছে...</div>
   }
 
   return (

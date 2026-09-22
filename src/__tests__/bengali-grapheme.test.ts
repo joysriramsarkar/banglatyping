@@ -17,6 +17,11 @@ import {
   ensureSpacedDrillItems,
   VOWEL_TO_KAR_MAP as _VOWEL_TO_KAR_MAP,
   KAR_TO_VOWEL_MAP as _KAR_TO_VOWEL_MAP,
+  isComplexConjunct,
+  isTransparentConjunct,
+  isKarCluster,
+  buildConjunctSimulationSteps,
+  buildGraphemeRenderModel,
 } from '@/lib/bengali-grapheme';
 
 // Bengali Unicode constants
@@ -450,4 +455,215 @@ describe('getBengaliGraphemeClip', () => {
     expect(getBengaliGraphemeClip('ফাদা', 3, 4)).toBe('polygon(0 0, 75% 0, 75% 100%, 0 100%)');
     expect(getBengaliGraphemeClip('ফাদা', 4, 4)).toBe('inset(0)');
   });
+
+  it('correctly clips transparent conjuncts (প্ত, প্র, চ্ছ, জ্ব)', () => {
+    // প্ত: step 1 ('প') and step 2 ('প্') clip top 58%
+    expect(getBengaliGraphemeClip('প্ত', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 58%, 0 58%)');
+    expect(getBengaliGraphemeClip('প্ত', 2, 3)).toBe('polygon(0 0, 100% 0, 100% 58%, 0 58%)');
+    expect(getBengaliGraphemeClip('প্ত', 3, 3)).toBe('inset(0)');
+
+    // প্র: step 1 and 2 clip top 72%
+    expect(getBengaliGraphemeClip('প্র', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 72%, 0 72%)');
+    expect(getBengaliGraphemeClip('প্র', 3, 3)).toBe('inset(0)');
+
+    // চ্ছ: step 1 clips top 58%
+    expect(getBengaliGraphemeClip('চ্ছ', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 58%, 0 58%)');
+    expect(getBengaliGraphemeClip('চ্ছ', 3, 3)).toBe('inset(0)');
+
+    // জ্ব: step 1 clips top 72%
+    expect(getBengaliGraphemeClip('জ্ব', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 72%, 0 72%)');
+    expect(getBengaliGraphemeClip('জ্ব', 3, 3)).toBe('inset(0)');
+  });
 });
+
+describe('Conjunct and Kar Classification', () => {
+  it('correctly identifies complex conjuncts requiring breakdown simulation screen', () => {
+    // User requested examples: ক্ত, ত্র, ট্ট, ক্র
+    expect(isComplexConjunct('ক্ত')).toBe(true);
+    expect(isComplexConjunct('ত্র')).toBe(true);
+    expect(isComplexConjunct('ট্ট')).toBe(true);
+    expect(isComplexConjunct('ক্র')).toBe(true);
+
+    // Other key fused ligatures
+    expect(isComplexConjunct('ক্ষ')).toBe(true);
+    expect(isComplexConjunct('ক্ষ্ম')).toBe(true);
+    expect(isComplexConjunct('জ্ঞ')).toBe(true);
+    expect(isComplexConjunct('হ্ম')).toBe(true);
+    expect(isComplexConjunct('ত্ত')).toBe(true);
+    expect(isComplexConjunct('দ্ধ')).toBe(true);
+
+    // Conjunct with trailing kar (e.g. 'ক্রি', 'ত্রু', 'ক্ষা')
+    expect(isComplexConjunct('ক্রি')).toBe(true);
+    expect(isComplexConjunct('ত্রু')).toBe(true);
+    expect(isComplexConjunct('ক্ষা')).toBe(true);
+
+    // Transparent conjuncts and kar are NOT complex
+    expect(isComplexConjunct('প্ত')).toBe(false);
+    expect(isComplexConjunct('চ্ছ')).toBe(false);
+    expect(isComplexConjunct('জ্ব')).toBe(false);
+    expect(isComplexConjunct('প্র')).toBe(false);
+    expect(isComplexConjunct('দ্র')).toBe(false);
+    expect(isComplexConjunct('রু')).toBe(false);
+    expect(isComplexConjunct('রূ')).toBe(false);
+    expect(isComplexConjunct('কা')).toBe(false);
+    expect(isComplexConjunct('টি')).toBe(false);
+  });
+
+  it('correctly identifies transparent conjuncts', () => {
+    // User requested examples: 'প্ত','চ্ছ', 'জ্ব', প্র, দ্র, রু, রূ
+    expect(isTransparentConjunct('প্ত')).toBe(true);
+    expect(isTransparentConjunct('চ্ছ')).toBe(true);
+    expect(isTransparentConjunct('জ্ব')).toBe(true);
+    expect(isTransparentConjunct('প্র')).toBe(true);
+    expect(isTransparentConjunct('দ্র')).toBe(true);
+    expect(isTransparentConjunct('রু')).toBe(true);
+    expect(isTransparentConjunct('রূ')).toBe(true);
+    expect(isTransparentConjunct('ব্দ')).toBe(true);
+    expect(isTransparentConjunct('স্প')).toBe(true);
+
+    // Complex conjuncts and kar are NOT transparent conjuncts
+    expect(isTransparentConjunct('ক্ত')).toBe(false);
+    expect(isTransparentConjunct('ত্র')).toBe(false);
+    expect(isTransparentConjunct('ট্ট')).toBe(false);
+    expect(isTransparentConjunct('ক্র')).toBe(false);
+    expect(isTransparentConjunct('ক্ষ')).toBe(false);
+    expect(isTransparentConjunct('কা')).toBe(false);
+    expect(isTransparentConjunct('টি')).toBe(false);
+  });
+
+  it('correctly identifies kar clusters', () => {
+    expect(isKarCluster('কা')).toBe(true);
+    expect(isKarCluster('টি')).toBe(true);
+    expect(isKarCluster('কু')).toBe(true);
+    expect(isKarCluster('কী')).toBe(true);
+    expect(isKarCluster('কে')).toBe(true);
+    expect(isKarCluster('কৌ')).toBe(true);
+    expect(isKarCluster('দাঁ')).toBe(true);
+
+    // Conjuncts and consonants are NOT kar clusters
+    expect(isKarCluster('ক')).toBe(false);
+    expect(isKarCluster('প্ত')).toBe(false);
+    expect(isKarCluster('ক্ত')).toBe(false);
+  });
+});
+
+describe('buildConjunctSimulationSteps', () => {
+  it('builds component decomposition formula for ক্র (ক+ক্+র)', () => {
+    // Initial: none typed -> 'ক' is active
+    const steps0 = buildConjunctSimulationSteps('ক্র', '');
+    expect(steps0.map(s => s.label)).toEqual(['ক', 'ক্', 'র']);
+    expect(steps0[0].active).toBe(true);
+    expect(steps0[0].completed).toBe(false);
+
+    // Step 1: 'ক' typed -> 'ক' completed, 'ক্' active
+    const steps1 = buildConjunctSimulationSteps('ক্র', 'ক');
+    expect(steps1[0].completed).toBe(true);
+    expect(steps1[1].active).toBe(true);
+
+    // Step 2: 'ক্' typed -> 'ক' and 'ক্' completed, 'র' active
+    const steps2 = buildConjunctSimulationSteps('ক্র', 'ক্');
+    expect(steps2[0].completed).toBe(true);
+    expect(steps2[1].completed).toBe(true);
+    expect(steps2[2].active).toBe(true);
+
+    // Step 3: 'ক্র' typed -> all completed
+    const steps3 = buildConjunctSimulationSteps('ক্র', 'ক্র');
+    expect(steps3.every(s => s.completed)).toBe(true);
+  });
+
+  it('builds component decomposition formula for ট্ট (ট+ট্+ট)', () => {
+    const steps = buildConjunctSimulationSteps('ট্ট', 'ট');
+    expect(steps.map(s => s.label)).toEqual(['ট', 'ট্', 'ট']);
+    expect(steps[0].completed).toBe(true);
+    expect(steps[1].active).toBe(true);
+  });
+
+  it('builds component decomposition formula for ক্ত (ক+ক্+ত)', () => {
+    const steps = buildConjunctSimulationSteps('ক্ত', 'ক্');
+    expect(steps.map(s => s.label)).toEqual(['ক', 'ক্', 'ত']);
+    expect(steps[0].completed).toBe(true);
+    expect(steps[1].completed).toBe(true);
+    expect(steps[2].active).toBe(true);
+  });
+
+  it('builds component decomposition formula for cluster with kar ষ্ঠা (ষ+্+ঠ+া)', () => {
+    const steps0 = buildConjunctSimulationSteps('ষ্ঠা', '');
+    expect(steps0.map(s => s.label)).toEqual(['ষ', '্', 'ঠ', 'া']);
+    expect(steps0[0].active).toBe(true);
+
+    const steps1 = buildConjunctSimulationSteps('ষ্ঠা', 'ষ');
+    expect(steps1[0].completed).toBe(true);
+    expect(steps1[1].active).toBe(true);
+
+    const steps2 = buildConjunctSimulationSteps('ষ্ঠা', 'ষ্');
+    expect(steps2[0].completed).toBe(true);
+    expect(steps2[1].completed).toBe(true);
+    expect(steps2[2].active).toBe(true);
+
+    const steps3 = buildConjunctSimulationSteps('ষ্ঠা', 'ষ্ঠ');
+    expect(steps3[0].completed).toBe(true);
+    expect(steps3[1].completed).toBe(true);
+    expect(steps3[2].completed).toBe(true);
+    expect(steps3[3].active).toBe(true);
+
+    const steps4 = buildConjunctSimulationSteps('ষ্ঠা', 'ষ্ঠা');
+    expect(steps4.every(s => s.completed)).toBe(true);
+  });
+
+  it('supports ক্ষ typed directly via BanglaWord "q" or via ক+ক্+ষ', () => {
+    // If typed directly 'ক্ষ' (e.g. from key 'q' in BanglaWord)
+    const directSteps = buildConjunctSimulationSteps('ক্ষ', 'ক্ষ');
+    expect(directSteps.every(s => s.completed)).toBe(true);
+
+    // If typed sequentially 'ক' -> 'ক্' -> 'ক্ষ'
+    const seqStep1 = buildConjunctSimulationSteps('ক্ষ', 'ক');
+    expect(seqStep1[0].completed).toBe(true);
+    expect(seqStep1[1].active).toBe(true);
+
+    const seqStep2 = buildConjunctSimulationSteps('ক্ষ', 'ক্');
+    expect(seqStep2[0].completed).toBe(true);
+    expect(seqStep2[1].completed).toBe(true);
+    expect(seqStep2[2].active).toBe(true);
+  });
+});
+
+describe('buildGraphemeRenderModel', () => {
+  it('creates render model for kar cluster (টি, কা) with full unbroken string', () => {
+    const model = buildGraphemeRenderModel('টি', 'ট');
+    expect(model.full).toBe('টি');
+    expect(model.kind).toBe('kar');
+    expect(model.currentStep).toBe(1);
+    expect(model.totalSteps).toBe(2);
+    expect(model.hasPendingHalant).toBe(false);
+  });
+
+  it('creates render model for transparent conjunct with halant indicator (প্ত: প-প্-প্ত)', () => {
+    // Step 1: 'প' typed
+    const model1 = buildGraphemeRenderModel('প্ত', 'প');
+    expect(model1.full).toBe('প্ত');
+    expect(model1.kind).toBe('conjunct');
+    expect(model1.isComplex).toBe(false);
+    expect(model1.hasPendingHalant).toBe(false);
+
+    // Step 2: 'প্' typed (halant entered) -> hasPendingHalant is true!
+    const model2 = buildGraphemeRenderModel('প্ত', 'প্');
+    expect(model2.full).toBe('প্ত');
+    expect(model2.hasPendingHalant).toBe(true);
+
+    // Step 3: 'প্ত' completed
+    const model3 = buildGraphemeRenderModel('প্ত', 'প্ত');
+    expect(model3.hasPendingHalant).toBe(false);
+  });
+
+  it('creates render model for complex conjunct (ক্র, ক্ষ) with simulation steps and hint', () => {
+    const modelCro = buildGraphemeRenderModel('ক্র', 'ক');
+    expect(modelCro.isComplex).toBe(true);
+    expect(modelCro.conjunctSteps).toBeDefined();
+    expect(modelCro.conjunctSteps?.length).toBe(3);
+
+    const modelKsa = buildGraphemeRenderModel('ক্ষ', '');
+    expect(modelKsa.isComplex).toBe(true);
+    expect(modelKsa.specialHint).toContain("বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক + ্ + ষ");
+  });
+});
+

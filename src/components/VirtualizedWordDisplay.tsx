@@ -33,7 +33,12 @@ export const VirtualizedWordDisplay = memo(({
 }: VirtualizedWordDisplayProps) => {
   return (
     <div className={cn("p-6 tracking-wider font-hind leading-relaxed relative select-none", textDisplayFontSize)}>
-      <p>
+      {/* Screen reader progress announcement */}
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        শব্দ {currentWordIndex + 1} / {totalWords}
+      </span>
+
+      <p aria-hidden="true">
         {visibleWords.map((item) => (
           <React.Fragment key={item.index}>
             <span
@@ -52,10 +57,10 @@ export const VirtualizedWordDisplay = memo(({
       
       {/* Indicators for more words ahead/behind */}
       {visibleWords.length > 0 && visibleWords[0].index > 0 && (
-        <div className="absolute left-4 top-2 text-xs text-muted-foreground">↑ আরও শব্দ আছে</div>
+        <div className="absolute left-4 top-2 text-xs text-muted-foreground" aria-hidden="true">↑ আরও শব্দ আছে</div>
       )}
       {visibleWords.length > 0 && visibleWords[visibleWords.length - 1].index < totalWords - 1 && (
-        <div className="absolute right-4 bottom-2 text-xs text-muted-foreground">↓ আরও শব্দ আছে</div>
+        <div className="absolute right-4 bottom-2 text-xs text-muted-foreground" aria-hidden="true">↓ আরও শব্দ আছে</div>
       )}
     </div>
   );

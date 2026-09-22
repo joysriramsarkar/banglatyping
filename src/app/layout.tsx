@@ -169,6 +169,13 @@ export default function RootLayout({
         />
       </head>
       <body className={cn("font-body antialiased", inter.variable, noto_sans_bengali.variable, hind_siliguri.variable)}>
+        {/* Skip to main content — keyboard accessibility */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-lg focus:font-bold focus:shadow-lg"
+        >
+          মূল বিষয়বস্তুতে যান (Skip to main content)
+        </a>
         <AuthProvider>
           {children}
         </AuthProvider>

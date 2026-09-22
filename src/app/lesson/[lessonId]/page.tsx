@@ -110,7 +110,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
               href="/bangla-typing-test"
               className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-4 transition-colors"
             >
-              <div className="text-sm text-slate-400 mb-1">🏆</div>
+              <div className="text-sm text-slate-400 mb-1" aria-hidden="true">🏆</div>
               <div className="font-semibold text-sm">বাংলা টাইপিং টেস্ট</div>
               <div className="text-slate-500 text-xs mt-1">গতি পরিমাপ করুন</div>
             </Link>
@@ -118,7 +118,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
               href="/bangla-typing-course"
               className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-4 transition-colors"
             >
-              <div className="text-sm text-slate-400 mb-1">📚</div>
+              <div className="text-sm text-slate-400 mb-1" aria-hidden="true">📚</div>
               <div className="font-semibold text-sm">পূর্ণাঙ্গ কোর্স</div>
               <div className="text-slate-500 text-xs mt-1">১৩ স্তরের কোর্স</div>
             </Link>
@@ -126,8 +126,8 @@ export default async function LessonPage({ params }: LessonPageProps) {
               href="/learn"
               className="bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-4 transition-colors"
             >
-              <div className="text-sm text-slate-400 mb-1">📖</div>
-              <div className="font-semibold text-sm">সব পাঠ</div>
+              <div className="text-sm text-slate-400 mb-1" aria-hidden="true">📖</div>
+              <div className="font-semibold text-sm">সব lesson দেখুন</div>
               <div className="text-slate-500 text-xs mt-1">বিষয় অনুযায়ী</div>
             </Link>
           </div>

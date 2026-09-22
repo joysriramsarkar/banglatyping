@@ -62,7 +62,7 @@ const StatItem = ({
     }`}
   >
     <div className="flex items-center gap-3">
-      <Icon className={`h-5 w-5 ${highlight ? "text-primary" : "text-muted-foreground"}`} />
+      <Icon className={`h-5 w-5 ${highlight ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
       <span className="text-muted-foreground">{label}</span>
     </div>
     <span className={`font-semibold text-lg ${highlight ? "text-primary" : ""}`}>
@@ -221,7 +221,7 @@ export default function TestResults({
     <div className="w-full max-w-4xl mx-auto space-y-6">
       <Card className="border shadow-lg">
         <CardHeader className="text-center pb-4">
-          <Award className="mx-auto h-14 w-14 text-yellow-500" />
+          <Award className="mx-auto h-14 w-14 text-yellow-500" aria-hidden="true" />
           <CardTitle className="text-3xl font-bold font-headline">
             {isDrill ? (passedDrill ? "অনুশীলন সফল!" : "অনুশীলন ব্যর্থ") : "টেস্ট ফলাফল ও মূল্যায়ন"}
           </CardTitle>
@@ -375,12 +375,21 @@ export default function TestResults({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base font-bold">ভুলপ্রবণ অক্ষর চার্ট</CardTitle>
                   <CardDescription className="text-xs">
-                    যে অক্ষরগুলোতে আপনি সবচেয়ে বেশি ভুল করেছেন।
+                    যে অক্ষরগুলোতে আপনি সবচেয়ে বেশি ভুল করেছেন।
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Screen reader accessible data table */}
+                  <table className="sr-only" aria-label="ভুলপ্রবণ অক্ষরের তালিকা">
+                    <thead><tr><th scope="col">অক্ষর</th><th scope="col">ভুলের সংখ্যা</th></tr></thead>
+                    <tbody>
+                      {erredCharacters.map((item) => (
+                        <tr key={item.char}><td>{item.char}</td><td>{item.count}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
                   <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={erredCharacters}>
+                    <BarChart data={erredCharacters} role="img" aria-label="ভুলপ্রবণ অক্ষরের বার চার্ট">
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="char" />
                       <YAxis
@@ -398,11 +407,11 @@ export default function TestResults({
                 </CardContent>
               </Card>
             ) : (
-              <div className="p-6 rounded-xl bg-green-500/10 border border-green-500/20 text-center space-y-2">
-                <CheckCircle className="h-10 w-10 text-green-600 mx-auto" />
-                <h4 className="font-bold text-foreground">কোনো ভুল হয়নি!</h4>
+              <div className="p-6 rounded-xl bg-green-500/10 border border-green-500/20 text-center space-y-2" role="status">
+                <CheckCircle className="h-10 w-10 text-green-600 mx-auto" aria-hidden="true" />
+                <h4 className="font-bold text-foreground">কোনো ভুল হয়নি!</h4>
                 <p className="text-xs text-muted-foreground">
-                  আপনার ১০০% নির্ভুল টাইপিং দক্ষতা সত্যিই প্রশংসনীয়।
+                  আপনার ১০০% নির্ভুল টাইপিং দক্ষতা সত্যিই প্রশংসনীয়।
                 </p>
               </div>
             )}

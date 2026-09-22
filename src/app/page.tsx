@@ -1,6 +1,5 @@
-"use client";
+﻿"use client";
 
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Logo } from "@/components/logo";
@@ -58,8 +57,6 @@ const stats = [
 ];
 
 export default function Home() {
-  const router = useRouter();
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Top Navbar */}
@@ -67,7 +64,7 @@ export default function Home() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-6">
             <Logo />
-            <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
+            <nav aria-label="প্রধান নেভিগেশন" className="hidden md:flex items-center gap-5 text-sm font-semibold">
               <Link href="/bangla-typing-test" className="text-muted-foreground hover:text-primary transition-colors">
                 টাইপিং টেস্ট
               </Link>
@@ -93,25 +90,25 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2.5">
-            <Button variant="ghost" size="sm" onClick={() => router.push("/login")}>
-              লগইন
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/login">লগইন</Link>
             </Button>
-            <Button size="sm" onClick={() => router.push("/signup")} className="bg-primary text-primary-foreground font-bold">
-              সাইন আপ
+            <Button size="sm" asChild className="bg-primary text-primary-foreground font-bold">
+              <Link href="/signup">সাইন আপ</Link>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* Hero */}
-        <section className="container mx-auto px-4 py-16 sm:py-24 text-center">
+        <section className="container mx-auto px-4 py-16 sm:py-24 text-center" aria-labelledby="hero-heading">
           <div className="mx-auto max-w-3xl space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold shadow-xs">
-              <Sparkles className="h-4 w-4" /> ধাপে ধাপে বাংলা টাইপিং শেখা, অনুশীলন ও স্পিড টেস্ট
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold shadow-xs" aria-hidden="true">
+              <Sparkles className="h-4 w-4" aria-hidden="true" /> ধাপে ধাপে বাংলা টাইপিং শেখা, অনুশীলন ও স্পিড টেস্ট
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground font-headline leading-tight">
+            <h1 id="hero-heading" className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground font-headline leading-tight">
               বাংলা টাইপিং মাস্টার ও স্পিড টেস্ট
               <span className="block text-primary text-2xl sm:text-4xl mt-2 font-bold">
                 (Bangla Typing Test & Master Online)
@@ -126,29 +123,33 @@ export default function Home() {
               <Button
                 size="lg"
                 className="w-full sm:w-auto bg-primary text-primary-foreground font-bold gap-2 text-base px-8 shadow-md hover:shadow-lg"
-                onClick={() => router.push("/dashboard/lessons")}
+                asChild
               >
-                <PlayCircle className="h-5 w-5" /> বিনামূল্যে টাইপিং শিখুন
+                <Link href="/dashboard/lessons">
+                  <PlayCircle className="h-5 w-5" aria-hidden="true" /> বিনামূল্যে টাইপিং শিখুন
+                </Link>
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto font-semibold text-base"
-                onClick={() => router.push("/dashboard/test")}
+                asChild
               >
-                <Timer className="h-5 w-5 mr-1" /> ১ মিনিটে টাইপিং টেস্ট দিন
+                <Link href="/dashboard/test">
+                  <Timer className="h-5 w-5 mr-1" aria-hidden="true" /> ১ মিনিটে টাইপিং টেস্ট দিন
+                </Link>
               </Button>
             </div>
           </div>
         </section>
 
         {/* Stats bar */}
-        <section className="border-y bg-muted/30">
-          <div className="container mx-auto grid grid-cols-3 divide-x px-4 py-8">
+        <section className="border-y bg-muted/30" aria-label="প্ল্যাটফর্মের পরিসংখ্যান">
+          <div className="container mx-auto grid grid-cols-3 divide-x px-4 py-8" role="list">
             {stats.map((s) => (
-              <div key={s.label} className="px-4 text-center">
-                <p className="text-2xl sm:text-4xl font-extrabold text-primary font-headline">{s.value}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">{s.label}</p>
+              <div key={s.label} className="px-4 text-center" role="listitem">
+                <p className="text-2xl sm:text-4xl font-extrabold text-primary font-headline" aria-label={`${s.value} ${s.label}`}>{s.value}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1" aria-hidden="true">{s.label}</p>
               </div>
             ))}
           </div>
@@ -222,8 +223,8 @@ export default function Home() {
             {features.map((f) => (
               <Card key={f.title} className="transition-all hover:border-primary/50 hover:shadow-md border bg-card">
                 <CardContent className="flex gap-4 p-6">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <f.icon className="h-6 w-6" />
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden="true">
+                    <f.icon className="h-6 w-6" aria-hidden="true" />
                   </div>
                   <div>
                     <h3 className="font-bold text-base text-foreground font-headline">{f.title}</h3>
@@ -366,27 +367,20 @@ export default function Home() {
         </section>
 
         {/* Call to action */}
-        <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-t py-16 text-center">
+        <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-background border-t py-16 text-center" aria-labelledby="cta-heading">
           <div className="container mx-auto px-4 max-w-2xl space-y-4">
-            <h2 className="text-3xl font-extrabold font-headline">আজই শুরু করুন — সম্পূর্ণ বিনামূল্যে</h2>
+            <h2 id="cta-heading" className="text-3xl font-extrabold font-headline">আজই শুরু করুন — সম্পূর্ণ বিনামূল্যে</h2>
             <p className="text-sm text-muted-foreground">
-              অ্যাকাউন্ট তৈরি করে ক্লাউডে অগ্রগতি সংরক্ষণ করুন, অথবা লগইন ছাড়াই সরাসরি গেস্ট হিসেবে টাইপ করুন।
+              অ্যাকাউন্ট তৈরি করে ক্লাউডে অগ্রগতি সংরক্ষণ করুন, অথবা লগইন ছাড়াই সরাসরি গেস্ট হিসেবে টাইপ করুন।
             </p>
             <div className="pt-2 flex flex-wrap justify-center gap-3">
-              <Button
-                size="lg"
-                className="bg-primary text-primary-foreground font-bold px-8 shadow-md"
-                onClick={() => router.push("/bangla-typing-course")}
-              >
-                সম্পূর্ণ কোর্স দেখুন <ArrowRight className="ml-2 h-4 w-4" />
+              <Button size="lg" className="bg-primary text-primary-foreground font-bold px-8 shadow-md" asChild>
+                <Link href="/bangla-typing-course">
+                  সম্পূর্ণ কোর্স দেখুন <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                </Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="font-semibold px-6"
-                onClick={() => router.push("/bangla-typing-test")}
-              >
-                টাইপিং টেস্ট দিন
+              <Button size="lg" variant="outline" className="font-semibold px-6" asChild>
+                <Link href="/bangla-typing-test">টাইপিং টেস্ট দিন</Link>
               </Button>
             </div>
           </div>
@@ -394,11 +388,11 @@ export default function Home() {
       </main>
 
       {/* Rich Multi-Column Footer (Section 27 of পরিকল্পনা.md) */}
-      <footer className="border-t bg-muted/40 py-12 text-sm text-muted-foreground">
+      <footer className="border-t bg-muted/40 py-12 text-sm text-muted-foreground" aria-label="সাইট ফুটার">
         <div className="container mx-auto px-4">
           <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4 pb-8 border-b">
             {/* Column 1: Tests */}
-            <div className="space-y-3">
+            <nav aria-label="টাইপিং টেস্ট ও টুলস" className="space-y-3">
               <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">টাইপিং টেস্ট ও টুলস</h4>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li><Link href="/bangla-typing-test" className="hover:text-primary transition-colors">বাংলা টাইপিং টেস্ট</Link></li>
@@ -407,10 +401,10 @@ export default function Home() {
                 <li><Link href="/bijoy-typing-test" className="hover:text-primary transition-colors">বিজয় টাইপিং টেস্ট</Link></li>
                 <li><Link href="/game" className="hover:text-primary transition-colors">টাইপিং গেম ও আর্কেড</Link></li>
               </ul>
-            </div>
+            </nav>
 
             {/* Column 2: Learn */}
-            <div className="space-y-3">
+            <nav aria-label="শেখার পাঠক্রম" className="space-y-3">
               <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">শেখার পাঠক্রম</h4>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li><Link href="/learn" className="hover:text-primary transition-colors">টাইপিং শেখার হাব</Link></li>
@@ -420,10 +414,10 @@ export default function Home() {
                 <li><Link href="/learn/bottom-row" className="hover:text-primary transition-colors">বটম রো (Bottom Row)</Link></li>
                 <li><Link href="/learn/kar" className="hover:text-primary transition-colors">কার-চিহ্ন টাইপিং</Link></li>
               </ul>
-            </div>
+            </nav>
 
             {/* Column 3: Rules & Grammar */}
-            <div className="space-y-3">
+            <nav aria-label="যুক্তাক্ষর ও নিয়মাবলি" className="space-y-3">
               <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">যুক্তাক্ষর ও নিয়মাবলি</h4>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li><Link href="/learn/hasanta" className="hover:text-primary transition-colors">হসন্তের (্) নিয়ম</Link></li>
@@ -434,10 +428,10 @@ export default function Home() {
                 <li><Link href="/learn/numbers" className="hover:text-primary transition-colors">বাংলা সংখ্যা টাইপিং</Link></li>
                 <li><Link href="/learn/punctuation" className="hover:text-primary transition-colors">বিরামচিহ্ন টাইপিং</Link></li>
               </ul>
-            </div>
+            </nav>
 
             {/* Column 4: Keyboards & Jobs */}
-            <div className="space-y-3">
+            <nav aria-label="কীবোর্ড ও ক্যারিয়ার" className="space-y-3">
               <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">কীবোর্ড ও ক্যারিয়ার</h4>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li><Link href="/bangla-keyboard" className="hover:text-primary transition-colors">বাংলা কীবোর্ড পরিচিতি</Link></li>
@@ -446,7 +440,7 @@ export default function Home() {
                 <li><Link href="/about" className="hover:text-primary transition-colors">আমাদের সম্পর্কে</Link></li>
                 <li><Link href="/login" className="hover:text-primary transition-colors">লগইন ও অ্যাকাউন্ট</Link></li>
               </ul>
-            </div>
+            </nav>
           </div>
 
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">

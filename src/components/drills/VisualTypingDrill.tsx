@@ -45,6 +45,20 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const currentDrill = !isSessionOver ? drills[currentDrillIndex] : null;
     const currentDrillStep = currentDrill?.steps[currentStepIndex];
 
+    const totalCharsRef = useRef(totalCharsTyped);
+    const timeRef = useRef(time);
+    const isActiveRef = useRef(isActive);
+    const isPausedRef = useRef(isPaused);
+    const pauseRef = useRef(pause);
+
+    useEffect(() => {
+        totalCharsRef.current = totalCharsTyped;
+        timeRef.current = time;
+        isActiveRef.current = isActive;
+        isPausedRef.current = isPaused;
+        pauseRef.current = pause;
+    }, [totalCharsTyped, time, isActive, isPaused, pause]);
+
     const finishDrill = useCallback(() => {
         if (isFinished) return;
         pause();
@@ -56,22 +70,33 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         const finalAccuracy = totalCharsTyped > 0 ? (correctChars / totalCharsTyped) * 100 : 100;
         setAccuracy(Math.round(finalAccuracy));
 
-        const finalWpm = time > 0 ? ((totalCharsTyped / 5) / (time / 60)) : 0;
-        setWpm(Math.round(finalWpm));
+        const finalWpm = time > 0 ? Math.round(((totalCharsTyped / 5) / (time / 60))) : 0;
+        setWpm(finalWpm);
+        if (time > 0) {
+            setWpmHistory(prev => {
+                if (prev.length > 0 && prev[prev.length - 1].time === time) return prev;
+                return [...prev, { time, wpm: finalWpm }];
+            });
+        }
     }, [isFinished, pause, time, totalCharsTyped, totalErrors]);
 
     const startDrill = useCallback(() => {
         start();
+        if (wpmIntervalRef.current) clearInterval(wpmIntervalRef.current);
         wpmIntervalRef.current = setInterval(() => {
+            if (!isActiveRef.current || isPausedRef.current) return;
+            const currentTime = timeRef.current;
+            const currentChars = totalCharsRef.current;
+            if (currentTime <= 0) return;
+            const currentWpm = Math.round(((currentChars / 5) / (currentTime / 60)));
             setWpmHistory(prevHistory => {
-                const latestTime = prevHistory.length > 0 ? prevHistory[prevHistory.length - 1].time : 0;
-                const newTime = latestTime + 30;
-
-                const currentWpm = newTime > 0 ? Math.round(((totalCharsTyped / 5) / (newTime / 60))) : 0;
-                return [...prevHistory, { time: newTime, wpm: currentWpm }];
+                if (prevHistory.length > 0 && prevHistory[prevHistory.length - 1].time === currentTime) {
+                    return prevHistory;
+                }
+                return [...prevHistory, { time: currentTime, wpm: currentWpm }];
             });
-        }, 30000);
-    }, [start, totalCharsTyped]);
+        }, 5000);
+    }, [start]);
 
 
     useEffect(() => {
@@ -101,11 +126,11 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
     const resetInactivityTimer = useCallback(() => {
         if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
         inactivityTimerRef.current = setTimeout(() => {
-            if (isActive && !isPaused) {
-                pause();
+            if (isActiveRef.current && !isPausedRef.current) {
+                pauseRef.current();
             }
-        }, 4000);
-    }, [isActive, isPaused, pause]);
+        }, 1800);
+    }, []);
 
 
      const handleKeyPress = useCallback((inputChar: string) => {
@@ -160,15 +185,45 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
             return;
         }
 
+        const HASANTA = '\u09CD';
+        const normInput = (inputChar || '').normalize('NFC');
+        const normStep = (currentDrillStep.display || '').normalize('NFC');
+
+        // Shortcut for 'ক্ষ': BanglaWord permits typing 'ক্ষ' directly via 'q'
+        // even when the drill decomposed it into [ক, ্, ষ]
+        if (normInput === 'ক্ষ' || normInput === 'q') {
+            const remainingSteps = currentDrill.steps.slice(currentStepIndex);
+            let skipCount = 0;
+            if (normStep === 'ক' && remainingSteps[1]?.display === '্' && remainingSteps[2]?.display === 'ষ') {
+                skipCount = 3;
+            } else if (normStep === '্' && remainingSteps[1]?.display === 'ষ' && currentStepIndex > 0 && currentDrill.steps[currentStepIndex - 1]?.display === 'ক') {
+                skipCount = 2;
+            } else if (normStep === 'ষ' && currentStepIndex >= 2 && currentDrill.steps[currentStepIndex - 1]?.display === '্' && currentDrill.steps[currentStepIndex - 2]?.display === 'ক') {
+                skipCount = 1;
+            } else if (normStep === 'ক্ষ') {
+                skipCount = 1;
+            }
+
+            if (skipCount > 0) {
+                setTotalCharsTyped(prev => prev + skipCount);
+                setDrillState(prev => {
+                    const newStepIndex = prev.currentStepIndex + skipCount;
+                    const isLastStep = newStepIndex >= drills[prev.currentDrillIndex].steps.length;
+                    if (isLastStep) {
+                        const nextDrillIndex = (prev.currentDrillIndex + 1) % drills.length;
+                        return { ...prev, currentDrillIndex: nextDrillIndex, currentStepIndex: 0, status: 'pending' };
+                    }
+                    return { ...prev, currentStepIndex: newStepIndex, status: 'pending' };
+                });
+                return;
+            }
+        }
+
         // হসন্ত (্) handling for BanglaWord layout.
         // BanglaWord uses ্ as a dead key that can either:
         //   A) be typed directly (if layout maps the key to ্ directly)
         //   B) be combined silently with the next consonant
         // We accept all three valid scenarios:
-        const HASANTA = '\u09CD';
-        const normInput = (inputChar || '').normalize('NFC');
-        const normStep = (currentDrillStep.display || '').normalize('NFC');
-
         if (normStep === HASANTA) {
             const nextStep = currentDrill.steps[currentStepIndex + 1];
             const normNext = nextStep ? nextStep.display.normalize('NFC') : null;
@@ -244,6 +299,13 @@ export const VisualTypingDrill = ({ drills: initialDrills, lessonId, accuracyGoa
         if (isExpectingHasanta && isHasantaKey) {
             e.preventDefault();
             handleKeyPress('্');
+            return;
+        }
+
+        // Direct key 'q' for 'ক্ষ' in BanglaWord
+        if (e.code === 'KeyQ' && !e.shiftKey) {
+            e.preventDefault();
+            handleKeyPress('ক্ষ');
             return;
         }
 

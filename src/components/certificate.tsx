@@ -68,6 +68,7 @@ export default function Certificate({
         {/* Decorative Background Pattern */}
         <div
           className="absolute inset-0 m-2 rounded-lg -z-10 opacity-30 pointer-events-none"
+          aria-hidden="true"
           style={{
             backgroundImage:
               'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23dcb14a\' fill-opacity=\'0.2\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
@@ -81,7 +82,7 @@ export default function Certificate({
             সাফল্যের সনদপত্র
           </h1>
           <p className="text-xs sm:text-sm font-semibold tracking-widest text-gray-500 uppercase">
-            CERTIFICATE OF TYPING PROFICIENCY & MASTERY
+            CERTIFICATE OF TYPING PROFICIENCY &amp; MASTERY
           </p>
         </div>
 
@@ -96,7 +97,7 @@ export default function Certificate({
         {/* Body Text */}
         <div className="text-center text-base sm:text-lg text-gray-800 max-w-2xl mx-auto leading-relaxed">
           <p>
-            বাংলা কীবোর্ড টাইপিংয়ে অসাধারণ দক্ষতা ও নির্ভুলতার স্বীকৃতিস্বরূপ। তিনি সফলভাবে
+            বাংলা কীবোর্ড টাইপিংয়ে অসাধারণ দক্ষতা ও নির্ভুলতার স্বীকৃতিস্বরূপ। তিনি সফলভাবে
             <span className="font-bold text-gray-950 mx-1.5">{toBengaliNumber(wpm)} WPM</span> গতি এবং
             <span className="font-bold text-gray-950 mx-1.5">{toBengaliNumber(accuracy)}%</span> নির্ভুলতা অর্জন করেছেন।
           </p>
@@ -111,7 +112,7 @@ export default function Certificate({
           </div>
 
           <div className="text-center">
-            <Award className="h-16 w-16 text-yellow-600 mx-auto drop-shadow-sm" />
+            <Award className="h-16 w-16 text-yellow-600 mx-auto drop-shadow-sm" aria-hidden="true" />
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mt-1">
               OFFICIAL VERIFIED
             </span>

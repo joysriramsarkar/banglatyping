@@ -130,7 +130,7 @@ export function parseConjunct(conjunct: string): {
   const halants: number[] = [];
   let trailingKar: string | null = null;
 
-  const segments = bengaliSegmenter.segmentString(conjunct);
+  const segments = Array.from(conjunct);
   
   let i = 0;
   while (i < segments.length) {
@@ -197,7 +197,7 @@ export function normalizeBengaliString(text: string): string {
  * Check if a string is a Bengali conjunct (has halants)
  */
 export function isConjunct(text: string): boolean {
-  return bengaliSegmenter.segmentString(text).some(seg => isHalant(seg));
+  return /[\u09CD]/.test(text);
 }
 
 /**
@@ -206,7 +206,7 @@ export function isConjunct(text: string): boolean {
  * e.g., 'ক্ষ্ম' → ['ক', 'ষ্ম'] (keeps trailing conjunct parts)
  */
 export function splitConjunctByHalant(conjunct: string): string[] {
-  const segments = bengaliSegmenter.segmentString(conjunct);
+  const segments = Array.from(conjunct);
   const parts: string[] = [];
   let currentPart = '';
 
@@ -253,6 +253,64 @@ export const COMPLEX_CONJUNCT_MAP: Record<string, { components: string[]; descri
   'স্ট': { components: ['স', '্', 'ট'], description: 'Sa-Ta conjunct' },
   'স্থ': { components: ['স', '্', 'থ'], description: 'Sa-Tha conjunct' },
 };
+
+/**
+ * Set of fused/complex conjuncts (ligatures) where individual component characters
+ * merge into a distinct new visual glyph. These require the dedicated simulation screen (ক-ক্-ক্র, ট-ট্-ট্ট).
+ */
+export const COMPLEX_CONJUNCTS = new Set<string>([
+  // ক-বর্গ
+  'ক্ত', 'ক্র', 'ক্ষ', 'ক্ষ্ম', 'ঙ্ক', 'ঙ্গ', 'ঙ্ঘ', 'ঙ্ক্ষ',
+  // চ/ছ/জ/ঝ-বর্গ
+  'জ্ঞ', 'ঞ্চ', 'ঞ্ছ', 'ঞ্জ', 'ঞ্ঝ',
+  // ট/ঠ/ড/ঢ/ণ-বর্গ
+  'ট্ট', 'ণ্ড', 'ণ্ট', 'ণ্ঠ', 'ণ্ণ',
+  // ত/থ/দ/ধ-বর্গ
+  'ত্ত', 'ত্থ', 'ত্র', 'দ্ধ', 'ব্ধ', 'গ্ধ',
+  // শ/ষ/স-বর্গ
+  'ষ্ণ', 'ষ্ক', 'ষ্ট', 'ষ্ঠ',
+  // হ-বর্গ
+  'হ্ম', 'হ্ণ', 'হ্ন', 'হ্ল', 'হ্য', 'হৃ',
+  // অন্যান্য বিশেষ জটিল রূপ
+  'শ্র', 'ভ্র', 'গ্র', 'ব্র',
+]);
+
+/**
+ * Strips trailing vowel signs (কার) and auxiliary modifiers (ঁ, ং, ঃ) to get the bare conjunct root.
+ */
+export function getConjunctCore(cluster: string): string {
+  return cluster.replace(/[\u09BE-\u09CC\u0981-\u0983\u09D7]/g, '');
+}
+
+/**
+ * Checks if a grapheme cluster is a complex conjunct requiring the breakdown simulation screen.
+ */
+export function isComplexConjunct(cluster: string): boolean {
+  const core = getConjunctCore(cluster);
+  return COMPLEX_CONJUNCTS.has(core);
+}
+
+/**
+ * Checks if a grapheme cluster is a transparent/identifiable conjunct (e.g. 'প্ত', 'চ্ছ', 'জ্ব', 'প্র', 'দ্র', 'রু', 'রূ').
+ */
+export function isTransparentConjunct(cluster: string): boolean {
+  if (cluster.startsWith('রু') || cluster.startsWith('রূ')) return true;
+  return isConjunct(cluster) && !isComplexConjunct(cluster);
+}
+
+/**
+ * Checks if a grapheme cluster is a consonant with vowel sign (kar).
+ */
+export function isKarCluster(cluster: string): boolean {
+  const units = Array.from(cluster);
+  return (
+    units.length >= 2 &&
+    isBengaliConsonant(units[0]) &&
+    !units.some(u => isHalant(u)) &&
+    (units.some(u => isBengaliVowelSign(u)) || units.some(u => /[\u0981\u0982\u0983]/.test(u)))
+  );
+}
+
 
 /**
  * Vowel to Kar mapping for independent vowels formed with hasant (্) in BanglaWord / Bijoy
@@ -696,134 +754,152 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
   const isSingleCluster = bengaliSegmenter.segmentString(text).length <= 1;
 
   if (isSingleCluster) {
-    // 1. Circumfix marks with Top Mark (Chandrabindu ঁ) (e.g. 'ধোঁ' in 'ধোঁয়া', 'রোঁ', 'চোঁ', 'টোঁ')
-    if (hasBothSides && hasTopMark) {
-      const [start, end] = getConsonantCircumfixSpan(baseChar);
-      if (currentStep === 1) {
-        // Step 1: Consonant only -> highlight middle consonant, exclude left e-kar, right aa-kar, and top chandrabindu
-        return `polygon(${start}% ${topY}%, ${end}% ${topY}%, ${end}% 100%, ${start}% 100%)`;
+    if (!hasHalant) {
+      // 1. Circumfix marks with Top Mark (Chandrabindu ঁ) (e.g. 'ধোঁ' in 'ধোঁয়া', 'রোঁ', 'চোঁ', 'টোঁ')
+      if (hasBothSides && hasTopMark) {
+        const [start, end] = getConsonantCircumfixSpan(baseChar);
+        if (currentStep === 1) {
+          // Step 1: Consonant only -> highlight middle consonant, exclude left e-kar, right aa-kar, and top chandrabindu
+          return `polygon(${start}% ${topY}%, ${end}% ${topY}%, ${end}% 100%, ${start}% 100%)`;
+        }
+        if (currentStep === 2) {
+          // Step 2: Consonant + O-kar (e.g. 'ধো') -> highlight left e-kar, middle consonant, and right aa-kar; exclude top chandrabindu
+          return `polygon(0 0, ${start}% 0, ${start}% ${topY}%, ${end}% ${topY}%, ${end}% 0, 100% 0, 100% 100%, 0 100%)`;
+        }
       }
-      if (currentStep === 2) {
-        // Step 2: Consonant + O-kar (e.g. 'ধো') -> highlight left e-kar, middle consonant, and right aa-kar; exclude top chandrabindu
-        return `polygon(0 0, ${start}% 0, ${start}% ${topY}%, ${end}% ${topY}%, ${end}% 0, 100% 0, 100% 100%, 0 100%)`;
-      }
-    }
 
-    // 2. Post-base Aa-kar with Top Mark (Chandrabindu ঁ) (e.g. 'দাঁ', 'চাঁ', 'বাঁ', 'হাঁ', 'পাঁ')
-    if (hasAaKar && hasTopMark && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides) {
-      const pct = getConsonantAaRatio(baseChar);
-      if (currentStep === 1) {
-        // Step 1: Consonant only -> highlight consonant, exclude top chandrabindu and right aa-kar
+      // 2. Post-base Aa-kar with Top Mark (Chandrabindu ঁ) (e.g. 'দাঁ', 'চাঁ', 'বাঁ', 'হাঁ', 'পাঁ')
+      if (hasAaKar && hasTopMark && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides) {
+        const pct = getConsonantAaRatio(baseChar);
+        if (currentStep === 1) {
+          // Step 1: Consonant only -> highlight consonant, exclude top chandrabindu and right aa-kar
+          return `polygon(0 ${topY}%, ${pct}% ${topY}%, ${pct}% 100%, 0 100%)`;
+        }
+        if (currentStep === 2) {
+          // Step 2: Consonant + Aa-kar -> highlight consonant and aa-kar, exclude top chandrabindu
+          return `polygon(0 ${topY}%, ${pct}% ${topY}%, ${pct}% 0, 100% 0, 100% 100%, 0 100%)`;
+        }
+      }
+
+      // 3. Below-base marks with Top Mark (Chandrabindu ঁ) (e.g. 'কুঁ', 'পুঁ', 'ধুঁ')
+      if (hasBelowBaseVowel && hasTopMark && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides && !hasAaKar) {
+        if (currentStep === 1) {
+          // Step 1: Consonant only -> exclude bottom vowel and top chandrabindu
+          return `polygon(0 ${topY}%, 100% ${topY}%, 100% 68%, 0 68%)`;
+        }
+        if (currentStep === 2) {
+          // Step 2: Consonant + below-base vowel -> exclude top chandrabindu
+          return `polygon(0 ${topY}%, 100% ${topY}%, 100% 100%, 0 100%)`;
+        }
+      }
+
+      // 4. Pre-base marks with Top Mark (Chandrabindu ঁ) (e.g. 'পিঁ', 'শেঁ', 'টিঁ')
+      if ((hasPreBaseEorOi || hasHroshwoIKar) && hasTopMark && !hasBothSides && !hasAaKar) {
+        const start = hasHroshwoIKar ? getConsonantHroshwoIOffset(baseChar) : getConsonantELeftOffset(baseChar);
+        if (currentStep === 1) {
+          // Step 1: Consonant only -> exclude left mark and top chandrabindu
+          if (hasHroshwoIKar && (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ')) {
+            return `polygon(${start}% ${topY}%, 46% ${topY}%, 46% 0, 78% 0, 78% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
+          }
+          return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
+        }
+        if (currentStep === 2) {
+          // Step 2: Mark + consonant -> exclude top chandrabindu
+          return `polygon(0 0, ${start}% 0, ${start}% ${topY}%, 100% ${topY}%, 100% 100%, 0 100%)`;
+        }
+      }
+
+      // 5. Below-base mark with Anusvara/Visarga (e.g. 'দুঃ' in 'দুঃখ')
+      if (hasBelowBaseVowel && hasAnusvaraOrVisarga && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides) {
+        const pct = getConsonantAnusvaraRatio(baseChar);
+        if (currentStep === 1) {
+          // Step 1: Consonant only -> exclude bottom vowel and right visarga/anusvara
+          return `polygon(0 0, ${pct}% 0, ${pct}% 68%, 0 68%)`;
+        }
+        if (currentStep === 2) {
+          // Step 2: Consonant + below-base mark -> exclude right visarga/anusvara
+          return `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
+        }
+      }
+
+      // 6. Post-base Aa-kar 'া' alone (e.g. 'ডা', 'ফা', 'সা', 'কা', 'মা', 'বা', 'লা', 'চা', 'দা'):
+      if (hasAaKar && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides && !hasTopMark) {
+        const pct = getConsonantAaRatio(baseChar);
+        return `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
+      }
+
+      // 7. Below-base marks alone (e.g. 'টূ', 'কু', 'কৃ', 'ক্', 'মৃ', 'পূ'):
+      if ((hasBelowBaseVowel || (hasHalant && !hasAaKar && !hasDirghoIKar && !hasHroshwoIKar && !hasPreBaseEorOi)) && !hasPreBaseEorOi && !hasHroshwoIKar && !hasAaKar && !hasAnusvaraOrVisarga && !hasDirghoIKar && !hasBothSides && !hasTopMark && totalSteps === 2) {
+        return 'polygon(0 0, 100% 0, 100% 68%, 0 68%)';
+      }
+
+      // 8. Post-base Anusvara 'ং' and Visarga 'ঃ' alone (e.g. 'টং', 'রং', 'চং', 'দং', 'সং', 'বং', 'দঃ'):
+      if (hasAnusvaraOrVisarga && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides && !hasTopMark && !hasBelowBaseVowel) {
+        const pct = getConsonantAnusvaraRatio(baseChar);
+        return `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
+      }
+
+      // 9. Post-base Dirgho-I kar 'ী' (e.g. 'কী', 'টী', 'সী', 'দী', 'ক্ষী'):
+      // Accurately clips below topY so the top arch/loop of 'ী' never turns green prematurely,
+      // while keeping the consonant's top matra 100% full and uncut.
+      if (hasDirghoIKar && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides) {
+        const pct = getConsonantDirghoIRatio(baseChar);
         return `polygon(0 ${topY}%, ${pct}% ${topY}%, ${pct}% 100%, 0 100%)`;
       }
-      if (currentStep === 2) {
-        // Step 2: Consonant + Aa-kar -> highlight consonant and aa-kar, exclude top chandrabindu
-        return `polygon(0 ${topY}%, ${pct}% ${topY}%, ${pct}% 0, 100% 0, 100% 100%, 0 100%)`;
-      }
-    }
 
-    // 3. Below-base marks with Top Mark (Chandrabindu ঁ) (e.g. 'কুঁ', 'পুঁ', 'ধুঁ')
-    if (hasBelowBaseVowel && hasTopMark && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides && !hasAaKar) {
-      if (currentStep === 1) {
-        // Step 1: Consonant only -> exclude bottom vowel and top chandrabindu
-        return `polygon(0 ${topY}%, 100% ${topY}%, 100% 68%, 0 68%)`;
+      // 10. Pre-base E-kar 'ে' and Oi-kar 'ৈ' (e.g. 'টে', 'চে', 'দে', 'সে', 'বে', 'রে', 'কে', 'তৈ', 'বৈ'):
+      // For Oi-kar 'ৈ', clips below topY so its upper plume remains cleanly uncolored until typed.
+      if (hasPreBaseEorOi && !hasAaKar && !hasAnusvaraOrVisarga && !hasBothSides) {
+        const start = getConsonantELeftOffset(baseChar);
+        if (hasOiKar) {
+          return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
+        }
+        return `polygon(${start}% 0, 100% 0, 100% 100%, ${start}% 100%)`;
       }
-      if (currentStep === 2) {
-        // Step 2: Consonant + below-base vowel -> exclude top chandrabindu
-        return `polygon(0 ${topY}%, 100% ${topY}%, 100% 100%, 0 100%)`;
-      }
-    }
 
-    // 4. Pre-base marks with Top Mark (Chandrabindu ঁ) (e.g. 'পিঁ', 'শেঁ', 'টিঁ')
-    if ((hasPreBaseEorOi || hasHroshwoIKar) && hasTopMark && !hasBothSides && !hasAaKar) {
-      const start = hasHroshwoIKar ? getConsonantHroshwoIOffset(baseChar) : getConsonantELeftOffset(baseChar);
-      if (currentStep === 1) {
-        // Step 1: Consonant only -> exclude left mark and top chandrabindu
-        if (hasHroshwoIKar && (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ')) {
+      // 11. Pre-base Hroshwo-I kar 'ি' (e.g. 'টি', 'কি', 'চি', 'দি', 'সি', 'বি', 'রি', 'ড়ি', 'পি'):
+      // Clips below topY so the top umbrella arch of 'ি' remains cleanly uncolored until 'ি' is typed!
+      // For 'ট', 'ঠ', 'ড', 'ঢ', their distinctive upper horn/টিঁকি extends above the matra to 0%
+      // between 46% and 78% width, while the umbrella curve of 'ি' stays on the left (0 to 46%).
+      // We use a notched polygon that covers 100% of the consonant (including its top horn)
+      // without ever touching the umbrella or left stem of 'ি'!
+      if (hasHroshwoIKar && !hasAaKar && !hasAnusvaraOrVisarga && !hasBothSides) {
+        const start = getConsonantHroshwoIOffset(baseChar);
+        if (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ') {
           return `polygon(${start}% ${topY}%, 46% ${topY}%, 46% 0, 78% 0, 78% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
         }
         return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
       }
-      if (currentStep === 2) {
-        // Step 2: Mark + consonant -> exclude top chandrabindu
-        return `polygon(0 0, ${start}% 0, ${start}% ${topY}%, 100% ${topY}%, 100% 100%, 0 100%)`;
+
+      // 12. Circumfix marks (e.g. 'টো', 'টৌ', 'চো', 'দো', 'সো', 'বো', 'কো', 'মৌ'):
+      if (hasBothSides) {
+        const [start, end] = getConsonantCircumfixSpan(baseChar);
+        if (hasOuKar) {
+          return `polygon(${start}% ${topY}%, ${end}% ${topY}%, ${end}% 100%, ${start}% 100%)`;
+        }
+        return `polygon(${start}% 0, ${end}% 0, ${end}% 100%, ${start}% 100%)`;
+      }
+
+      // 13. Top mark alone (chandrabindu ঁ, e.g. 'টঁ', 'হঁ'):
+      if (hasTopMark) {
+        return `polygon(0 ${topY}%, 100% ${topY}%, 100% 100%, 0 100%)`;
       }
     }
 
-    // 5. Below-base mark with Anusvara/Visarga (e.g. 'দুঃ' in 'দুঃখ')
-    if (hasBelowBaseVowel && hasAnusvaraOrVisarga && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides) {
-      const pct = getConsonantAnusvaraRatio(baseChar);
-      if (currentStep === 1) {
-        // Step 1: Consonant only -> exclude bottom vowel and right visarga/anusvara
-        return `polygon(0 0, ${pct}% 0, ${pct}% 68%, 0 68%)`;
+    // 14. Conjunct clusters (with halants, e.g. 'প্ত', 'চ্ছ', 'জ্ব', 'প্র', 'দ্র', 'ব্দ', 'স্প', 'স্থ', 'শ্রে', 'ব্রা'):
+    if (hasHalant && isConjunct(text)) {
+      if (currentStep >= totalSteps) {
+        return `polygon(0 0, 100% 0, 100% 100%, 0 100%)`;
       }
-      if (currentStep === 2) {
-        // Step 2: Consonant + below-base mark -> exclude right visarga/anusvara
-        return `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
+      if (currentStep <= 2) {
+        if (/^[পদচজ]/.test(baseChar) || text.includes('্র') || text.includes('্ব')) {
+          const splitHeight = (text.includes('্র') || text.includes('্ব')) ? 72 : 58;
+          return `polygon(0 0, 100% 0, 100% ${splitHeight}%, 0 ${splitHeight}%)`;
+        }
+        return `polygon(0 0, 52% 0, 52% 100%, 0 100%)`;
       }
-    }
-
-    // 6. Post-base Aa-kar 'া' alone (e.g. 'ডা', 'ফা', 'সা', 'কা', 'মা', 'বা', 'লা', 'চা', 'দা'):
-    if (hasAaKar && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides && !hasTopMark) {
-      const pct = getConsonantAaRatio(baseChar);
-      return `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
-    }
-
-    // 7. Below-base marks alone (e.g. 'টূ', 'কু', 'কৃ', 'ক্', 'মৃ', 'পূ'):
-    if ((hasBelowBaseVowel || (hasHalant && !hasAaKar && !hasDirghoIKar && !hasHroshwoIKar && !hasPreBaseEorOi)) && !hasPreBaseEorOi && !hasHroshwoIKar && !hasAaKar && !hasAnusvaraOrVisarga && !hasDirghoIKar && !hasBothSides && !hasTopMark && totalSteps === 2) {
-      return 'polygon(0 0, 100% 0, 100% 68%, 0 68%)';
-    }
-
-    // 8. Post-base Anusvara 'ং' and Visarga 'ঃ' alone (e.g. 'টং', 'রং', 'চং', 'দং', 'সং', 'বং', 'দঃ'):
-    if (hasAnusvaraOrVisarga && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides && !hasTopMark && !hasBelowBaseVowel) {
-      const pct = getConsonantAnusvaraRatio(baseChar);
-      return `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
-    }
-
-    // 9. Post-base Dirgho-I kar 'ী' (e.g. 'কী', 'টী', 'সী', 'দী', 'ক্ষী'):
-    // Accurately clips below topY so the top arch/loop of 'ী' never turns green prematurely,
-    // while keeping the consonant's top matra 100% full and uncut.
-    if (hasDirghoIKar && !hasPreBaseEorOi && !hasHroshwoIKar && !hasBothSides) {
-      const pct = getConsonantDirghoIRatio(baseChar);
-      return `polygon(0 ${topY}%, ${pct}% ${topY}%, ${pct}% 100%, 0 100%)`;
-    }
-
-    // 10. Pre-base E-kar 'ে' and Oi-kar 'ৈ' (e.g. 'টে', 'চে', 'দে', 'সে', 'বে', 'রে', 'কে', 'তৈ', 'বৈ'):
-    // For Oi-kar 'ৈ', clips below topY so its upper plume remains cleanly uncolored until typed.
-    if (hasPreBaseEorOi && !hasAaKar && !hasAnusvaraOrVisarga && !hasBothSides) {
-      const start = getConsonantELeftOffset(baseChar);
-      if (hasOiKar) {
-        return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
-      }
-      return `polygon(${start}% 0, 100% 0, 100% 100%, ${start}% 100%)`;
-    }
-
-    // 11. Pre-base Hroshwo-I kar 'ি' (e.g. 'টি', 'কি', 'চি', 'দি', 'সি', 'বি', 'রি', 'ড়ি', 'পি'):
-    // Clips below topY so the top umbrella arch of 'ি' remains cleanly uncolored until 'ি' is typed!
-    // For 'ট', 'ঠ', 'ড', 'ঢ', their distinctive upper horn/টিঁকি extends above the matra to 0%
-    // between 46% and 78% width, while the umbrella curve of 'ি' stays on the left (0 to 46%).
-    // We use a notched polygon that covers 100% of the consonant (including its top horn)
-    // without ever touching the umbrella or left stem of 'ি'!
-    if (hasHroshwoIKar && !hasAaKar && !hasAnusvaraOrVisarga && !hasBothSides) {
-      const start = getConsonantHroshwoIOffset(baseChar);
-      if (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ') {
-        return `polygon(${start}% ${topY}%, 46% ${topY}%, 46% 0, 78% 0, 78% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
-      }
-      return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
-    }
-
-    // 12. Circumfix marks (e.g. 'টো', 'টৌ', 'চো', 'দো', 'সো', 'বো', 'কো', 'মৌ'):
-    if (hasBothSides) {
-      const [start, end] = getConsonantCircumfixSpan(baseChar);
-      if (hasOuKar) {
-        return `polygon(${start}% ${topY}%, ${end}% ${topY}%, ${end}% 100%, ${start}% 100%)`;
-      }
-      return `polygon(${start}% 0, ${end}% 0, ${end}% 100%, ${start}% 100%)`;
-    }
-
-    // 13. Top mark alone (chandrabindu ঁ, e.g. 'টঁ', 'হঁ'):
-    if (hasTopMark) {
-      return `polygon(0 ${topY}%, 100% ${topY}%, 100% 100%, 0 100%)`;
+      const xPct = Math.round((currentStep / totalSteps) * 100);
+      return `polygon(0 0, ${xPct}% 0, ${xPct}% 100%, 0 100%)`;
     }
   }
 
@@ -845,8 +921,9 @@ export interface GraphemePart {
 }
 
 export interface ConjunctStep {
-  label: string;    // e.g. "ক", "ক্", "ক্ত"
+  label: string;    // e.g. "ক", "ক্", "র" / "ষ", "্", "ঠ", "া"
   completed: boolean;
+  active?: boolean;
 }
 
 export type GraphemeKind = "simple" | "kar" | "conjunct";
@@ -855,7 +932,12 @@ export interface GraphemeRenderModel {
   full: string;
   kind: GraphemeKind;
   parts: GraphemePart[];
-  conjunctSteps?: ConjunctStep[]; // শুধু conjunct-এর জন্য
+  conjunctSteps?: ConjunctStep[]; // শুধু complex conjunct-এর সিমুলেশনের জন্য
+  currentStep?: number;
+  totalSteps?: number;
+  hasPendingHalant?: boolean;
+  isComplex?: boolean;
+  specialHint?: string;
 }
 
 /**
@@ -866,120 +948,121 @@ export interface GraphemeRenderModel {
  *       "ক্ষ্ম" → ["ক", "্", "ষ", "্", "ম"]
  *       "কা" → ["ক", "া"]
  */
-function extractTypingUnits(cluster: string): string[] {
-  // Use Array.from to split by UTF-16 code units but handle surrogates correctly
-  // For Bengali, all characters are in BMP so Array.from is fine here
+export function extractTypingUnits(cluster: string): string[] {
   return Array.from(cluster);
 }
 
 /**
- * Build intermediate conjunct steps for a multi-consonant cluster.
- * e.g. "ক্ত" → ["ক", "ক্", "ক্ত"]
- *      "ক্ষ্ম" → ["ক", "ক্", "ক্ষ", "ক্ষ্", "ক্ষ্ম"]
- *
- * Each step represents a meaningful intermediate typing state.
+ * Build component decomposition simulation steps for a complex conjunct.
+ * Formula specification:
+ * - 2-consonant conjuncts: "ক + ক্ + র = ক্র", "ক + ক্ + ত = ক্ত", "ক + ক্ + ষ = ক্ষ"
+ * - Clusters with kars or >2 consonants: "ষ + ্ + ঠ + া = ষ্ঠা", "শ + ্ + র + ে = শ্রে", "ব + ্ + র + া = ব্রা"
  */
-function buildConjunctSteps(cluster: string): string[] {
-  const units = extractTypingUnits(cluster);
-  const steps: string[] = [];
-  let accumulated = '';
+export function buildConjunctSimulationSteps(
+  cluster: string,
+  typedSoFar: string
+): ConjunctStep[] {
+  const normCluster = normalizeBengaliString(cluster);
+  const normTyped = normalizeBengaliString(typedSoFar);
+  const units = extractTypingUnits(normCluster);
+  const typedUnits = extractTypingUnits(normTyped);
 
-  for (let i = 0; i < units.length; i++) {
-    accumulated += units[i];
-    // After each consonant or at the end of a halant group, record a step
-    // A "meaningful" step is after: consonant alone, consonant+halant, full cluster
-    const ch = units[i];
-    const nextCh = units[i + 1];
-
-    // Record after consonant (but not if immediately followed by halant — wait for halant)
-    // Actually record after every unit for full granularity matching typing sequence
-    // We record: consonant (if next is halant, skip — let halant complete the step)
-    // But actually for display: show each intermediate state the user types through
-    if (isHalant(ch)) {
-      // After halant: record "ক্" state
-      steps.push(accumulated);
-    } else if (isBengaliConsonant(ch)) {
-      if (!isHalant(nextCh || '')) {
-        // Consonant not followed by halant → record (e.g. last consonant of cluster, or vowel sign)
-        steps.push(accumulated);
-      }
-      // If next is halant, don't record yet — wait for halant step
-    } else if (isBengaliVowelSign(ch)) {
-      steps.push(accumulated);
+  // Determine token breakdown formula
+  const tokens: string[] = [];
+  if (units.length === 3 && units[1] === '\u09CD') {
+    // 2-consonant conjunct formula: [C1, C1্, C2] e.g. ["ক", "ক্", "র"] or ["ক", "ক্", "ত"]
+    tokens.push(units[0]);
+    tokens.push(units[0] + '\u09CD');
+    tokens.push(units[2]);
+  } else {
+    // Clusters with trailing kar or >2 consonants: [C1, ্, C2, ...] e.g. ["ষ", "্", "ঠ", "া"]
+    for (const u of units) {
+      tokens.push(u);
     }
   }
 
-  // Ensure full cluster is always the last step
-  if (steps.length === 0 || steps[steps.length - 1] !== cluster) {
-    steps.push(cluster);
-  }
+  const isFullyTyped = normTyped === normCluster || (normCluster.length > 0 && normTyped.startsWith(normCluster));
 
-  return steps;
+  let activeAssigned = false;
+  return tokens.map((label, idx) => {
+    let completed = false;
+    let active = false;
+
+    if (isFullyTyped) {
+      completed = true;
+    } else if (units.length === 3 && units[1] === '\u09CD') {
+      // 2-consonant conjunct tracking:
+      // idx 0 ('ক'): completed if typedUnits >= 1
+      // idx 1 ('ক্'): completed if typedUnits >= 2
+      // idx 2 ('র'): completed if typedUnits >= 3
+      if (typedUnits.length > idx) {
+        completed = true;
+      } else if (!activeAssigned) {
+        active = true;
+        activeAssigned = true;
+      }
+    } else {
+      // Direct unit-by-unit tracking
+      if (typedUnits.length > idx) {
+        completed = true;
+      } else if (!activeAssigned) {
+        active = true;
+        activeAssigned = true;
+      }
+    }
+
+    return {
+      label,
+      completed,
+      active,
+    };
+  });
 }
 
 /**
  * Build a GraphemeRenderModel for a target cluster and how much the user has typed so far.
  *
- * @param cluster  - The normalized target grapheme cluster (e.g. "টি", "ক্ত")
+ * @param cluster  - The normalized target grapheme cluster (e.g. "টি", "প্ত", "ক্ত", "ক্র")
  * @param typedSoFar - The normalized string the user has typed into this cluster so far
  */
 export function buildGraphemeRenderModel(
   cluster: string,
   typedSoFar: string
 ): GraphemeRenderModel {
-  const units = extractTypingUnits(cluster);
-  const typedUnits = extractTypingUnits(typedSoFar);
+  const normCluster = normalizeBengaliString(cluster);
+  const normTyped = normalizeBengaliString(typedSoFar);
+  const units = extractTypingUnits(normCluster);
+  const typedUnits = extractTypingUnits(normTyped);
 
-  // ── Determine kind ──────────────────────────────────────────────────────────
-  const hasHalantChar = units.some(u => isHalant(u));
+  const isComplex = isComplexConjunct(normCluster);
+  const isConj = isConjunct(normCluster) || normCluster === 'রু' || normCluster === 'রূ';
+  const isKar = isKarCluster(normCluster);
 
   let kind: GraphemeKind;
-  if (hasHalantChar && units.filter(u => isBengaliConsonant(u)).length >= 2) {
+  if (isComplex || isConj) {
     kind = 'conjunct';
-  } else if (
-    units.length >= 2 &&
-    isBengaliConsonant(units[0]) &&
-    (isBengaliVowelSign(units[units.length - 1]) ||
-      /[\u0981\u0982\u0983]/.test(units[units.length - 1]))
-  ) {
+  } else if (isKar) {
     kind = 'kar';
   } else {
     kind = 'simple';
   }
 
-  // ── Build parts (typed / current / pending) ─────────────────────────────────
-  const parts: GraphemePart[] = [];
+  const fullyTyped = normTyped === normCluster;
+  const currentStep = typedUnits.length;
+  const totalSteps = units.length;
+  const hasPendingHalant = !isComplex && isConj && normTyped.endsWith('্') && !fullyTyped;
 
-  if (kind === 'conjunct') {
-    // For conjunct: the whole cluster is displayed as one glyph (full), plus decomposition steps.
-    // Parts here represent the full cluster in a single part with overall state.
-    const fullyTyped = typedSoFar === cluster;
-    const partiallyTyped = typedSoFar.length > 0 && cluster.startsWith(typedSoFar) && !fullyTyped;
-    parts.push({
-      text: cluster,
-      state: fullyTyped ? 'typed' : partiallyTyped ? 'current' : 'pending',
-    });
+  let conjunctSteps: ConjunctStep[] | undefined = undefined;
+  let specialHint: string | undefined = undefined;
 
-    // Build decomposition steps
-    const stepLabels = buildConjunctSteps(cluster);
-    const conjunctSteps: ConjunctStep[] = stepLabels.map(label => ({
-      label,
-      completed: typedSoFar.length > 0 && (
-        typedSoFar === label ||
-        label.length < typedSoFar.length ||
-        (typedSoFar.startsWith(label) && label !== cluster)
-      ),
-    }));
-
-    return {
-      full: cluster,
-      kind,
-      parts,
-      conjunctSteps,
-    };
+  if (isComplex) {
+    conjunctSteps = buildConjunctSimulationSteps(normCluster, normTyped);
+    if (normCluster.includes('ক্ষ')) {
+      specialHint = "বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক + ্ + ষ";
+    }
   }
 
-  // ── simple / kar: render parts individually ─────────────────────────────────
+  const parts: GraphemePart[] = [];
   for (let i = 0; i < units.length; i++) {
     const unit = units[i];
     let state: GraphemePartState;
@@ -996,8 +1079,15 @@ export function buildGraphemeRenderModel(
   }
 
   return {
-    full: cluster,
+    full: normCluster,
     kind,
     parts,
+    conjunctSteps,
+    currentStep,
+    totalSteps,
+    hasPendingHalant,
+    isComplex,
+    specialHint,
   };
 }
+

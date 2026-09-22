@@ -10,8 +10,8 @@ import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { DrillProgress } from "./DrillProgress";
 import { useWordDrill } from "./use-word-drill";
 
-import { normalizeBengaliString, bengaliSegmenter, buildGraphemeRenderModel } from "@/lib/bengali-grapheme";
-import { GraphemeDisplay } from "@/components/lessons/GraphemeDisplay";
+import { normalizeBengaliString, bengaliSegmenter, buildGraphemeRenderModel, isComplexConjunct } from "@/lib/bengali-grapheme";
+import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
 import { cn } from "@/lib/utils";
 
 const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; isCurrent: boolean; userInput: string; isError: boolean }) => {
@@ -82,10 +82,22 @@ const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; is
                         }
                     }
 
+                    const isNextActive = cIdx === inputClusters.length;
+                    if (isNextActive && isComplexConjunct(normCluster)) {
+                        const renderModel = buildGraphemeRenderModel(normCluster, "");
+                        return (
+                            <GraphemeDisplay
+                                key={`wd-${cIdx}`}
+                                model={renderModel}
+                                isError={isError}
+                            />
+                        );
+                    }
+
                     return (
                         <span
                             key={`wd-${cIdx}`}
-                            className={cIdx === inputClusters.length ? "text-foreground font-black" : "text-muted-foreground/40"}
+                            className={isNextActive ? "text-foreground font-black" : "text-muted-foreground/40"}
                         >
                             {cluster}
                         </span>
@@ -143,11 +155,13 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
              <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
                  <div className="flex-1 w-full min-w-0 space-y-5">
                       {/* Word Display */}
-                    <div className="flex items-center justify-center gap-2 bg-background p-4 sm:p-6 rounded-xl min-h-[90px] flex-wrap border shadow-xs">
+                    <div className="flex flex-col items-center justify-center gap-3 bg-background p-4 sm:p-6 rounded-xl min-h-[90px] border shadow-xs">
+                       <div className="flex items-center justify-center gap-2 flex-wrap">
                        {(() => {
                            const currentPrompt = drills[currentDrillIndex]?.prompt;
                            const isSentence = currentPrompt?.trim().includes(" ") || currentPrompt?.includes("।");
-                           const visibleCount = isSentence ? 1 : 4;
+                           // Exactly 2 words in view for word exercises
+                           const visibleCount = isSentence ? 1 : 2;
                            return drills.slice(currentDrillIndex, currentDrillIndex + visibleCount).map((drill, index) => (
                                <WordDisplay
                                     key={`${drill.prompt}-${currentDrillIndex + index}`}
@@ -158,6 +172,41 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                                />
                            ));
                        })()}
+                       </div>
+
+                       {/* Standalone Conjunct Simulation Box (docked cleanly below word prompt) */}
+                       {(() => {
+                           const currentPrompt = drills[currentDrillIndex]?.prompt;
+                           if (!currentPrompt || currentPrompt.trim() === '') return null;
+                           const normPrompt = normalizeBengaliString(currentPrompt);
+                           const normInput = normalizeBengaliString(userInput);
+                           const targetClusters = bengaliSegmenter.segmentString(normPrompt);
+                           const inputClusters = bengaliSegmenter.segmentString(normInput);
+
+                           let activeIdx = inputClusters.length;
+                           if (inputClusters.length > 0) {
+                               const lastInput = normalizeBengaliString(inputClusters[inputClusters.length - 1]);
+                               const targetClusterAtLast = normalizeBengaliString(targetClusters[inputClusters.length - 1] || "");
+                               if (targetClusterAtLast.startsWith(lastInput) && lastInput !== targetClusterAtLast) {
+                                   activeIdx = inputClusters.length - 1;
+                               }
+                           }
+
+                           const activeCluster = targetClusters[activeIdx];
+                           if (!activeCluster) return null;
+                           const normCluster = normalizeBengaliString(activeCluster);
+                           if (isComplexConjunct(normCluster)) {
+                               const typedInCluster = activeIdx < inputClusters.length ? normalizeBengaliString(inputClusters[activeIdx]) : "";
+                               const simModel = buildGraphemeRenderModel(normCluster, typedInCluster);
+                               return (
+                                   <div className="flex justify-center pt-1">
+                                       <ConjunctSimulationBox model={simModel} />
+                                   </div>
+                               );
+                           }
+                           return null;
+                       })()}
+
                        <Input
                         type="text"
                         className="absolute w-0 h-0 p-0 m-0 border-0 opacity-0"

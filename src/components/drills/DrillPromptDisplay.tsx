@@ -3,8 +3,9 @@ import { CheckCircle } from "lucide-react";
 import { cn, toBengaliNumber } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import type { Drill } from "@/lib/types";
-import { buildGraphemeRenderModel, bengaliSegmenter, normalizeBengaliString } from "@/lib/bengali-grapheme";
-import { GraphemeDisplay } from "@/components/lessons/GraphemeDisplay";
+import { buildGraphemeRenderModel, bengaliSegmenter, normalizeBengaliString, isComplexConjunct } from "@/lib/bengali-grapheme";
+import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
+import { getStepsForWord } from "@/lib/lessons";
 
 interface DrillPromptDisplayProps {
     drills: Drill[];
@@ -14,11 +15,30 @@ interface DrillPromptDisplayProps {
 }
 
 export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, currentDrillIndex, currentStepIndex = 0, status }) => {
+    const isWordDrills = React.useMemo(() => {
+        return drills.some(d => d.prompt.trim().length > 1);
+    }, [drills]);
+
     const getVisibleDrills = () => {
+        if (!isWordDrills) {
+            // For single characters, show 5 items in a chunk
+            const visible: Drill[] = [];
+            const startIndex = Math.floor(currentDrillIndex / 5) * 5;
+            for (let i = startIndex; i < startIndex + 5 && i < drills.length; i++) {
+                visible.push(drills[i]);
+            }
+            return visible;
+        }
+
+        // For words: show EXACTLY 2 words at a time! (current word + space + next word)
         const visible: Drill[] = [];
-        const startIndex = Math.floor(currentDrillIndex / 10) * 10;
-        for(let i = startIndex; i < startIndex + 10 && i < drills.length; i++) {
+        let wordsCount = 0;
+        for (let i = currentDrillIndex; i < drills.length; i++) {
             visible.push(drills[i]);
+            if (drills[i].prompt.trim() !== '') {
+                wordsCount++;
+                if (wordsCount >= 2) break;
+            }
         }
         return visible;
     };
@@ -76,16 +96,19 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                     <span className="relative inline-flex items-center justify-center leading-none whitespace-pre">
                         {(() => {
                             const clusters = bengaliSegmenter.segmentString(normalizeBengaliString(drillData.prompt));
-                            // টাইপ করা characters সংখ্যা grapheme-aware পদ্ধতিতে বের করা
-                            const typedClusters = clusters.slice(0, currentStepIndex);
-                            const typedSoFar = typedClusters.join('');
+                            let stepOffset = 0;
 
                             return clusters.map((cluster, cIdx) => {
                                 const normCluster = normalizeBengaliString(cluster);
+                                const clusterSteps = getStepsForWord(cluster);
+                                const clusterStepCount = Math.max(1, clusterSteps.length);
+                                const clusterStart = stepOffset;
+                                const clusterEnd = stepOffset + clusterStepCount;
+                                stepOffset = clusterEnd;
 
                                 // Inter-word space character
                                 if (cluster === ' ' || cluster === '\u00A0' || !cluster.trim()) {
-                                    const isTyped = cIdx < currentStepIndex;
+                                    const isTyped = currentStepIndex >= clusterEnd;
                                     return (
                                         <span
                                             key={`drill-c-${cIdx}`}
@@ -105,8 +128,8 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                                     );
                                 }
 
-                                // Fully typed cluster → pure green
-                                if (cIdx < currentStepIndex) {
+                                // 1. Fully typed cluster → pure green
+                                if (currentStepIndex >= clusterEnd) {
                                     return (
                                         <span key={`drill-c-${cIdx}`} className="text-green-600 dark:text-green-400 font-black">
                                             {cluster}
@@ -114,39 +137,32 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                                     );
                                 }
 
-                                // Untyped cluster → next active or muted
-                                if (cIdx > currentStepIndex) {
+                                // 2. Untyped future cluster
+                                if (currentStepIndex <= clusterStart) {
+                                    const isNextActive = clusterStart === currentStepIndex;
                                     return (
                                         <span
                                             key={`drill-c-${cIdx}`}
-                                            className="text-muted-foreground/40 dark:text-muted-foreground/45"
+                                            className={cn(
+                                                isNextActive
+                                                    ? "text-foreground font-black"
+                                                    : "text-muted-foreground/40 dark:text-muted-foreground/45"
+                                            )}
                                         >
                                             {cluster}
                                         </span>
                                     );
                                 }
 
-                                // cIdx === currentStepIndex → current cluster being typed
-                                // Check for intra-cluster partial progress
-                                const partialTyped = typedSoFar.slice(typedClusters.join('').length);
-                                if (partialTyped && normCluster.startsWith(normalizeBengaliString(partialTyped)) && normalizeBengaliString(partialTyped) !== normCluster) {
-                                    const renderModel = buildGraphemeRenderModel(normCluster, normalizeBengaliString(partialTyped));
-                                    return (
-                                        <GraphemeDisplay
-                                            key={`drill-c-${cIdx}`}
-                                            model={renderModel}
-                                        />
-                                    );
-                                }
-
-                                // Current cluster, not yet started → foreground
+                                // 3. Partially typed active cluster (currentStepIndex > clusterStart && currentStepIndex < clusterEnd)
+                                const stepsTypedInCluster = currentStepIndex - clusterStart;
+                                const typedInCluster = clusterSteps.slice(0, stepsTypedInCluster).map(s => s.display).join('');
+                                const renderModel = buildGraphemeRenderModel(normCluster, normalizeBengaliString(typedInCluster));
                                 return (
-                                    <span
+                                    <GraphemeDisplay
                                         key={`drill-c-${cIdx}`}
-                                        className="text-foreground font-black"
-                                    >
-                                        {cluster}
-                                    </span>
+                                        model={renderModel}
+                                    />
                                 );
                             });
                         })()}
@@ -159,19 +175,37 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
     };
 
     const visibleDrills = getVisibleDrills();
-    const promptsWithSpacers: (Drill | {isSpacer: true})[] = [];
-    visibleDrills.forEach((drill, index) => {
-        promptsWithSpacers.push(drill);
-        const originalIndex = drills.indexOf(drill);
-        if (drill.prompt === ' ' && (originalIndex + 1) % 5 === 0 && index < visibleDrills.length - 1) {
-           promptsWithSpacers.push({ isSpacer: true });
-        }
-    });
-
     const progressPercent = Math.min(100, Math.round((currentDrillIndex / Math.max(1, drills.length)) * 100));
 
+    // Calculate active complex conjunct model for docked simulation box
+    const activeComplexModel = (() => {
+        const currentDrill = drills[currentDrillIndex];
+        if (!currentDrill || currentDrill.prompt === ' ') return null;
+        const normPrompt = normalizeBengaliString(currentDrill.prompt);
+        const clusters = bengaliSegmenter.segmentString(normPrompt);
+
+        let stepOffset = 0;
+        for (const cluster of clusters) {
+            const normCluster = normalizeBengaliString(cluster);
+            const clusterSteps = getStepsForWord(cluster);
+            const clusterStepCount = Math.max(1, clusterSteps.length);
+            const clusterEnd = stepOffset + clusterStepCount;
+
+            if (currentStepIndex >= stepOffset && currentStepIndex < clusterEnd) {
+                if (isComplexConjunct(normCluster)) {
+                    const stepsTypedInCluster = currentStepIndex - stepOffset;
+                    const typedInCluster = clusterSteps.slice(0, stepsTypedInCluster).map(s => s.display).join('');
+                    return buildGraphemeRenderModel(normCluster, normalizeBengaliString(typedInCluster));
+                }
+                return null;
+            }
+            stepOffset = clusterEnd;
+        }
+        return null;
+    })();
+
     return (
-        <div className="space-y-3 bg-card p-5 sm:p-7 rounded-2xl border shadow-xs transition-all">
+        <div className="space-y-4 bg-card p-5 sm:p-7 rounded-2xl border shadow-xs transition-all">
             {/* Real-time Progress Bar and Counter Header */}
             <div className="space-y-1.5 pb-2 border-b">
                 <div className="flex items-center justify-between text-xs sm:text-sm font-medium">
@@ -196,18 +230,22 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
                 <Progress value={progressPercent} className="h-1.5 bg-muted" />
             </div>
 
-            {/* Prompt Cards */}
+            {/* Prompt Cards: Exactly 2 words in view */}
             <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap pt-2">
-                {promptsWithSpacers.map((item, index) => {
-                     if ('isSpacer' in item) {
-                        return <div key={`spacer-${index}`} className="w-full h-1" />
-                    }
+                {visibleDrills.map((item) => {
                     const originalIndex = drills.indexOf(item);
                     const isCurrent = currentDrillIndex === originalIndex;
                     const isCompleted = originalIndex < currentDrillIndex;
                     return renderDrillPrompt(item, isCurrent, isCompleted, `${item.prompt}-${originalIndex}`);
                 })}
             </div>
+
+            {/* Standalone Conjunct Simulation Box (docked below prompt cards) */}
+            {activeComplexModel && (
+                <div className="flex justify-center pt-2">
+                    <ConjunctSimulationBox model={activeComplexModel} />
+                </div>
+            )}
         </div>
     );
 };

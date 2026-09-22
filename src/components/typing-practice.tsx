@@ -29,7 +29,7 @@ interface TypingPracticeProps {
 // Memoized StatDisplay component to prevent unnecessary re-renders
 const StatDisplay = memo(({ icon: Icon, value, label }: { icon: React.ElementType; value: string | number; label: string }) => (
   <div className="flex items-center gap-2 text-lg">
-    <Icon className="h-5 w-5 text-primary" />
+    <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
     <span className="font-semibold">{toBengaliNumber(value)}</span>
     <span className="text-sm text-muted-foreground">{label}</span>
   </div>
@@ -61,6 +61,16 @@ export default function TypingPractice({
 
   const maxTime = isPracticeDrill ? 360 : (timeLimit ? timeLimit * 60 : 0);
   const { time, isActive, isPaused, start, pause, resume, reset: resetTimer } = useTimer();
+
+  const isActiveRef = useRef(isActive);
+  const isPausedRef = useRef(isPaused);
+  const pauseRef = useRef(pause);
+
+  useEffect(() => {
+    isActiveRef.current = isActive;
+    isPausedRef.current = isPaused;
+    pauseRef.current = pause;
+  }, [isActive, isPaused, pause]);
 
   const timeLeft = maxTime > 0 ? maxTime - time : time;
 
@@ -100,11 +110,11 @@ export default function TypingPractice({
   const resetInactivityTimer = useCallback(() => {
     if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     inactivityTimerRef.current = setTimeout(() => {
-      if (isActive && !isPaused) {
-        pause();
+      if (isActiveRef.current && !isPausedRef.current) {
+        pauseRef.current();
       }
-    }, 4000);
-  }, [isActive, isPaused, pause]);
+    }, 1800);
+  }, []);
 
   // Debounced stats calculation to prevent excessive updates on every keystroke
   const debouncedCalculateStats = useCallback(() => {
@@ -332,7 +342,8 @@ export default function TypingPractice({
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck="false"
-        aria-label="Typing input field"
+        aria-label="টাইপিং ইনপুট ক্ষেত্র"
+        aria-describedby="typing-instructions"
       />
 
       {/* Stats Display Card */}
@@ -392,7 +403,7 @@ export default function TypingPractice({
       </div>
 
       {/* Instructions */}
-      <div className="text-xs text-muted-foreground space-y-1 text-center" role="note">
+      <div id="typing-instructions" className="text-xs text-muted-foreground space-y-1 text-center" role="note">
         <p>শব্দটি সম্পূর্ণ করতে <kbd className="px-2 py-1 bg-muted rounded border">Space</kbd> চাপুন</p>
         <p>আগের শব্দে ফিরতে <kbd className="px-2 py-1 bg-muted rounded border">←</kbd> বা ভুল সংশোধন করতে <kbd className="px-2 py-1 bg-muted rounded border">Backspace</kbd> ব্যবহার করুন</p>
         <p>পুরো শব্দ মোছার জন্য <kbd className="px-2 py-1 bg-muted rounded border">Ctrl+Backspace</kbd> চাপুন</p>

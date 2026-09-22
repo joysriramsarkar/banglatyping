@@ -105,22 +105,6 @@ export const getStepsForChar = (char: string): SingleDrill[] => {
     const steps: SingleDrill[] = [];
     const normalizedChar = normalizeBengaliString(char);
 
-    // Special case for 'ক্ষ'
-    if (normalizedChar === 'ক্ষ') {
-        const directMapping = findKey(normalizedChar);
-        if (directMapping) {
-             steps.push({
-                key: directMapping.key,
-                keyCode: directMapping.keyCode,
-                fingerPosition: directMapping.fingerPosition,
-                fingerName: directMapping.fingerName,
-                shift: directMapping.bnShift === normalizedChar,
-                display: normalizedChar
-            });
-            return steps;
-        }
-    }
-
     // Case 1: Standalone vowel
     const vowelEntry = Object.values(vowelMap).find(v => v.vowel === normalizedChar);
     if (vowelEntry) {
@@ -143,22 +127,8 @@ export const getStepsForChar = (char: string): SingleDrill[] => {
             return steps;
         }
     }
-    
-    // Case 2: Direct key mapping
-    const directMapping = findKey(normalizedChar);
-    if (directMapping) {
-        steps.push({
-            key: directMapping.key,
-            keyCode: directMapping.keyCode,
-            fingerPosition: directMapping.fingerPosition,
-            fingerName: directMapping.fingerName,
-            shift: directMapping.bnShift === normalizedChar,
-            display: normalizedChar
-        });
-        return steps;
-    }
-    
-    // Case 3: Conjunct (যুক্তাক্ষর)
+
+    // Case 2: Conjunct (যুক্তাক্ষর) - decomposes into constituent keystrokes
     if (isConjunct(normalizedChar)) {
         const { consonants, halants, trailingKar } = parseConjunct(normalizedChar);
         
@@ -210,6 +180,20 @@ export const getStepsForChar = (char: string): SingleDrill[] => {
                 if (steps.length > 0) return steps;
             }
         }
+    }
+
+    // Case 3: Direct key mapping
+    const directMapping = findKey(normalizedChar);
+    if (directMapping) {
+        steps.push({
+            key: directMapping.key,
+            keyCode: directMapping.keyCode,
+            fingerPosition: directMapping.fingerPosition,
+            fingerName: directMapping.fingerName,
+            shift: directMapping.bnShift === normalizedChar,
+            display: normalizedChar
+        });
+        return steps;
     }
 
     // Case 4: Base + modifier (Kar, Anusvara ং, Chandrabindu ঁ, Visarga ঃ, Nukta, etc.)
