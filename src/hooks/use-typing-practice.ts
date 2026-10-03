@@ -1,5 +1,10 @@
 import { useReducer, useCallback, useEffect } from 'react';
-import { composeBengaliKeystroke, isValidBengaliTypingPrefix } from '@/lib/bengali-grapheme';
+import {
+  composeBengaliKeystroke,
+  isValidBengaliTypingPrefix,
+  bengaliSegmenter,
+  normalizeBengaliString,
+} from '@/lib/bengali-grapheme';
 
 /**
  * Custom Hook: useTypingPractice - Optimized for Performance
@@ -19,12 +24,28 @@ interface TypingState {
   currentWordIndex: number;
   charInputPerWord: Record<number, string>;
   totalErrors: number;
+  /** Graphemes the learner actually produced, plus the spaces between them. */
   totalChars: number;
+  /** Words typed exactly right. Drives WPM. */
+  totalWords: number;
   wpm: number;
+  /** Graphemes per minute — the metric that actually means something in Bengali. */
+  gpm: number;
+  /** Kept for the results screen; equals gpm for a grapheme-based session. */
   spm: number;
   accuracy: number;
   isFinished: boolean;
-  wordStatsCache: Record<number, { rawInput: string, typedWord: string, keystrokes: number, errors: number }>;
+  wordStatsCache: Record<number, WordStats>;
+}
+
+interface WordStats {
+  rawInput: string;
+  /** Graphemes the learner produced for this word. */
+  graphemesTyped: number;
+  /** Graphemes that do not match the expected word. */
+  errors: number;
+  /** True when the word was typed exactly right. */
+  exact: boolean;
 }
 
 type TypingAction =
@@ -46,90 +67,154 @@ const initialTypingState: TypingState = {
   charInputPerWord: {},
   totalErrors: 0,
   totalChars: 0,
+  totalWords: 0,
   wpm: 0,
+  gpm: 0,
   spm: 0,
   accuracy: 100,
   isFinished: false,
   wordStatsCache: {},
 };
 
+/** Split a word into grapheme clusters, the unit the learner actually produces. */
+function toGraphemes(text: string): string[] {
+  if (!text) return [];
+  return bengaliSegmenter.segmentString(normalizeBengaliString(text));
+}
+
 /**
- * Calculates WPM, accuracy, and error count based on current typing state
- * Uses standard typing test methodology:
- * - Gross WPM = (Total Keystrokes / 5) / Time in minutes
- * - Net WPM = Gross WPM - (Uncorrected Errors / Time in minutes)
- * 
- * Standard formula ensures accurate speed calculation even when words are skipped or mistyped.
+ * Count the mistakes in one word, comparing grapheme by grapheme.
+ *
+ * Three things this gets right that a code-point loop did not:
+ *
+ * 1. Nothing is charged while the word is still on its way. Bengali is not
+ *    fixed-width: a half-typed conjunct (ক ্) or a half-typed next grapheme
+ *    (বিজ of বিজ্ঞান) is not a mistake yet, and the only thing that knows that
+ *    is isValidBengaliTypingPrefix. Comparing code points instead reported
+ *    every untyped trailing position as a wrong one, so a learner who had typed
+ *    two correct graphemes out of three was already being marked down for the
+ *    third.
+ *
+ * 2. Graphemes, not code units. ক্ষ is three code points and one thing on
+ *    screen. Walking code points misaligned the comparison as soon as a conjunct
+ *    was involved, so errors landed on the wrong letters.
+ *
+ * 3. Once the word is no longer a prefix, every wrong position counts, including
+ *    graphemes typed beyond the end of the word.
+ */
+function countWordErrors(expected: string, typed: string): { errors: number; exact: boolean } {
+  const typedGraphemes = toGraphemes(typed);
+  if (typedGraphemes.length === 0) return { errors: 0, exact: false };
+
+  const expectedGraphemes = toGraphemes(expected);
+
+  // Still on track: nothing typed so far is wrong.
+  if (isValidBengaliTypingPrefix(typed, expected)) {
+    return { errors: 0, exact: typedGraphemes.length === expectedGraphemes.length };
+  }
+
+  let errors = 0;
+  const shared = Math.min(expectedGraphemes.length, typedGraphemes.length);
+  for (let i = 0; i < shared; i++) {
+    if (expectedGraphemes[i] !== typedGraphemes[i]) errors++;
+  }
+  // Anything typed beyond the end of the word is also a mistake.
+  errors += typedGraphemes.length - shared;
+
+  return { errors, exact: false };
+}
+
+/**
+ * Recompute the running stats from the raw inputs.
+ *
+ * WPM is words-per-minute: finished words divided by minutes. The English
+ * "characters / 5" formula has no meaning here, because one Bengali grapheme
+ * can cost five keystrokes (ক্ষ্ম is ক ্ ষ ্ ম) and one keystroke can produce
+ * half a grapheme. Dividing by 5 therefore produced numbers that were neither
+ * comparable to any other typing test nor a measure of anything.
+ *
+ * GPM — graphemes per minute — is the honest speed number for Bengali, and it
+ * is what the UI leads with. WPM stays because it is the unit the government
+ * job exams quote (২৫–৩০ WPM), so a learner can still check themselves against
+ * the target they have been told about.
  */
 function calculateStatsHelper(
   words: string[],
   charInputPerWord: Record<number, string>,
   currentWordIndex: number,
   time: number,
-  wordStatsCache: Record<number, { rawInput: string, typedWord: string, keystrokes: number, errors: number }>
+  wordStatsCache: Record<number, WordStats>
 ) {
-  let totalKeystrokesTyped = 0;
+  let graphemesTyped = 0;
+  let finishedWords = 0;
   let uncorrectedErrors = 0;
-  let newCache: Record<number, { rawInput: string, typedWord: string, keystrokes: number, errors: number }> | null = null;
+  let newCache: Record<number, WordStats> | null = null;
 
   // Process all words up to and including current word
   for (let i = 0; i <= currentWordIndex; i++) {
     const rawInput = charInputPerWord[i] || '';
     let stats = wordStatsCache[i];
 
-    // Calculate stats if not cached or if the word has changed
+    // Recompute only when this word's input actually changed
     if (!stats || stats.rawInput !== rawInput) {
-      const typedWord = rawInput.normalize('NFC');
-      const expectedWord = words[i]?.normalize('NFC') || '';
-      let errors = 0;
-
-      const expectedLength = expectedWord.length;
-      const typedLength = typedWord.length;
-
-      // Compare character by character up to the longer length
-      for (let j = 0; j < Math.max(expectedLength, typedLength); j++) {
-        const expectedChar = expectedWord[j] || '';
-        const typedChar = typedWord[j] || '';
-
-        if (expectedChar !== typedChar) {
-          errors++;
-        }
-      }
-
-      stats = { rawInput, typedWord, keystrokes: typedLength, errors };
+      const { errors, exact } = countWordErrors(words[i] || '', rawInput);
+      stats = {
+        rawInput,
+        graphemesTyped: toGraphemes(rawInput).length,
+        errors,
+        exact,
+      };
       if (!newCache) newCache = { ...wordStatsCache };
       newCache[i] = stats;
     }
-    
-    // Add each typed character to keystroke count
-    totalKeystrokesTyped += stats.keystrokes;
-    
-    // Add space between words (except for current incomplete word)
-    if (i < currentWordIndex) {
-      totalKeystrokesTyped += 1;
-    }
-    
-    // Add uncorrected errors for this word
+
+    graphemesTyped += stats.graphemesTyped;
     uncorrectedErrors += stats.errors;
+
+    // A word counts toward WPM once it has been typed exactly. The word the
+    // learner is on right now counts too if it is already complete — otherwise
+    // finishing a one-word test would always report 0 WPM.
+    if (stats.exact && (i < currentWordIndex || rawInput.length > 0)) {
+      finishedWords += 1;
+    }
+
+    // The space the learner pressed to leave a completed word.
+    if (i < currentWordIndex) graphemesTyped += 1;
   }
 
-  // Calculate accuracy: (characters correct) / (total characters typed) * 100
-  const totalCharsTyped = totalKeystrokesTyped;
-  const correctChars = totalCharsTyped - uncorrectedErrors;
-  const accuracy = totalCharsTyped > 0 ? Math.round((correctChars / totalCharsTyped) * 100) : 100;
+  // Accuracy is over graphemes the learner actually produced. Spaces count as
+  // produced and never as errors, which matches how a typing test is scored.
+  const correctGraphemes = graphemesTyped - uncorrectedErrors;
+  const accuracy = graphemesTyped > 0 ? Math.round((correctGraphemes / graphemesTyped) * 100) : 100;
 
-  // Calculate WPM using standard typing test formula
   const timeInMinutes = time / 60;
-  const grossWpm = timeInMinutes > 0 ? (totalKeystrokesTyped / 5) / timeInMinutes : 0;
-  const netWpm = timeInMinutes > 0 ? grossWpm - (uncorrectedErrors / timeInMinutes) : 0;
-  
-  // Use Net WPM (with minimum of 0)
-  const wpm = Math.round(Math.max(0, netWpm));
+  if (timeInMinutes <= 0) {
+    return {
+      totalCharsTyped: graphemesTyped,
+      errors: uncorrectedErrors,
+      wordsFinished: finishedWords,
+      accuracy,
+      wpm: 0,
+      gpm: 0,
+      spm: 0,
+      newCache,
+    };
+  }
 
-  // SPM (Strokes / Keystrokes Per Minute)
-  const spm = timeInMinutes > 0 ? Math.round(totalKeystrokesTyped / timeInMinutes) : 0;
+  const wpm = Math.round(finishedWords / timeInMinutes);
+  const gpm = Math.round(graphemesTyped / timeInMinutes);
 
-  return { totalCharsTyped, errors: uncorrectedErrors, accuracy, wpm, spm, newCache };
+  return {
+    totalCharsTyped: graphemesTyped,
+    errors: uncorrectedErrors,
+    wordsFinished: finishedWords,
+    accuracy,
+    wpm,
+    gpm,
+    // Kept for the results screen, which still labels this SPM.
+    spm: gpm,
+    newCache,
+  };
 }
 
 /**
@@ -174,9 +259,12 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
         return state;
       }
 
-      // Check if this is a valid prefix or typed char
-      const isPrefix = isValidBengaliTypingPrefix(nextInput, targetWord);
-
+      // The keystroke is always recorded, mistakes included, so the word can be
+      // scored and shown struck-through. Whether what is currently in the box is
+      // still on the way to the target word is answered by isValidBengaliTypingPrefix,
+      // which is what isError() below and the red word styling both read. That
+      // check used to also be computed here and thrown away, which left the
+      // reducer looking like it validated input when it never did.
       return {
         ...state,
         charInputPerWord: {
@@ -251,17 +339,20 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
       if (
         stats.totalCharsTyped !== state.totalChars ||
         stats.errors !== state.totalErrors ||
+        stats.wordsFinished !== state.totalWords ||
         stats.accuracy !== state.accuracy ||
         stats.wpm !== state.wpm ||
-        stats.spm !== state.spm ||
+        stats.gpm !== state.gpm ||
         newCache !== state.wordStatsCache
       ) {
         return {
           ...state,
           totalChars: stats.totalCharsTyped,
           totalErrors: stats.errors,
+          totalWords: stats.wordsFinished,
           accuracy: stats.accuracy,
           wpm: stats.wpm,
+          gpm: stats.gpm,
           spm: stats.spm,
           wordStatsCache: newCache,
         };
@@ -276,8 +367,10 @@ function typingReducer(state: TypingState, action: TypingAction): TypingState {
         ...state,
         totalChars: stats.totalCharsTyped,
         totalErrors: stats.errors,
+        totalWords: stats.wordsFinished,
         accuracy: stats.accuracy,
         wpm: stats.wpm,
+        gpm: stats.gpm,
         spm: stats.spm,
         wordStatsCache: stats.newCache || state.wordStatsCache,
         isFinished: true,

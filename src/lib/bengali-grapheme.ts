@@ -18,17 +18,214 @@ const BENGALI_CHAR_RANGES = {
 };
 
 /**
- * Create a Bengali-aware grapheme segmenter
- * Uses Intl.Segmenter for proper grapheme boundary detection
+ * True when the runtime has a usable Intl.Segmenter.
+ *
+ * Intl.Segmenter is missing on IE and on older Safari/Firefox builds, and
+ * `new Intl.Segmenter(...)` throws there. An unguarded constructor meant a
+ * module-level crash that took the whole app down, so we feature-detect once
+ * and fall back to a hand-written Bengali grapheme walker.
+ *
+ * The fallback implements the part of UAX #29 that Bengali actually needs:
+ *   GB3   CR x LF stays together, then breaks
+ *   GB4/5 break around Control / CR / LF
+ *   GB9   x (Extend | ZWJ)  -> vowel signs, hasanta, anusvara, nukta
+ *   GB9a  x SpacingMark     -> the post-base marks
+ *   GB9c  Consonant [Extend|Linker]* x Consonant
+ *         -> the rule that makes ক্ + ষ = ক্ষ one cluster instead of two.
+ *         Without it every conjunct in the language fell apart.
+ *   GB999 otherwise break
  */
+export const hasNativeSegmenter: boolean = (() => {
+  try {
+    return (
+      typeof Intl !== 'undefined' &&
+      typeof (Intl as { Segmenter?: unknown }).Segmenter === 'function'
+    );
+  } catch {
+    return false;
+  }
+})();
+
+/**
+ * Marks that attach to the preceding base character (GB9 / GB9a).
+ *
+ * Written as escapes on purpose: these are invisible codepoints, and inlining
+ * the literals makes the source unreadable and easy to corrupt.
+ *
+ * The Bengali ranges were derived by sweeping U+0980..U+09FF against
+ * Intl.Segmenter in every position, so this set is measured rather than guessed:
+ *
+ *   0981-0983  candrabindu, anusvara, visarga
+ *   09BC       nukta (ড় is ড + ়)
+ *   09BE-09C4  া ি ী ু ূ ৃ ৄ
+ *   09C7 09C8 09CB 09CC   ে ৈ ো ৌ
+ *   09CD       hasanta
+ *   09D7       vocalic length mark
+ *   09E2-09E3  vocalic marks
+ *   09FE       sandhi mark
+ *   200C-200D  ZWNJ / ZWJ
+ *   0300-036F  generic combining diacritics, for mixed Bangla/Latin text
+ *
+ * Note the gaps: 0980, 09B1, 09C5, 09C6, 09C9 and 09CA do *not* attach, even
+ * though they sit inside the ranges a first reading would suggest. Guessing
+ * those ranges produces wrong clusters for exactly the codepoints nobody
+ * exercises by hand.
+ */
+const BENGALI_COMBINING_MARK =
+  /[\u0300-\u036F\u0981-\u0983\u09BC\u09BE-\u09C4\u09C7\u09C8\u09CB\u09CC\u09CD\u09D7\u09E2\u09E3\u09FE\u200C\u200D]/;
+
+/**
+ * Marks that keep an open conjunct link alive (InCB = Extend / Linker / ZWJ).
+ *
+ * This is the tail of GB9c:
+ *     Consonant [ Extend|Linker ]* Linker [ Extend|Linker ]*  x  Consonant
+ *
+ * It is deliberately *not* the same set as BENGALI_COMBINING_MARK. The
+ * pre-base vowel signs (ি ে ো ৌ) attach to their base but cancel the link, so
+ * প্রি is one cluster while প্ + রি is two. Empirical sweep:
+ *
+ *   PRESERVES: 0981 09BC 09BE 09C1-09C4 09CD 09D7 09E2 09E3 09FE 200D
+ *   CANCELS:   09BF 09C7 09C8 09CB 09CC 0982 0983 and ZWNJ (200C)
+ */
+const BENGALI_LINK_PRESERVING = /[\u0981\u09BC\u09BE\u09C1-\u09C4\u09CD\u09D7\u09E2\u09E3\u09FE\u200D]/;
+
+/** BENGALI SIGN HASANTA — Indic_Conjunct_Break = Linker. */
+const BENGALI_HASANTA = /\u09CD/;
+
+/** CR, LF, NEL, LS and PS: each one ends the current cluster (GB4/GB5). */
+const BENGALI_FORCE_BREAK = /\r\n|[\r\n\u0085\u2028\u2029]/;
+
+/** Other C0/C1 controls: a cluster boundary and a cluster of its own. */
+const BENGALI_CONTROL = /[\u0000-\u001F\u007F-\u009F]/;
+
+/**
+ * The letters GB9c will use — as the anchor at the head of a cluster and as the
+ * consonant pulled in after a hasanta. For Bengali the two sets coincide.
+ *
+ * Derived by sweeping U+0980..U+09FF twice: once for "ক্X" vs "ক‌্X" (does
+ * X get linked?) and once for "X্ক" (can X anchor a link?).
+ *
+ *   0995-09A8  ক খ গ ঘ ঙ চ ছ জ ঝ ঞ ট ঠ ড ঢ ণ ত থ দ ধ ন
+ *   09AA-09B0 09B2   প ফ ব ভ ম য র ল
+ *   09B6-09B9  শ ষ স হ
+ *   09DC 09DD 09DF  ড় ঢ় য়
+ *   09F0 09F1  ৎ ৑
+ *
+ * The five rare letters in between — ঩ ঱ ঳ ঴ ঵ (09A9, 09B1, 09B3-09B5) — are
+ * excluded on purpose. They look like ordinary consonants in the block, but
+ * Intl.Segmenter will not form a conjunct with them, so প্‌র style clusters
+ * come out differently if you include them.
+ *
+ * The vowel *signs* (09BE-09CC) are absent too: they reach the cluster through
+ * GB9 instead, and they cancel the link rather than continue it.
+ */
+const BENGALI_CONSONANT =
+  /[\u0995-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09DC\u09DD\u09DF\u09F0\u09F1]/;
+
+/**
+ * Split a string into Bengali grapheme clusters without Intl.Segmenter.
+ *
+ * Exported so it can be regression-tested against the native implementation
+ * directly — that comparison is the guarantee this fallback exists to provide.
+ */
+export function segmentBengaliGraphemesFallback(text: string): string[] {
+  if (!text) return [];
+
+  const out: string[] = [];
+  const chars = Array.from(text);
+  let current = '';
+  // True while the current cluster still has an unconsumed conjunct link,
+  // i.e. `Consonant [Extend|Linker]* Linker [Extend|Linker]*` with nothing but
+  // link-preserving marks since the last hasant.
+  let linked = false;
+  // ZWNJ means "do not form a conjunct here", so it vetoes the link for the rest
+  // of the cluster no matter what follows — even a hasant.
+  let vetoed = false;
+  // GB9c is anchored on a consonant at the head of the cluster (see
+  // BENGALI_CONJUNCT_HEAD); a cluster starting on anything else can never open
+  // a link.
+  let anchored = false;
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+
+    // CRLF is one cluster (GB3), then we break.
+    if (BENGALI_FORCE_BREAK.test(ch)) {
+      if (current) { out.push(current); current = ''; }
+      if (ch === '\r' && chars[i + 1] === '\n') { out.push('\r\n'); i++; }
+      else { out.push(ch); }
+      linked = false;
+      vetoed = false;
+      anchored = false;
+      continue;
+    }
+
+    if (BENGALI_CONTROL.test(ch)) {
+      if (current) { out.push(current); current = ''; }
+      out.push(ch);
+      linked = false;
+      vetoed = false;
+      anchored = false;
+      continue;
+    }
+
+    if (!current) {
+      current = ch;
+      linked = false;
+      vetoed = ch === '\u200C';
+      anchored = BENGALI_CONSONANT.test(ch);
+      continue;
+    }
+
+    // GB9 / GB9a: combining marks ride along with their base.
+    if (BENGALI_COMBINING_MARK.test(ch)) {
+      current += ch;
+      // A hasanta opens a link; a link-preserving mark keeps it open; any other
+      // mark closes it for good. ZWNJ vetoes it outright.
+      if (vetoed) continue;
+      if (ch === '\u200C') vetoed = true;
+      else if (BENGALI_HASANTA.test(ch)) linked = anchored;
+      else if (!BENGALI_LINK_PRESERVING.test(ch)) linked = false;
+      continue;
+    }
+
+    // GB9c: the hasanta pulls exactly one consonant into this cluster, which is
+    // what makes ক্ + ষ + ম = ক্ষ্ম a single visible unit instead of three.
+    // The link is consumed by that consonant, so a third one starts fresh.
+    if (linked && !vetoed && BENGALI_CONSONANT.test(ch)) {
+      current += ch;
+      linked = false;
+      continue;
+    }
+
+    out.push(current);
+    current = ch;
+    linked = false;
+    vetoed = false;
+    anchored = BENGALI_CONSONANT.test(ch);
+  }
+
+  if (current) out.push(current);
+  return out;
+}
+
 export class BengaliSegmenter {
-  private segmenter: Intl.Segmenter;
+  private segmenter: Intl.Segmenter | null;
 
   constructor() {
-    this.segmenter = new Intl.Segmenter('bn-IN', { granularity: 'grapheme' });
+    this.segmenter = hasNativeSegmenter
+      ? new Intl.Segmenter('bn-IN', { granularity: 'grapheme' })
+      : null;
+  }
+
+  /** True when this instance is backed by the platform's Intl.Segmenter. */
+  get isNative(): boolean {
+    return this.segmenter !== null;
   }
 
   segmentString(text: string): string[] {
+    if (!text) return [];
+    if (!this.segmenter) return segmentBengaliGraphemesFallback(text);
     return Array.from(this.segmenter.segment(text), (s: Intl.SegmentData) => s.segment);
   }
 

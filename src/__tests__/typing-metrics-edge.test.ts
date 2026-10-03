@@ -104,6 +104,7 @@ describe('Typing Metrics Engine Edge Cases', () => {
   function createEvent(overrides: Partial<TypingEvent>): TypingEvent {
     return {
       sequence: 1,
+      graphemeIndex: 1,
       expectedGrapheme: '',
       actualInput: '',
       timestamp: Date.now(),

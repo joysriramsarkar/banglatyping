@@ -52,6 +52,8 @@ export {
 // ── Convenience: current grapheme display state ─────────────────
 
 import { SessionState } from './session';
+import { TypingEvent } from '../types';
+import { getKeySequenceForGrapheme } from '../keyboard-layouts';
 
 export interface GraphemeDisplayState {
   /** The grapheme the user needs to type next */
@@ -74,8 +76,21 @@ export interface GraphemeDisplayState {
  */
 export function buildDisplayState(session: SessionState): GraphemeDisplayState {
   const graphemes = session.expectedGraphemes;
-  const events = session.events;
   const currentIndex = session.currentGraphemeIndex;
+
+  // Last attempt per grapheme index, so a grapheme the learner mistyped and then
+  // fixed shows the correction rather than the original mistake. Indexing by
+  // `sequence` instead — which is what this used to do — put every event after a
+  // correction on the wrong grapheme, because sequence counts events while the
+  // display is indexed by position in the text.
+  const attemptByIndex = new Map<number, TypingEvent>();
+  for (const event of session.events) {
+    const index = event.graphemeIndex ?? event.sequence;
+    const existing = attemptByIndex.get(index);
+    if (!existing || existing.sequence <= event.sequence) {
+      attemptByIndex.set(index, event);
+    }
+  }
 
   const displayGraphemes = graphemes.map((g, i) => {
     if (i > currentIndex) {
@@ -84,13 +99,12 @@ export function buildDisplayState(session: SessionState): GraphemeDisplayState {
     if (i === currentIndex) {
       return { grapheme: g, state: 'current' as const, typed: '' };
     }
-    // Find the last event for this grapheme
-    const event = events.find(e => e.sequence === i);
-    if (event) {
+    const attempt = attemptByIndex.get(i);
+    if (attempt) {
       return {
         grapheme: g,
-        state: event.correct ? ('correct' as const) : ('incorrect' as const),
-        typed: event.actualInput,
+        state: attempt.correct ? ('correct' as const) : ('incorrect' as const),
+        typed: attempt.actualInput,
       };
     }
     return { grapheme: g, state: 'upcoming' as const, typed: '' };
@@ -106,16 +120,21 @@ export function buildDisplayState(session: SessionState): GraphemeDisplayState {
 
 /**
  * Get the expected typing sequence for a grapheme given a keyboard layout.
- * Returns human-readable key sequence (e.g., "h + Shift+L" for ক্ষ in Avro).
  *
- * Note: This is a simplified lookup. Full implementation requires layout-aware
- * getSequence() method on the keyboard layout.
+ * Returns one entry per keystroke, formatted for display: ক্রা in BanglaWord
+ * comes back as ['k', 'h', 'r', 'a'], and in Avro as ['k', 'h', 'r', 'a'] too
+ * (Avro has no compound key for ্র), while ক্ষ is ['q'] in BanglaWord and
+ * ['k', 'h', 'Shift + l'] in Avro.
+ *
+ * Every key comes from the layout's own table, so the hint can never name a key
+ * that the on-screen keyboard does not show for that layout.
+ *
+ * Returns [] when the layout cannot produce the grapheme — Avro has no key for
+ * the vocalic ৃ, for instance. Callers must treat empty as "no hint available"
+ * rather than rendering a blank that looks like a bug.
  */
 export function getTypingHint(grapheme: string, layoutId: string): string[] {
-  // This is a placeholder — real implementation should use the keyboard layout
-  // to resolve the key sequence for each grapheme.
-  // Returning empty for now; will be enhanced when layout abstraction is added.
-  void grapheme;
-  void layoutId;
-  return [];
+  return getKeySequenceForGrapheme(grapheme, layoutId).map((step) =>
+    step.needsShift ? `Shift + ${step.key}` : step.key
+  );
 }

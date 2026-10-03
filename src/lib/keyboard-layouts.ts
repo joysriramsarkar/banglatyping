@@ -1,4 +1,4 @@
-import { INDEPENDENT_VOWEL_PROCESS_MAP } from './bengali-grapheme';
+import { INDEPENDENT_VOWEL_PROCESS_MAP, normalizeBengaliString } from './bengali-grapheme';
 
 export type KeyboardLayoutKey = 'banglaword' | 'khipro' | 'probhat' | 'bijoy' | 'avro' | 'unijoy';
 
@@ -71,7 +71,10 @@ const bijoyLayout: KeyboardLayoutConfig = {
     { key: 'p', keyCode: 'KeyP', bn: 'ড়', bnShift: 'ঢ়', ...baseFinger(10, 'Pinky') },
   ],
   home: [
-    { key: 'a', keyCode: 'KeyA', bn: 'ৃ', bnShift: 'র্', ...baseFinger(1, 'Pinky') },
+    // Bijoy puts the reph (র-ফলা) on plain `a` and vocalic ৃ on Shift+a.
+    // These two were the wrong way round, so every hint for a reph and for ৃ
+    // was wrong by exactly one Shift.
+    { key: 'a', keyCode: 'KeyA', bn: 'র্', bnShift: 'ৃ', ...baseFinger(1, 'Pinky') },
     { key: 's', keyCode: 'KeyS', bn: 'ু', bnShift: 'ূ', ...baseFinger(2, 'Ring') },
     { key: 'd', keyCode: 'KeyD', bn: 'ি', bnShift: 'ী', ...baseFinger(3, 'Middle') },
     { key: 'f', keyCode: 'KeyF', bn: 'া', bnShift: 'অ', ...baseFinger(4, 'Index') },
@@ -210,7 +213,8 @@ const unijoyLayout: KeyboardLayoutConfig = {
     { key: 'p', keyCode: 'KeyP', bn: 'ড়', bnShift: 'ঢ়', ...baseFinger(10, 'Pinky') },
   ],
   home: [
-    { key: 'a', keyCode: 'KeyA', bn: 'ৃ', bnShift: 'র্', ...baseFinger(1, 'Pinky') },
+    // Same as Bijoy: reph on `a`, vocalic ৃ on Shift+a.
+    { key: 'a', keyCode: 'KeyA', bn: 'র্', bnShift: 'ৃ', ...baseFinger(1, 'Pinky') },
     { key: 's', keyCode: 'KeyS', bn: 'ু', bnShift: 'ূ', ...baseFinger(2, 'Ring') },
     { key: 'd', keyCode: 'KeyD', bn: 'ি', bnShift: 'ী', ...baseFinger(3, 'Middle') },
     { key: 'f', keyCode: 'KeyF', bn: 'া', bnShift: 'অ', ...baseFinger(4, 'Index') },
@@ -319,6 +323,37 @@ export interface KeyboardLayoutOption {
   isDefault?: boolean;
   badge?: string;
 }
+
+/**
+ * The number row, shared by every layout.
+ *
+ * The six layout configs above each describe only the three letter rows plus the
+ * space bar, which is why a digit could not be resolved before. Digit0..Digit9
+ * are the same physical keys whichever Bengali layout is active, so they live
+ * here rather than being repeated six times.
+ *
+ * Finger assignments match `keyMap` in lessons.ts, which is the mapping the
+ * lesson drills already teach.
+ */
+export const NUMBER_ROW: ReadonlyArray<{
+  key: string;
+  keyCode: string;
+  /** The Bengali digit this key produces in the app's drills. */
+  bn: string;
+  fingerPosition: number;
+  fingerName: string;
+}> = [
+  { key: '1', keyCode: 'Digit1', bn: '১', fingerPosition: 1, fingerName: 'Pinky' },
+  { key: '2', keyCode: 'Digit2', bn: '২', fingerPosition: 2, fingerName: 'Ring' },
+  { key: '3', keyCode: 'Digit3', bn: '৩', fingerPosition: 3, fingerName: 'Middle' },
+  { key: '4', keyCode: 'Digit4', bn: '৪', fingerPosition: 4, fingerName: 'Index' },
+  { key: '5', keyCode: 'Digit5', bn: '৫', fingerPosition: 4, fingerName: 'Index' },
+  { key: '6', keyCode: 'Digit6', bn: '৬', fingerPosition: 7, fingerName: 'Index' },
+  { key: '7', keyCode: 'Digit7', bn: '৭', fingerPosition: 7, fingerName: 'Index' },
+  { key: '8', keyCode: 'Digit8', bn: '৮', fingerPosition: 8, fingerName: 'Middle' },
+  { key: '9', keyCode: 'Digit9', bn: '৯', fingerPosition: 9, fingerName: 'Ring' },
+  { key: '0', keyCode: 'Digit0', bn: '০', fingerPosition: 10, fingerName: 'Pinky' },
+];
 
 export const KEYBOARD_LAYOUT_OPTIONS: KeyboardLayoutOption[] = [
   {
@@ -526,6 +561,383 @@ const KHIPRO_CHAR_KEY_MAP: Record<
   '৯': { keyCode: 'Digit9', key: '9', needsShift: false, fingerPosition: 9, fingerName: 'Ring' },
 };
 
+// ── Key-sequence resolution ───────────────────────────────────────
+//
+// findKeyInfoForChar answers "which key produces this one character". A Bengali
+// grapheme is rarely one character though — ক্রা is ক + ্ + র + া — so a
+// single-character lookup cannot tell a learner how to type anything that is
+// actually a conjunct. That is why the typing hint this app shows has always
+// been empty.
+//
+// What follows answers "which key sequence produces this grapheme" for all six
+// layouts, by composing the layout's own key table rather than by hard-coding a
+// transliteration. Every keystroke it returns is one the learner can see printed
+// on the on-screen keyboard for that layout, so the hint and the keyboard can
+// never disagree.
+
+/**
+ * Each vowel sign (কার) and the independent vowel it is derived from.
+ *
+ * This is a fact about Bengali, not about any particular layout: the sign ো is
+ * the written form of ও, ি of ই, ৃ of ঋ. Layout tables only have room for one
+ * character per key per Shift state, and many of them spend that slot on the
+ * kar and leave the independent vowel out (BanglaWord's `i` is ি, not ই; Bijoy
+ * has no independent vowels at all). Consulting the vowel lets the kar be
+ * resolved from the layout's own data instead of from an invented table.
+ */
+const KAR_TO_INDEPENDENT_VOWEL: Record<string, string> = {
+  '\u09BE': '\u0986', // া -> আ
+  '\u09BF': '\u0987', // ি -> ই
+  '\u09C0': '\u0988', // ী -> ঈ
+  '\u09C1': '\u0989', // ু -> উ
+  '\u09C2': '\u098A', // ূ -> ঊ
+  '\u09C3': '\u098B', // ৃ (contextual) -> ঋ
+  '\u09C7': '\u098F', // ে -> এ
+  '\u09C8': '\u0990', // ৈ -> ঐ
+  '\u09CB': '\u0993', // ো -> ও
+  '\u09CC': '\u0994', // ৌ -> ঔ
+  '\u09D2': '\u098B', // ৃ -> ঋ
+};
+
+const VOCALIC_R_SHORT = '\u09C3';
+const VOCALIC_R_LONG = '\u09D2';
+
+/** Swap the two code points Bengali uses for the vocalic r vowel sign. */
+function alternateVocalicR(text: string): string {
+  return text.replace(/[\u09C3\u09D2]/g, (ch) =>
+    ch === VOCALIC_R_SHORT ? VOCALIC_R_LONG : VOCALIC_R_SHORT
+  );
+}
+
+type KeyCandidate = {
+  /** The Bengali text this keystroke produces. */
+  produces: string;
+  key: string;
+  keyCode: string;
+  needsShift: boolean;
+  fingerPosition: number;
+  fingerName: string;
+  /** Rank used to pick between candidates that produce the same text. */
+  rank: number;
+};
+
+export type LayoutIndex = {
+  /** Bengali text produced -> keystrokes that produce it. */
+  byProduces: Map<string, KeyCandidate[]>;
+  /** Physical key -> itself, so Latin letters and digits resolve directly. */
+  byAsciiKey: Map<string, KeyCandidate>;
+  space: KeyCandidate | null;
+};
+
+const layoutIndexCache = new Map<KeyboardLayoutKey, LayoutIndex>();
+
+/**
+ * Reverse index of one layout: for every key, what it produces.
+ *
+ * Built once per layout and cached. A key can produce several different strings
+ * (`bn`, `bnShift`, and for some keys an extra pair), so every output is indexed
+ * separately and all of them are kept — ঢ় is Shift+p on Bijoy but ড় is p, and
+ * a naive "first match wins" scan gets one of the two backwards.
+ */
+function getLayoutIndex(layout: KeyboardLayoutKey): LayoutIndex {
+  const cached = layoutIndexCache.get(layout);
+  if (cached) return cached;
+
+  const config = layouts[layout] || banglaWordLayout;
+  const byProduces = new Map<string, KeyCandidate[]>();
+  const byAsciiKey = new Map<string, KeyCandidate>();
+  let space: KeyCandidate | null = null;
+
+  const record = (candidate: KeyCandidate) => {
+    if (!candidate.produces) return;
+    const existing = byProduces.get(candidate.produces);
+    if (existing) {
+      existing.push(candidate);
+      existing.sort((a, b) => a.rank - b.rank);
+    } else {
+      byProduces.set(candidate.produces, [candidate]);
+    }
+
+    // Bengali spells the vocalic r with two code points that look identical on
+    // screen: U+09D2 after most vowels and U+09C3 after ো/ৌ. Layout tables and
+    // lesson text mix them freely, so without this the same visible vowel would
+    // get a hint on one page and nothing on the next.
+    const alternate = alternateVocalicR(candidate.produces);
+    if (alternate === candidate.produces) return;
+    const swapped = { ...candidate, produces: alternate };
+    const existingAlt = byProduces.get(alternate);
+    if (existingAlt) {
+      existingAlt.push(swapped);
+      existingAlt.sort((a, b) => a.rank - b.rank);
+    } else {
+      byProduces.set(alternate, [swapped]);
+    }
+  };
+
+  for (const key of [...config.top, ...config.home, ...config.bottom, ...config.space]) {
+    if (key.special === 'shift') continue;
+    const fingerPosition = key.fingerPosition ?? 1;
+    const fingerName = key.fingerName ?? 'Index';
+
+    const outputs: Array<[string | undefined, boolean, number]> = [
+      [key.bn, false, 0],
+      [key.bnShift, true, 1],
+      [key.bnExtra, false, 2],
+      [key.bnShiftExtra, true, 3],
+    ];
+
+    for (const [produces, needsShift, rank] of outputs) {
+      if (!produces) continue;
+      record({
+        produces: normalizeBengaliString(produces),
+        key: key.key,
+        keyCode: key.keyCode,
+        needsShift,
+        fingerPosition,
+        fingerName,
+        rank,
+      });
+    }
+
+    if (key.key === ' ' || key.keyCode === 'Space') {
+      space = {
+        produces: ' ',
+        key: 'Space',
+        keyCode: 'Space',
+        needsShift: false,
+        fingerPosition: 5,
+        fingerName: 'Thumb',
+        rank: 0,
+      };
+    }
+
+    // Latin letters are typed with the physical key regardless of what the
+    // layout prints on it, and they have to be indexed as produced text as well
+    // — otherwise "কা" resolves through the Bengali route while a stray Latin
+    // "a" in a mixed-text lesson resolves to nothing.
+    if (/^[a-z]$/i.test(key.key)) {
+      const ascii = (produces: string, needsShift: boolean): KeyCandidate => ({
+        produces,
+        key: key.key,
+        keyCode: key.keyCode,
+        needsShift,
+        fingerPosition,
+        fingerName,
+        rank: needsShift ? 20 : 19,
+      });
+      record(ascii(key.key, false));
+      record(ascii(key.key.toUpperCase(), true));
+      if (!byAsciiKey.has(key.key)) byAsciiKey.set(key.key, ascii(key.key, false));
+      if (!byAsciiKey.has(key.key.toUpperCase())) {
+        byAsciiKey.set(key.key.toUpperCase(), ascii(key.key.toUpperCase(), true));
+      }
+    }
+  }
+
+  // The number row.
+  //
+  // None of the layout configs declare one, but Digit0..Digit9 are the same
+  // physical keys on every Bengali layout and the lesson drills already teach
+  // them (see keyMap in lessons.ts, which is where this mapping comes from). So
+  // digits resolve through it for every layout rather than for none.
+  //
+  // Note the on-screen keyboard does not draw this row yet — see NUMBER_ROW.
+  for (const key of NUMBER_ROW) {
+    record({
+      produces: key.bn,
+      key: key.key,
+      keyCode: key.keyCode,
+      needsShift: false,
+      fingerPosition: key.fingerPosition,
+      fingerName: key.fingerName,
+      rank: 30,
+    });
+    record({
+      produces: key.key,
+      key: key.key,
+      keyCode: key.keyCode,
+      needsShift: false,
+      fingerPosition: key.fingerPosition,
+      fingerName: key.fingerName,
+      rank: 31,
+    });
+    if (!byAsciiKey.has(key.key)) {
+      byAsciiKey.set(key.key, {
+        produces: key.key,
+        key: key.key,
+        keyCode: key.keyCode,
+        needsShift: false,
+        fingerPosition: key.fingerPosition,
+        fingerName: key.fingerName,
+        rank: 31,
+      });
+    }
+  }
+
+  // Khipro's on-screen table is not enough on its own: it prints a bare "Mod"
+  // on the `f` key and is missing several letters that the layout's own
+  // char->key map (used by findKeyInfoForChar) already resolves. Fill only the
+  // gaps, so the printed table always wins where the two disagree.
+  if (layout === 'khipro') {
+    // Khipro's modifier key is the hasant. The table shows it as "Mod", which is
+    // the one label in it that is not a letter.
+    record({
+      produces: '\u09CD',
+      key: 'f',
+      keyCode: 'KeyF',
+      needsShift: false,
+      fingerPosition: 4,
+      fingerName: 'Index',
+      rank: 5,
+    });
+
+    for (const [char, mapping] of Object.entries(KHIPRO_CHAR_KEY_MAP)) {
+      const produces = normalizeBengaliString(char);
+      if (!produces || byProduces.has(produces)) continue;
+      record({
+        produces,
+        key: mapping.key,
+        keyCode: mapping.keyCode,
+        needsShift: mapping.needsShift,
+        fingerPosition: mapping.fingerPosition,
+        fingerName: mapping.fingerName,
+        rank: 8,
+      });
+    }
+  }
+
+  // Fall back to the independent vowel for any kar the table does not print.
+  for (const [kar, vowel] of Object.entries(KAR_TO_INDEPENDENT_VOWEL)) {
+    if (byProduces.has(kar)) continue;
+    const vowelCandidates = byProduces.get(vowel);
+    if (!vowelCandidates?.length) continue;
+    const source = vowelCandidates[0];
+    record({
+      produces: kar,
+      key: source.key,
+      keyCode: source.keyCode,
+      needsShift: source.needsShift,
+      fingerPosition: source.fingerPosition,
+      fingerName: source.fingerName,
+      rank: 10,
+    });
+  }
+
+  const index: LayoutIndex = { byProduces, byAsciiKey, space };
+  layoutIndexCache.set(layout, index);
+  return index;
+}
+
+export interface KeySequenceStep {
+  /** The key to press, e.g. 'k' or 'l'. Never includes Shift. */
+  key: string;
+  /** Physical key identifier, e.g. 'KeyK'. */
+  keyCode: string;
+  /** True when Shift must be held for this key. */
+  needsShift: boolean;
+  /** The part of the grapheme this keystroke produces, e.g. 'ক' or '্'. */
+  produces: string;
+  fingerPosition: number;
+  fingerName: string;
+  hand: 'left' | 'right';
+  bengaliFingerLabel: string;
+}
+
+/**
+ * Split a Bengali grapheme into the keystrokes that produce it under a layout.
+ *
+ * Works on the code points of the grapheme and asks, for every suffix of every
+ * starting position, whether one keystroke can produce it. The cheapest
+ * segmentation wins — cheapest meaning fewest Shift presses, then fewest keys,
+ * so a layout's own compound key (BanglaWord `q` for ক্ষ) is preferred over
+ * spelling it out as ক + ্ + ষ.
+ *
+ * Every key comes from the layout's own table, so the hint can never name a key
+ * that the on-screen keyboard does not show for that layout. That also bounds
+ * the coverage: where a layout's table has no key for a character, this returns
+ * an empty array rather than inventing one. The known gaps are
+ *
+ *   Probhat — ঞ দ ধ        Bijoy — শ ঁ
+ *   Avro    — ঞ ঢ় ৃ ঃ ঁ ।    Unijoy — ঁ
+ *
+ * An empty hint is the honest answer; a guessed one teaches the wrong keys.
+ * Callers must handle it rather than assume success. Fixing a gap means adding
+ * the key to that layout's config, not adding a special case here.
+ */
+export function getKeySequenceForGrapheme(
+  grapheme: string,
+  layoutName?: string
+): KeySequenceStep[] {
+  if (!grapheme) return [];
+
+  const layout = normalizeKeyboardLayout(layoutName);
+  const index = getLayoutIndex(layout);
+
+  if (grapheme === ' ') {
+    if (!index.space) return [];
+    return [toKeySequenceStep(index.space)];
+  }
+
+  const normalized = normalizeBengaliString(grapheme);
+  if (!normalized) return [];
+
+  const chars = Array.from(normalized);
+  const n = chars.length;
+
+  // best[i] = the cheapest way to produce chars[i..n]
+  const best: Array<{ steps: KeySequenceStep[]; rank: number } | null> = new Array(n + 1).fill(null);
+  best[n] = { steps: [], rank: 0 };
+
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = i + 1; j <= n; j++) {
+      const tail = best[j];
+      if (!tail) continue;
+
+      const candidates = index.byProduces.get(chars.slice(i, j).join(''));
+      if (!candidates?.length) continue;
+
+      for (const candidate of candidates) {
+        const step = toKeySequenceStep(candidate);
+        const rank = candidate.rank + tail.rank;
+        const current = best[i];
+        const isBetter =
+          !current ||
+          rank < current.rank ||
+          // Same Shift cost: prefer fewer keystrokes, which is the whole point
+          // of preferring the layout's own compound key.
+          (rank === current.rank && tail.steps.length + 1 < current.steps.length);
+
+        if (isBetter) {
+          best[i] = { steps: [step, ...tail.steps], rank };
+        }
+      }
+    }
+  }
+
+  return best[0]?.steps ?? [];
+}
+
+function toKeySequenceStep(candidate: KeyCandidate): KeySequenceStep {
+  return {
+    key: candidate.key,
+    keyCode: candidate.keyCode,
+    needsShift: candidate.needsShift,
+    produces: candidate.produces,
+    fingerPosition: candidate.fingerPosition,
+    fingerName: candidate.fingerName,
+    hand: candidate.fingerPosition <= 5 ? 'left' : 'right',
+    bengaliFingerLabel: FINGER_BENGALI_NAMES[candidate.fingerPosition] || 'অজানা',
+  };
+}
+
+/**
+ * Render a key sequence as the string a learner reads, e.g. "k + h + Shift + l".
+ * Returns '' for an empty sequence so callers can render it unconditionally.
+ */
+export function formatKeySequence(steps: KeySequenceStep[]): string {
+  return steps.map((step) => (step.needsShift ? `Shift + ${step.key}` : step.key)).join(' + ');
+}
+
 export function findKeyInfoForChar(
   char: string,
   layoutName?: string,
@@ -650,3 +1062,4 @@ export function findKeyInfoForChar(
 
   return null;
 }
+

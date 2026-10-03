@@ -287,18 +287,18 @@ export default function TypingPractice({
 
   if (state.isFinished) {
     const timeElapsed = Math.max(time, 1);
-    const grossWpm = Math.round(((state.totalChars / 5) / (timeElapsed / 60)));
-    const cpm = Math.round((state.totalChars / (timeElapsed / 60)));
+    const gpm = state.gpm;
+    const cpm = state.totalChars; // graphemes typed over the whole test
 
     return (
       <TestResults
         stats={{
           wpm: state.wpm,
+          gpm,
           spm: state.spm,
           accuracy: state.accuracy,
           errors: state.totalErrors,
           timeElapsed: time,
-          grossWpm,
           cpm,
           uncorrectedErrors: state.totalErrors,
         }}
@@ -349,8 +349,8 @@ export default function TypingPractice({
       {/* Stats Display Card */}
       <Card className="w-full">
         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
-          <StatDisplay icon={Zap} value={toBengaliNumber(state.wpm)} label="WPM" />
-          <StatDisplay icon={Activity} value={toBengaliNumber(state.spm)} label="SPM (স্ট্রোক)" />
+          <StatDisplay icon={Zap} value={toBengaliNumber(state.gpm)} label="GPM (গ্রাফিম/মিনিট)" />
+          <StatDisplay icon={Activity} value={toBengaliNumber(state.wpm)} label="WPM (শব্দ/মিনিট)" />
           <StatDisplay icon={Target} value={`${toBengaliNumber(state.accuracy)}%`} label="নির্ভুলতা" />
           <StatDisplay
             icon={Timer}

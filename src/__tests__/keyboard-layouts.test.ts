@@ -33,13 +33,23 @@ describe('keyboard layout helpers', () => {
 
   it('returns the expected Bengali labels for each layout including khipro', () => {
     expect(getKeyboardLayoutConfig('avro').home[0].bn).toBe('া');
-    expect(getKeyboardLayoutConfig('bijoy').home[0].bn).toBe('ৃ');
+    expect(getKeyboardLayoutConfig('bijoy').home[0].bn).toBe('র্');
     expect(getKeyboardLayoutConfig('banglaword').home[0].bn).toBe('া');
     expect(getKeyboardLayoutConfig('probhat').home[0].bn).toBe('া');
-    expect(getKeyboardLayoutConfig('unijoy').home[0].bn).toBe('ৃ');
+    expect(getKeyboardLayoutConfig('unijoy').home[0].bn).toBe('র্');
     expect(getKeyboardLayoutConfig('khipro').home[0].bn).toBe('আ');
     expect(getKeyboardLayoutConfig('khipro').home.find(k => k.keyCode === 'KeyF')?.bn).toBe('Mod');
     expect(getKeyboardLayoutConfig('khipro').home.find(k => k.keyCode === 'KeyK')?.bn).toBe('ক');
+  });
+
+  it('puts the reph on plain `a` and vocalic ri on Shift+a for bijoy and unijoy', () => {
+    // These two were the wrong way round, so every hint for a reph and for the
+    // vocalic r was wrong by exactly one Shift.
+    for (const layout of ['bijoy', 'unijoy'] as const) {
+      const a = getKeyboardLayoutConfig(layout).home.find((k) => k.keyCode === 'KeyA');
+      expect({ layout, bn: a?.bn }).toEqual({ layout, bn: 'র্' });
+      expect({ layout, bnShift: a?.bnShift }).toEqual({ layout, bnShift: 'ৃ' });
+    }
   });
 
   it('includes Backslash key mapped to ri-kar (ৃ) in banglaword layout', () => {

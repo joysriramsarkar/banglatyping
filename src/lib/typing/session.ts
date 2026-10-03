@@ -13,6 +13,7 @@
  */
 
 import type { TypingEvent, ExtendedTypingStats, ErrorType } from '../types';
+import { normalizeBengaliString } from '../bengali-grapheme';
 import { segmentGraphemes } from './comparator';
 import { classifyGraphemeError } from './error-classifier';
 import { computeMetrics } from './metrics';
@@ -109,9 +110,13 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
       const expectedGrapheme = state.expectedGraphemes[state.currentGraphemeIndex] ?? '';
       const actualInput = action.payload.grapheme;
 
-      // Compare
+      // Compare. normalizeBengaliString is the single normalizer for the whole
+      // app: NFC, ZWJ/ZWNJ removal, and the decomposed-nukta forms folded onto
+      // their atomic letters (ড + ় -> ড়). A second, narrower copy of this
+      // function used to live here, so the session engine called ড় a mistake
+      // whenever the rest of the app called it correct.
       const correct = expectedGrapheme !== '' &&
-        normalizeForCompare(expectedGrapheme) === normalizeForCompare(actualInput);
+        normalizeBengaliString(expectedGrapheme) === normalizeBengaliString(actualInput);
 
       const errorType: ErrorType | null = correct
         ? null
@@ -119,6 +124,10 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
 
       const newEvent: TypingEvent = {
         sequence: state.events.length,
+        // Captured before the index advances, and deliberately not the same as
+        // `sequence`: a grapheme the learner mistyped and then fixed has two
+        // events and one index.
+        graphemeIndex: state.currentGraphemeIndex,
         expectedGrapheme,
         actualInput,
         timestamp: now - startedAt,  // Relative to session start
@@ -126,7 +135,11 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
         correct,
         errorType,
         layout: state.layout,
-        corrected: false,
+        // A mistake is "corrected" when the learner comes back to the same
+        // grapheme after having already got it wrong.
+        corrected: state.events.some(
+          (e) => e.graphemeIndex === state.currentGraphemeIndex && !e.correct
+        ),
       };
 
       const newIndex = correct
@@ -212,10 +225,6 @@ export function sessionReducer(state: SessionState, action: SessionAction): Sess
 }
 
 // ── Helpers ─────────────────────────────────────────────────────
-
-function normalizeForCompare(text: string): string {
-  return text.replace(/\u200D/g, '').replace(/\u200C/g, '').normalize('NFC');
-}
 
 /**
  * Compute effective session duration (excluding pauses).

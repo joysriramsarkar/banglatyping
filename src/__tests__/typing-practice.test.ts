@@ -9,6 +9,10 @@ const KSSA = '\u0995\u09CD\u09B7'; // ক্ষ - single grapheme cluster, 3 cod
 const HASANTA = '\u09CD'; // ্
 const KA = '\u0995'; // ক
 const SSA = '\u09B7'; // ষ
+const BI = '\u09AC\u09BF'; // বি
+const BJAN = '\u099C'; // জ
+/** বিজ্ঞান — 7 code points, 3 graphemes. */
+const BIJNAN = '\u09AC\u09BF\u099C\u09CD\u09DE\u09BE\u09A8';
 
 const THREE_WORDS = `${AMAR} ${SONAR} ${BANGLA}`;
 
@@ -424,7 +428,7 @@ describe('useTypingPractice', () => {
       expect(result.current.state.accuracy).toBe(80);
     });
 
-    it('counts the space between completed words as a keystroke', () => {
+    it('counts the space between completed words as a grapheme', () => {
       const { result } = setup('ab cd');
 
       typeWord(result, 'ab');
@@ -435,35 +439,131 @@ describe('useTypingPractice', () => {
         result.current.calculateStats(60);
       });
 
-      // 2 typed characters + 1 space
+      // 2 typed graphemes + 1 space
       expect(result.current.state.totalChars).toBe(3);
-      // The current word has not been started, so both of its expected
-      // characters ('c' and 'd') are counted as uncorrected errors.
-      expect(result.current.state.totalErrors).toBe(2);
+      // The next word has not been started, so nothing in it has been typed and
+      // nothing in it is an error. Counting untyped graphemes as mistakes meant
+      // pressing space tanked the accuracy before the learner had typed a thing.
+      expect(result.current.state.totalErrors).toBe(0);
+      expect(result.current.state.accuracy).toBe(100);
     });
 
-    it('calculates net WPM from keystrokes over time', () => {
-      const { result } = setup('abcdefghij other');
+    it('reports WPM as finished words per minute', () => {
+      const { result } = setup('one two three four');
 
-      typeWord(result, 'abcdefghij'); // 10 keystrokes
+      for (const word of ['one', 'two', 'three']) {
+        typeWord(result, word);
+        act(() => {
+          result.current.handleSpace();
+        });
+      }
       act(() => {
         result.current.calculateStats(60);
       });
 
-      // (10 / 5) per minute, no errors => 2 WPM
-      expect(result.current.state.wpm).toBe(2);
+      expect(result.current.state.totalWords).toBe(3);
+      expect(result.current.state.wpm).toBe(3);
+    });
+
+    it('does not count a mistyped word toward WPM', () => {
+      const { result } = setup('one two');
+
+      typeWord(result, 'oen'); // transposed
+      act(() => {
+        result.current.handleSpace();
+      });
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.totalWords).toBe(0);
+      expect(result.current.state.wpm).toBe(0);
+      expect(result.current.state.totalErrors).toBe(2);
+    });
+
+    it('reports GPM as graphemes per minute', () => {
+      const { result } = setup('abcdefghij other');
+
+      typeWord(result, 'abcdefghij'); // 10 graphemes
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.gpm).toBe(10);
+      expect(result.current.state.spm).toBe(10);
+    });
+
+    it('counts a conjunct as one grapheme, not three characters', () => {
+      const { result } = setup(`${KSSA} ${SONAR}`);
+
+      // ক্ষ is three code points but a single thing to produce.
+      typeWord(result, KSSA);
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.totalChars).toBe(1);
+      expect(result.current.state.totalErrors).toBe(0);
+      expect(result.current.state.accuracy).toBe(100);
+      expect(result.current.state.gpm).toBe(1);
+    });
+
+    it('charges nothing for the part of a conjunct word that is not typed yet', () => {
+      // বিজ্ঞান is 7 code points but only 3 graphemes. Counting code points
+      // meant the two trailing graphemes were reported as mistakes the moment
+      // the word was opened, before the learner had typed anything.
+      const { result } = setup(`${BIJNAN} ${SONAR}`);
+
+      typeWord(result, `${BI}\u099C`); // বি + জ, still incomplete
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.totalChars).toBe(2);
+      expect(result.current.state.totalErrors).toBe(0);
+      expect(result.current.state.accuracy).toBe(100);
+    });
+
+    it('charges nothing for a partially typed conjunct', () => {
+      const { result } = setup(`${KSSA} ${SONAR}`);
+
+      // ক্ on its own is halfway through the conjunct, not a mistake.
+      typeWord(result, KA);
+      act(() => {
+        result.current.inputChar(HASANTA, 100);
+      });
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.totalErrors).toBe(0);
+      expect(result.current.state.accuracy).toBe(100);
+    });
+
+    it('charges the extra graphemes when a conjunct is replaced by letters', () => {
+      const { result } = setup(`${KSSA} ${SONAR}`);
+
+      // ক্ষ typed as কস: the conjunct became two letters.
+      typeWord(result, `${KA}স`);
+      act(() => {
+        result.current.calculateStats(60);
+      });
+
+      expect(result.current.state.totalChars).toBe(2);
+      expect(result.current.state.totalErrors).toBe(2);
+      expect(result.current.state.accuracy).toBe(0);
     });
 
     it('never reports a negative WPM', () => {
       const { result } = setup('hello world');
 
-      typeWord(result, 'xxxxx'); // 5 keystrokes, 5 errors
+      typeWord(result, 'xxxxx'); // 5 graphemes, all wrong
       act(() => {
         result.current.calculateStats(60);
       });
 
-      // gross 1 WPM minus 5 errors per minute would be negative
       expect(result.current.state.wpm).toBe(0);
+      expect(result.current.state.accuracy).toBe(0);
     });
 
     it('caches word stats and skips redundant state updates', () => {

@@ -188,6 +188,15 @@ export interface SkillMastery {
  */
 export interface TypingEvent {
   sequence: number;
+  /**
+   * Which grapheme of `expectedGraphemes` this event was an attempt at.
+   *
+   * Not the same as `sequence`. Backing up and retyping a grapheme leaves the
+   * cursor where it was, so the second attempt has a higher `sequence` than the
+   * first but the same index. Anything that maps events back onto the display
+   * has to key off this, not off `sequence`.
+   */
+  graphemeIndex: number;
   expectedGrapheme: string;
   actualInput: string;
   timestamp: number;       // ms since session start
