@@ -1,27 +1,9 @@
 
 import type { Metadata } from 'next';
-import { Inter, Noto_Sans_Bengali, Hind_Siliguri } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-});
-
-const noto_sans_bengali = Noto_Sans_Bengali({
-  subsets: ['bengali'],
-  weight: ["400", "700"],
-  variable: '--font-noto-sans-bengali',
-});
-
-const hind_siliguri = Hind_Siliguri({
-  subsets: ['bengali'],
-  weight: ["400", "700"],
-  variable: '--font-hind-siliguri',
-});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://typing.onuron.org';
 
@@ -168,7 +150,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchemas) }}
         />
       </head>
-      <body className={cn("font-body antialiased", inter.variable, noto_sans_bengali.variable, hind_siliguri.variable)}>
+      <body className={cn("font-body antialiased")}>
         {/* Skip to main content — keyboard accessibility */}
         <a
           href="#main-content"
