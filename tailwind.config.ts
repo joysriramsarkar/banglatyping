@@ -20,11 +20,11 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", ...fontFamily.sans],
-        headline: ["var(--font-noto-sans-bengali)", "var(--font-inter)", ...fontFamily.sans],
-        body: ["var(--font-noto-sans-bengali)", "var(--font-inter)", ...fontFamily.sans],
+        sans: ["Inter", ...fontFamily.sans],
+        headline: ["Noto Sans Bengali", "Nirmala UI", "Arial", ...fontFamily.sans],
+        body: ["Noto Sans Bengali", "Nirmala UI", "Arial", ...fontFamily.sans],
         code: ['monospace'],
-        hind: ["var(--font-hind-siliguri)", "var(--font-inter)", ...fontFamily.sans],
+        hind: ["Hind Siliguri", "Noto Sans Bengali", "Nirmala UI", "Arial", ...fontFamily.sans],
       },
       colors: {
         background: 'hsl(var(--background))',
