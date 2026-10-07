@@ -1,26 +1,51 @@
 // Database client configuration for Supabase
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+export function getSupabaseUrl(): string {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+}
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('⚠️ Supabase credentials not fully configured');
+export function getSupabaseAnonKey(): string {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+}
+
+export function getSupabaseServiceKey(): string | undefined {
+  return process.env.SUPABASE_SERVICE_KEY;
 }
 
 let _client: ReturnType<typeof createClient> | null = null;
 let _adminClient: ReturnType<typeof createClient> | null = null;
 
-// Client for authentication and basic queries
+/**
+ * Resets cached Supabase singletons (used in testing environments).
+ */
+export function resetSupabaseClientsForTesting() {
+  _client = null;
+  _adminClient = null;
+}
+
+// Client for authentication and basic public queries
 export function getSupabase() {
-  if (!_client) _client = createClient(supabaseUrl, supabaseKey);
+  const url = getSupabaseUrl();
+  const key = getSupabaseAnonKey();
+  if (!_client) {
+    if (!url || !key) {
+      console.warn('⚠️ Supabase credentials not fully configured');
+    }
+    _client = createClient(url, key);
+  }
   return _client;
 }
 
+/**
+ * Privileged admin client for server-side maintenance, migrations, and seeds only.
+ * NEVER use in user route handlers or user request context.
+ */
 export function getSupabaseAdmin() {
-  if (!_adminClient && supabaseServiceKey && supabaseUrl) {
-    _adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+  const serviceKey = getSupabaseServiceKey();
+  const url = getSupabaseUrl();
+  if (!_adminClient && serviceKey && url) {
+    _adminClient = createClient(url, serviceKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -37,22 +62,21 @@ export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
 /**
  * A Supabase client for database operations.
  *
- * Server route handlers verify the caller's identity via auth token first.
- * When the server has SUPABASE_SERVICE_KEY configured, it executes database
- * operations via the service role client, avoiding RLS policy violations.
- * Otherwise, it forwards the caller's access token.
+ * Always enforces the user's privilege boundary:
+ * - When an accessToken is provided, forwards `Authorization: Bearer <token>`
+ *   so PostgREST sets `auth.uid()` and enforces Row Level Security (RLS).
+ * - When no token is provided, returns the public anonymous client.
+ * - NEVER falls back to service role admin client during normal user requests.
  */
 export function createRequestClient(accessToken?: string | null): ReturnType<typeof createClient> {
-  const admin = getSupabaseAdmin();
-  if (admin) {
-    return admin;
-  }
-
   if (!accessToken) {
     return getSupabase();
   }
 
-  return createClient(supabaseUrl, supabaseKey, {
+  const url = getSupabaseUrl();
+  const key = getSupabaseAnonKey();
+
+  return createClient(url, key, {
     global: {
       headers: { Authorization: `Bearer ${accessToken}` },
     },

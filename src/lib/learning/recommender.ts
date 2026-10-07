@@ -77,9 +77,14 @@ export function generateRecommendations(
     recencyBoost.set(err.char, err.count / maxRecentCount);
   }
 
-  // Score and rank each weak skill
+  // Score and rank each weak skill with statistical sample-size confidence
   const scored = weakChars.map(wc => {
-    const baseScore = 100 - wc.accuracy_rate;    // Higher score = weaker
+    const attempts = wc.total_attempts ?? (wc.error_count > 0 ? wc.error_count : 1);
+    // Statistical confidence: prevents single-attempt outliers from hijacking recommendations
+    // over confirmed repeating error patterns (as per পরিকল্পনা.md #17).
+    const sampleConfidence = Math.min(1, Math.max(0.35, attempts / 5));
+
+    const baseScore = (100 - wc.accuracy_rate) * sampleConfidence;    // Confidence-weighted error severity
     const boost = (recencyBoost.get(wc.character) ?? 0) * 20; // Recency boost up to 20pts
     const frequencyFactor = Math.min(wc.error_count / 10, 1) * 10; // Up to 10pts for frequency
 

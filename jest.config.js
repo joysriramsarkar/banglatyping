@@ -23,11 +23,15 @@ const config = {
     'src/lib/types.ts',
     'src/lib/curriculum/types.ts',
   ],
-  // Honest floor. Coverage is measured across every file in src/lib and
-  // src/hooks rather than a hand-picked list, so this number is the real one.
-  // Raise it as tests are added; do not lower it.
+  // Multi-dimensional coverage floor enforcing rigorous regression protection
+  // across lines, branches, functions, and statements (পরিকল্পনা.md #19.2).
   coverageThreshold: {
-    global: { lines: 80 },
+    global: {
+      lines: 85,
+      statements: 85,
+      functions: 80,
+      branches: 65,
+    },
   },
 };
 

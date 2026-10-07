@@ -6,7 +6,7 @@
 
 // Bengali script Unicode ranges and important characters
 const BENGALI_CHAR_RANGES = {
-  VOWELS: /[\u0985-\u0988\u098F-\u0990\u0993-\u0994]/,
+  VOWELS: /[\u0985-\u098C\u098F-\u0990\u0993-\u0994]/,
   CONSONANTS: /[\u0995-\u09B9\u09CE\u09DC-\u09DD\u09DF]/,
   VOWEL_SIGNS: /[\u09BE-\u09C4\u09C7-\u09C8\u09CB-\u09CC]/,
   HALANT: /\u09CD/,
