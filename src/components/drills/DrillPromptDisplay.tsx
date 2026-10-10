@@ -3,7 +3,7 @@ import { CheckCircle } from "lucide-react";
 import { cn, toBengaliNumber } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import type { Drill } from "@/lib/types";
-import { buildGraphemeRenderModel, bengaliSegmenter, normalizeBengaliString, isComplexConjunct } from "@/lib/bengali-grapheme";
+import { buildGraphemeRenderModel, bengaliSegmenter, normalizeBengaliString, needsConjunctSimulation } from "@/lib/bengali-grapheme";
 import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
 import { getStepsForWord } from "@/lib/lessons";
 
@@ -192,7 +192,7 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
             const clusterEnd = stepOffset + clusterStepCount;
 
             if (currentStepIndex >= stepOffset && currentStepIndex < clusterEnd) {
-                if (isComplexConjunct(normCluster)) {
+                if (needsConjunctSimulation(normCluster)) {
                     const stepsTypedInCluster = currentStepIndex - stepOffset;
                     const typedInCluster = clusterSteps.slice(0, stepsTypedInCluster).map(s => s.display).join('');
                     return buildGraphemeRenderModel(normCluster, normalizeBengaliString(typedInCluster));

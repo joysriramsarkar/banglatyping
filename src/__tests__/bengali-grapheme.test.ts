@@ -20,6 +20,8 @@ import {
   isComplexConjunct,
   isTransparentConjunct,
   isKarCluster,
+  isVerticallyStackedConjunct,
+  needsConjunctSimulation,
   buildConjunctSimulationSteps,
   buildGraphemeRenderModel,
 } from '@/lib/bengali-grapheme';
@@ -691,6 +693,42 @@ describe('buildGraphemeRenderModel', () => {
     const modelKsa = buildGraphemeRenderModel('ক্ষ', '');
     expect(modelKsa.isComplex).toBe(true);
     expect(modelKsa.specialHint).toContain("বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক + ্ + ষ");
+  });
+
+  it('creates simulation steps for side-by-side fused ligatures (ক্ল, গ্ল) but not stacked ones (প্ত, প্র)', () => {
+    // 'ক্ল' is a side-by-side ল-ফলা ligature: a mid-glyph clip would cut it
+    // mid-stroke, so it needs the simulation-steps path instead.
+    const modelKlo = buildGraphemeRenderModel('ক্ল', 'ক');
+    expect(modelKlo.isComplex).toBe(false);
+    expect(modelKlo.conjunctSteps).toBeDefined();
+    expect(modelKlo.conjunctSteps?.map((s) => s.label)).toEqual(['ক', 'ক্', 'ল']);
+    expect(modelKlo.conjunctSteps?.[0].completed).toBe(true);
+    expect(modelKlo.conjunctSteps?.[1].active).toBe(true);
+
+    // Vertically stacked conjuncts keep the clip highlight: no steps needed.
+    expect(buildGraphemeRenderModel('প্ত', 'প').conjunctSteps).toBeUndefined();
+    expect(buildGraphemeRenderModel('প্র', 'প').conjunctSteps).toBeUndefined();
+    expect(buildGraphemeRenderModel('স্বা', 'স').conjunctSteps).toBeUndefined();
+  });
+});
+
+describe('needsConjunctSimulation', () => {
+  it('flags complex conjuncts and side-by-side ligatures, not stacked/kar clusters', () => {
+    expect(needsConjunctSimulation('ক্র')).toBe(true);
+    expect(needsConjunctSimulation('ক্ষ')).toBe(true);
+    expect(needsConjunctSimulation('ক্ল')).toBe(true);
+    expect(needsConjunctSimulation('গ্ল')).toBe(true);
+    expect(needsConjunctSimulation('ক্ক')).toBe(true);
+    expect(needsConjunctSimulation('প্ত')).toBe(false);
+    expect(needsConjunctSimulation('প্র')).toBe(false);
+    expect(needsConjunctSimulation('স্বা')).toBe(false);
+    expect(needsConjunctSimulation('কা')).toBe(false);
+    expect(needsConjunctSimulation('ক')).toBe(false);
+
+    expect(isVerticallyStackedConjunct('প্ত')).toBe(true);
+    expect(isVerticallyStackedConjunct('প্র')).toBe(true);
+    expect(isVerticallyStackedConjunct('ক্ল')).toBe(false);
+    expect(isVerticallyStackedConjunct('গ্ল')).toBe(false);
   });
 });
 

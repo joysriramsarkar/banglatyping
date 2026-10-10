@@ -55,6 +55,27 @@ describe('GraphemeDisplay', () => {
     expect(simScreen.textContent).toContain('ক্র');
   });
 
+  it('renders side-by-side ligature (ক্ল) as one unbroken glyph with simulation steps, no clip overlay', () => {
+    // Regression: ক্ল typed ক used to render a mid-stroke clip cut that looked
+    // like two overlapping glyphs. It must render one clean glyph + steps.
+    const model = buildGraphemeRenderModel('ক্ল', 'ক');
+    const { container } = render(<GraphemeDisplay model={model} />);
+
+    // Exactly one visible instance of the full glyph (no underlay+overlay double).
+    expect(container.textContent).toContain('ক্ল');
+    const clipped = Array.from(container.querySelectorAll('span')).filter(
+      (s) => (s as HTMLElement).style.clipPath
+    );
+    expect(clipped.length).toBe(0);
+
+    // With the simulation box, the learner sees ক ✓ + ক্ ● + ল ○ = ক্ল.
+    const { getByLabelText, getByText } = render(
+      <GraphemeDisplay model={model} showSimulationBox />
+    );
+    expect(getByLabelText('যুক্তাক্ষর সিমুলেশন স্ক্রিন')).toBeInTheDocument();
+    expect(getByText('ক্')).toBeInTheDocument();
+  });
+
   it('renders complex conjunct (ক্ষ) with BanglaWord hint badge for "q" or "ক+্+ষ"', () => {
     const model = buildGraphemeRenderModel('ক্ষ', '');
     render(<GraphemeDisplay model={model} showSimulationBox />);

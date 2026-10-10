@@ -38,7 +38,7 @@ import {
   getNextExpectedKeyChar,
   bengaliSegmenter,
   buildGraphemeRenderModel,
-  isComplexConjunct,
+  needsConjunctSimulation,
   getUpcomingIndependentVowel,
   ensureSpacedDrillItems,
 } from "@/lib/bengali-grapheme";
@@ -1170,7 +1170,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
                             // 3. Untyped cluster -> show breakdown simulation screen if active cluster is a complex conjunct
                             const isNextActive = cIdx === inputClusters.length;
-                            if (isNextActive && isComplexConjunct(normCluster)) {
+                            if (isNextActive && needsConjunctSimulation(normCluster)) {
                               const renderModel = buildGraphemeRenderModel(normCluster, "");
                               return (
                                 <GraphemeDisplay
@@ -1254,7 +1254,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                   const activeCluster = targetClusters[activeIdx];
                   if (!activeCluster) return null;
                   const normCluster = normalizeBengaliString(activeCluster);
-                  if (isComplexConjunct(normCluster)) {
+                  if (needsConjunctSimulation(normCluster)) {
                     const typedInCluster = activeIdx < inputClusters.length ? normalizeBengaliString(inputClusters[activeIdx]) : "";
                     const simModel = buildGraphemeRenderModel(normCluster, typedInCluster);
                     return (

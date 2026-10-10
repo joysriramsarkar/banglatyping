@@ -10,7 +10,7 @@ import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { DrillProgress } from "./DrillProgress";
 import { useWordDrill } from "./use-word-drill";
 
-import { normalizeBengaliString, bengaliSegmenter, buildGraphemeRenderModel, isComplexConjunct } from "@/lib/bengali-grapheme";
+import { normalizeBengaliString, bengaliSegmenter, buildGraphemeRenderModel, needsConjunctSimulation } from "@/lib/bengali-grapheme";
 import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +83,7 @@ const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; is
                     }
 
                     const isNextActive = cIdx === inputClusters.length;
-                    if (isNextActive && isComplexConjunct(normCluster)) {
+                    if (isNextActive && needsConjunctSimulation(normCluster)) {
                         const renderModel = buildGraphemeRenderModel(normCluster, "");
                         return (
                             <GraphemeDisplay
@@ -195,7 +195,7 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                            const activeCluster = targetClusters[activeIdx];
                            if (!activeCluster) return null;
                            const normCluster = normalizeBengaliString(activeCluster);
-                           if (isComplexConjunct(normCluster)) {
+                           if (needsConjunctSimulation(normCluster)) {
                                const typedInCluster = activeIdx < inputClusters.length ? normalizeBengaliString(inputClusters[activeIdx]) : "";
                                const simModel = buildGraphemeRenderModel(normCluster, typedInCluster);
                                return (

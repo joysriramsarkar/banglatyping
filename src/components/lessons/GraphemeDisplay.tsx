@@ -31,23 +31,27 @@ interface GraphemeDisplayProps {
 /**
  * Renders a single Bengali grapheme cluster without breaking font shaping:
  *
- * 1. Kar clusters ('কা', 'টি', 'কু') & Transparent conjuncts ('প্ত', 'চ্ছ', 'জ্ব', 'প্র', 'দ্র', 'রু', 'রূ'):
+ * 1. Kar clusters ('কা', 'টি', 'কু') & vertically-stacked transparent conjuncts
+ *    ('প্ত', 'চ্ছ', 'জ্ব', 'প্র', 'দ্র', 'স্বা'):
  *    - Unbroken glyph rendering via layered underlay (gray) and overlay with getBengaliGraphemeClip.
  *    - Halant indicator dot ('.') displayed below when halant ('্') is typed for transparent conjuncts.
  *
- * 2. Complex conjuncts ('ক্ত', 'ত্র', 'ট্ট', 'ক্র', 'ক্ষ', 'জ্ঞ'):
- *    - Full target glyph displayed cleanly without breaking text baselines.
- *    - The simulation decomposition box is cleanly handled by ConjunctSimulationBox.
+ * 2. Complex conjuncts ('ক্ত', 'ত্র', 'ট্ট', 'ক্র', 'ক্ষ', 'জ্ঞ') and side-by-side
+ *    fused ligatures ('ক্ল', 'গ্ল'):
+ *    - Full target glyph displayed cleanly without breaking text baselines (no
+ *      mid-stroke clip that would render as a broken, overlapping glyph).
+ *    - Step-by-step progress is shown by the ConjunctSimulationBox
+ *      (e.g. ক ✓ + ক্ ● + ল ○ = ক্ল) instead of a partial green cut.
  */
 export function GraphemeDisplay({ model, className, isError, showSimulationBox = false }: GraphemeDisplayProps) {
   const typedColor = isError
     ? "text-red-500 font-black"
     : "text-green-600 dark:text-green-400 font-black";
 
-  // ── 1. Complex Conjuncts: Full Glyph (unbroken baseline) ───────────────────
-  if (model.isComplex && model.conjunctSteps && model.conjunctSteps.length > 0) {
+  // ── 1. Conjuncts with simulation steps: Full Glyph (unbroken baseline) ──────
+  if (model.conjunctSteps && model.conjunctSteps.length > 0) {
     const isFullyTyped = (model.currentStep ?? 0) >= (model.totalSteps ?? model.full.length);
-    const glyphColor = isFullyTyped ? typedColor : "text-foreground font-black";
+    const glyphColor = isFullyTyped || isError ? typedColor : "text-foreground font-black";
 
     if (showSimulationBox) {
       return (

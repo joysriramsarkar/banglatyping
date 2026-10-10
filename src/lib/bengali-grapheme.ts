@@ -496,6 +496,36 @@ export function isTransparentConjunct(cluster: string): boolean {
 }
 
 /**
+ * Checks if a conjunct stacks its components vertically (one below the other),
+ * e.g. 'প্ত', 'স্ব', 'প্র' (contains ্ব/্র, or the base consonant belongs to the
+ * vertically-stacking family). For these, a horizontal split highlight follows
+ * the natural glyph geometry.
+ *
+ * Side-by-side fused ligatures such as 'ক্ল' / 'গ্ল' (ল-ফলা) are NOT stacked:
+ * a vertical cut through them slices the ligature mid-stroke and renders as a
+ * broken, overlapping glyph. Those must use the simulation-steps path instead.
+ */
+export function isVerticallyStackedConjunct(text: string): boolean {
+  const baseChar = text[0] || '';
+  return text.includes('্ব') ||
+    text.includes('্র') ||
+    /^[পদচজশসবলমতম্নছটঠডঢ]/.test(baseChar);
+}
+
+/**
+ * Checks if a cluster needs the conjunct simulation (step-by-step decomposition)
+ * display instead of a partial clip highlight. True for complex conjuncts and
+ * for non-vertically-stacked transparent conjuncts (e.g. 'ক্ল', 'গ্ল'), where a
+ * clip-path would cut a fused side-by-side ligature mid-stroke.
+ */
+export function needsConjunctSimulation(cluster: string): boolean {
+  const normCluster = normalizeBengaliString(cluster);
+  if (isComplexConjunct(normCluster)) return true;
+  const core = getConjunctCore(normCluster);
+  return isConjunct(core) && !isVerticallyStackedConjunct(core);
+}
+
+/**
  * Checks if a grapheme cluster is a consonant with vowel sign (kar).
  */
 export function isKarCluster(cluster: string): boolean {
@@ -1100,9 +1130,7 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
 
       const hasPostBaseKar = /[\u09BE\u09C0]/.test(text); // া (Aa-kar) or ী (Dirgho-I kar)
       const hasPreBaseKar = /[\u09BF\u09C7\u09C8]/.test(text); // ি, ে, ৈ
-      const isVerticalStacked = text.includes('\u09CD\u09AC') || text.includes('্ব') ||
-                                text.includes('\u09CD\u09B0') || text.includes('্র') ||
-                                /^[পদচজশসবলমতম্নছটঠডঢ]/.test(baseChar);
+      const isVerticalStacked = isVerticallyStackedConjunct(text);
 
       // Conjuncts with trailing post-base marks like 'স্বা', 'ব্রা', 'প্রা', 'দ্বা', 'শ্বা', 'স্পা', 'স্থা':
       // The conjunct base is on the left (0% to ~70%), while the post-base mark (া, ী) is on the right (~70% to 100%).
@@ -1180,7 +1208,7 @@ export interface GraphemeRenderModel {
   full: string;
   kind: GraphemeKind;
   parts: GraphemePart[];
-  conjunctSteps?: ConjunctStep[]; // শুধু complex conjunct-এর সিমুলেশনের জন্য
+  conjunctSteps?: ConjunctStep[]; // যুক্তাক্ষর সিমুলেশনের জন্য (complex + non-stacked transparent)
   currentStep?: number;
   totalSteps?: number;
   hasPendingHalant?: boolean;
@@ -1303,7 +1331,7 @@ export function buildGraphemeRenderModel(
   let conjunctSteps: ConjunctStep[] | undefined = undefined;
   let specialHint: string | undefined = undefined;
 
-  if (isComplex) {
+  if (isComplex || needsConjunctSimulation(normCluster)) {
     conjunctSteps = buildConjunctSimulationSteps(normCluster, normTyped);
     if (normCluster.includes('ক্ষ')) {
       specialHint = "বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক + ্ + ষ";

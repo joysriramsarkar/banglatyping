@@ -41,7 +41,7 @@ interface ConjunctSimulationBoxProps {
  * Docked cleanly underneath prompt cards without breaking word baselines.
  */
 export function ConjunctSimulationBox({ model, className }: ConjunctSimulationBoxProps) {
-  if (!model.isComplex || !model.conjunctSteps || model.conjunctSteps.length === 0) {
+  if (!model.conjunctSteps || model.conjunctSteps.length === 0) {
     return null;
   }
 
