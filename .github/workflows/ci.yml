@@ -75,6 +75,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E Smoke Tests
-        run: npx playwright test e2e/00-smoke.spec.ts
+      - name: Run E2E tests (full suite)
+        # Serialize: the specs fight over the on-demand dev-server compile,
+        # which otherwise trips the expect timeout when run in parallel.
+        run: npx playwright test --workers=1
 

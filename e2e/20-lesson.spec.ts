@@ -99,17 +99,22 @@ test.describe("Curriculum lesson end-to-end flows", () => {
   });
 
   test("future lesson section bypass is blocked", async ({ page }) => {
-    test.fail(
-      true,
-      "Known defect: LessonPlayer currently lets users click future section pills.",
-    );
-
     await preparePage(page, { completedLessons: ["lesson-0-1"] });
     await page.goto("/dashboard/practice/lesson-1-1");
 
-    await expect(page.getByText(/বাম হাতের হোম কী/i)).toBeVisible();
-    await page.getByRole("button", { name: /আইসোলেটেড প্যাটার্ন ড্রিল/i }).click();
+    // This text is rendered only inside an explanation section, so it proves
+    // the player is still on section 1.
+    const explanationMarker = page.getByText(/হোম রো হাতের অবস্থান ও আঙুল মানচিত্র/i);
+    await expect(explanationMarker).toBeVisible();
 
-    await expect(page.getByText(/বাম হাতের হোম কী/i)).toBeVisible();
+    const futurePill = page.getByRole("button", { name: /আইসোলেটেড প্যাটার্ন ড্রিল/i });
+    await expect(futurePill).toHaveAttribute("aria-disabled", "true");
+    // Force the click so we still exercise the app-level guard (Playwright would
+    // otherwise refuse to click an aria-disabled control).
+    await futurePill.click({ force: true });
+
+    // Clicking a locked future section must not navigate away from the current
+    // section, so the explanation marker stays on screen.
+    await expect(explanationMarker).toBeVisible();
   });
 });

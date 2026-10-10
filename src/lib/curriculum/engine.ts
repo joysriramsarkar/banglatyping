@@ -10,6 +10,7 @@ import {
   getCurriculumLessonById,
   getAllCurriculumLessons,
 } from './curriculum-data';
+import { bengaliSegmenter } from '../bengali-grapheme';
 import type {
   UserLessonProgress,
   UserCurriculumState,
@@ -17,22 +18,100 @@ import type {
 
 const STORAGE_KEY = 'banglatyping_curriculum_state';
 
+/** Current persisted schema version. Bump when the shape changes. */
+export const CURRICULUM_STATE_VERSION = 3;
+
+/** Accuracy required before a lesson counts as completed. */
+export const LESSON_COMPLETION_ACCURACY = 90;
+
+/** Accuracy required for a lesson to be (currently) mastered. */
+export const LESSON_MASTERY_ACCURACY = 97;
+
 /** Default initial curriculum state (Level 0 unlocked) */
 export const INITIAL_CURRICULUM_STATE: UserCurriculumState = {
+  version: CURRICULUM_STATE_VERSION,
   completedLessons: {},
   currentLessonId: 'lesson-0-1',
   unlockedLevel: 0,
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function toNonNegativeInt(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? Math.max(0, Math.floor(value))
+    : fallback;
+}
+
+/**
+ * Validate and coerce persisted curriculum state from localStorage.
+ *
+ * Corrupted or hand-edited JSON used to be returned as-is, which let a
+ * structurally wrong object flow into the rest of the app. We now rebuild a
+ * guaranteed-valid state and drop anything malformed.
+ */
+export function sanitizeCurriculumState(raw: unknown): UserCurriculumState {
+  if (!isRecord(raw)) return { ...INITIAL_CURRICULUM_STATE };
+
+  const completedLessons: Record<string, UserLessonProgress> = {};
+  if (isRecord(raw.completedLessons)) {
+    for (const [lessonId, value] of Object.entries(raw.completedLessons)) {
+      if (!lessonId || !isRecord(value)) continue;
+      const bestAccuracy = toNonNegativeInt(value.bestAccuracy);
+      completedLessons[lessonId] = {
+        lessonId,
+        completed: Boolean(value.completed),
+        // `mastered` is the current (regress-capable) flag; `everMastered` is the
+        // sticky all-time one. Legacy records only stored `mastered`, so treat it
+        // as both and default lastAccuracy to the best we know.
+        mastered: Boolean(value.mastered),
+        everMastered: Boolean(value.everMastered ?? value.mastered),
+        bestAccuracy,
+        lastAccuracy: toNonNegativeInt(value.lastAccuracy, bestAccuracy),
+        bestWpm: toNonNegativeInt(value.bestWpm),
+        bestGpm: toNonNegativeInt(value.bestGpm),
+        timesCompleted: toNonNegativeInt(value.timesCompleted),
+        lastAttemptAt:
+          typeof value.lastAttemptAt === 'string'
+            ? value.lastAttemptAt
+            : new Date().toISOString(),
+        unlockedAt: typeof value.unlockedAt === 'string' ? value.unlockedAt : undefined,
+      };
+    }
+  }
+
+  const currentLessonId =
+    typeof raw.currentLessonId === 'string' && getCurriculumLessonById(raw.currentLessonId)
+      ? raw.currentLessonId
+      : INITIAL_CURRICULUM_STATE.currentLessonId;
+
+  return {
+    version: CURRICULUM_STATE_VERSION,
+    completedLessons,
+    currentLessonId,
+    unlockedLevel: toNonNegativeInt(raw.unlockedLevel),
+  };
+}
+
 /** Get local curriculum state from localStorage (or fallback) */
 export function getStoredCurriculumState(): UserCurriculumState {
-  if (typeof window === 'undefined') return INITIAL_CURRICULUM_STATE;
+  if (typeof window === 'undefined') return { ...INITIAL_CURRICULUM_STATE };
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return INITIAL_CURRICULUM_STATE;
-    return JSON.parse(raw);
+    if (!raw) return { ...INITIAL_CURRICULUM_STATE };
+    const parsed: unknown = JSON.parse(raw);
+    const sanitized = sanitizeCurriculumState(parsed);
+    const storedVersion =
+      isRecord(parsed) && typeof parsed.version === 'number' ? parsed.version : 1;
+    // Persist the migrated/cleaned shape so future reads are consistent.
+    if (storedVersion !== CURRICULUM_STATE_VERSION) {
+      saveStoredCurriculumState(sanitized);
+    }
+    return sanitized;
   } catch {
-    return INITIAL_CURRICULUM_STATE;
+    return { ...INITIAL_CURRICULUM_STATE };
   }
 }
 
@@ -40,7 +119,10 @@ export function getStoredCurriculumState(): UserCurriculumState {
 export function saveStoredCurriculumState(state: UserCurriculumState): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...state, version: CURRICULUM_STATE_VERSION })
+    );
   } catch (err) {
     console.error('Failed to save curriculum state:', err);
   }
@@ -83,21 +165,28 @@ export function recordLessonCompletion(
     lessonId,
     completed: false,
     mastered: false,
+    everMastered: false,
     bestAccuracy: 0,
+    lastAccuracy: 0,
     bestWpm: 0,
     bestGpm: 0,
     timesCompleted: 0,
     lastAttemptAt: new Date().toISOString(),
   };
 
-  const isCompleted = accuracy >= 90;
-  const isMastered = accuracy >= 97;
+  const isCompleted = accuracy >= LESSON_COMPLETION_ACCURACY;
+  const isMastered = accuracy >= LESSON_MASTERY_ACCURACY;
 
   const updatedProgress: UserLessonProgress = {
     lessonId,
+    // Completion is a milestone and stays sticky.
     completed: current.completed || isCompleted,
-    mastered: current.mastered || isMastered,
+    // Mastery reflects the latest attempt, so it can regress; `everMastered`
+    // keeps the all-time badge from the best result.
+    mastered: isMastered,
+    everMastered: current.everMastered || current.mastered || isMastered,
     bestAccuracy: Math.max(current.bestAccuracy, accuracy),
+    lastAccuracy: accuracy,
     bestWpm: Math.max(current.bestWpm, wpm),
     bestGpm: Math.max(current.bestGpm, gpm),
     timesCompleted: current.timesCompleted + (isCompleted ? 1 : 0),
@@ -154,7 +243,9 @@ export function calculateWordDifficulty(word: string): number {
   if (!word || word.trim().length === 0) return 0;
 
   const text = word.trim();
-  const graphemes = Array.from(new Intl.Segmenter('bn-IN', { granularity: 'grapheme' }).segment(text));
+  // Use the app-wide segmenter so word difficulty stays identical to every other
+  // grapheme-counting path (and keeps working without Intl.Segmenter).
+  const graphemes = bengaliSegmenter.segmentString(text);
   const graphemeCount = graphemes.length;
 
   // Counts of specific features
@@ -170,7 +261,7 @@ export function calculateWordDifficulty(word: string): number {
   // Detect conjuncts in graphemes
   let conjunctCount = 0;
   for (const g of graphemes) {
-    if (g.segment.includes('\u09CD') || g.segment.length > 1) {
+    if (g.includes('\u09CD') || g.length > 1) {
       conjunctCount++;
     }
   }
@@ -269,7 +360,9 @@ export function calculateCurriculumProgress(state: UserCurriculumState): {
   for (const les of all) {
     const prog = state.completedLessons[les.id];
     if (prog?.completed) completedCount++;
-    if (prog?.mastered) masteredCount++;
+    // Headline "mastered" count is the all-time achievement; per-lesson UI shows
+    // the current (regress-capable) state separately.
+    if (prog?.everMastered ?? prog?.mastered) masteredCount++;
   }
 
   const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;

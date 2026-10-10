@@ -80,9 +80,20 @@ export interface CurriculumLevel {
 
 export interface UserLessonProgress {
   lessonId: string;
+  /** Sticky milestone: the lesson was ever completed (>= completion threshold). */
   completed: boolean;
+  /**
+   * CURRENT mastery. Reflects the most recent attempt, so it can regress when a
+   * later attempt falls below the mastery threshold. Use `everMastered` for the
+   * all-time achievement badge.
+   */
   mastered: boolean;
+  /** Sticky all-time achievement: mastery was reached at least once. */
+  everMastered: boolean;
+  /** Best (highest) accuracy ever recorded. */
   bestAccuracy: number;
+  /** Accuracy of the most recent attempt; drives current mastery. */
+  lastAccuracy: number;
   bestWpm: number;
   bestGpm: number;
   timesCompleted: number;
@@ -91,6 +102,8 @@ export interface UserLessonProgress {
 }
 
 export interface UserCurriculumState {
+  /** Schema version, bumped when the persisted shape changes. */
+  version?: number;
   completedLessons: Record<string, UserLessonProgress>;
   currentLessonId: string;
   unlockedLevel: number;

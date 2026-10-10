@@ -43,6 +43,12 @@ import {
   ensureSpacedDrillItems,
 } from "@/lib/bengali-grapheme";
 import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
+import {
+  computeGpm,
+  computeSpm,
+  computeAccuracy,
+  deriveWpmFromGpm,
+} from "@/lib/typing/metric-formulas";
 
 interface LessonPlayerProps {
   lesson: CurriculumLesson;
@@ -72,6 +78,10 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
   const [sectionPassed, setSectionPassed] = useState(false);
   const [sectionFailed, setSectionFailed] = useState(false);
   const [lessonFinished, setLessonFinished] = useState(false);
+  // Sections that the learner has actually completed. Tracked by section id
+  // (not by index) so going back to an earlier section never erases progress,
+  // and so a lesson can only be completed once every section was passed.
+  const [passedSectionIds, setPassedSectionIds] = useState<Set<string>>(() => new Set());
 
   // Next curriculum lesson resolution
   const nextLesson = useMemo(() => getNextCurriculumLesson(lesson.id), [lesson.id]);
@@ -141,6 +151,11 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
   const isPausedRef = useRef<boolean>(false);
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentSection = lesson.sections[currentSectionIndex];
+  // Best result per passed typing section, keyed by section id. Used to record
+  // a lesson-level aggregate instead of blindly storing the last section score.
+  const sectionResultsRef = useRef<Map<string, { accuracy: number; gpm: number; wpm: number }>>(
+    new Map()
+  );
 
   // Live timer ticker to update speed continuously during active typing
   useEffect(() => {
@@ -238,12 +253,37 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     }, 30);
   }, []);
 
+  // A section can only be opened when every preceding section has been passed.
+  const canOpenSection = useCallback(
+    (index: number): boolean => {
+      if (index <= 0) return true;
+      const sections = lesson.sections;
+      for (let i = 0; i < index && i < sections.length; i++) {
+        if (!passedSectionIds.has(sections[i].id)) return false;
+      }
+      return true;
+    },
+    [lesson.sections, passedSectionIds]
+  );
+
+  const isSectionPassed = useCallback(
+    (sectionId: string): boolean => passedSectionIds.has(sectionId),
+    [passedSectionIds]
+  );
+
+  // Restart the whole lesson from the first section, clearing section progress.
+  const restartLesson = useCallback(() => {
+    setPassedSectionIds(new Set());
+    sectionResultsRef.current.clear();
+    setLessonFinished(false);
+    initSection(0);
+  }, [initSection]);
+
   // Calculate live stats
-  const accuracy = useMemo(() => {
-    if (totalAttempts === 0) return 100;
-    const correct = Math.max(0, totalAttempts - errorsCount);
-    return Math.round((correct / totalAttempts) * 100);
-  }, [totalAttempts, errorsCount]);
+  const accuracy = useMemo(
+    () => computeAccuracy(totalAttempts - errorsCount, totalAttempts),
+    [totalAttempts, errorsCount]
+  );
 
   const timeElapsedSec = useMemo(() => {
     if (!startTime) return 0;
@@ -265,30 +305,26 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
   // GPM = Graphemes Per Minute (Bengali-accurate metric)
   const gpm = useMemo(() => {
-    if (timeElapsedSec <= 0 || totalCompletedGraphemes <= 0) return 0;
+    if (totalCompletedGraphemes <= 0) return 0;
     // Damping for the initial 2 seconds to avoid extreme instant spikes
     if (timeElapsedSec < 2) {
       return Math.min(60, Math.round(totalCompletedGraphemes * 30));
     }
-    return Math.round(totalCompletedGraphemes / (timeElapsedSec / 60));
+    return computeGpm(totalCompletedGraphemes, timeElapsedSec * 1000);
   }, [totalCompletedGraphemes, timeElapsedSec]);
 
   // WPM approximation for display (1 Bengali word ≈ 4 graphemes on average)
-  const wpm = useMemo(() => {
-    if (gpm <= 0) return 0;
-    return Math.max(1, Math.round(gpm / 4));
-  }, [gpm]);
+  const wpm = useMemo(() => deriveWpmFromGpm(gpm), [gpm]);
 
   // SPM = Strokes (correct keystrokes) Per Minute — stroke meter methodology
   // Counts only useful keystrokes (errors excluded) to match stroke meter's eventCount logic
   const spm = useMemo(() => {
-    if (timeElapsedSec <= 0 || totalAttempts <= 0) return 0;
     const correctStrokes = Math.max(0, totalAttempts - errorsCount);
     if (correctStrokes <= 0) return 0;
     if (timeElapsedSec < 2) {
       return Math.min(120, Math.round(correctStrokes * 30));
     }
-    return Math.round(correctStrokes / (timeElapsedSec / 60));
+    return computeSpm(correctStrokes, timeElapsedSec * 1000);
   }, [totalAttempts, errorsCount, timeElapsedSec]);
 
   // Authoritative display metrics: uses frozen snapshot once section passes/fails
@@ -306,42 +342,77 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
   // Advance to next section or finish lesson
   const advanceSection = useCallback(async () => {
-    if (currentSectionIndex < lesson.sections.length - 1) {
+    const sections = lesson.sections;
+    const currentId = sections[currentSectionIndex]?.id;
+
+    // Mark the section we are leaving as passed.
+    const nextPassed = new Set(passedSectionIds);
+    if (currentId) nextPassed.add(currentId);
+    setPassedSectionIds(nextPassed);
+
+    if (currentSectionIndex < sections.length - 1) {
       initSection(currentSectionIndex + 1);
-    } else {
-      // Lesson completely finished!
-      setLessonFinished(true);
-      playSuccess();
-
-      const state = getStoredCurriculumState();
-      recordLessonCompletion(state, lesson.id, displayAccuracy, displayWpm, displayGpm);
-
-      // Save to Supabase if authenticated
-      if (user) {
-        try {
-          await apiFetch("/api/user-progress", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              userId: user.id,
-              lessonId: lesson.id,
-              wpm: displayWpm,
-              accuracy: displayAccuracy,
-              errors: errorsCount,
-              timeElapsed: timeElapsedSec,
-              erredCharacters: [],
-            }),
-          });
-        } catch (err) {
-          console.error("Failed to sync progress:", err);
-        }
-      }
-
-      onComplete?.();
+      return;
     }
+
+    // Integrity guard: a lesson may only be completed once every section has
+    // been passed. Without this, skipping ahead with the section pills could
+    // record an incomplete lesson as finished.
+    if (currentId && nextPassed.size < sections.length) {
+      const firstUnpassed = sections.findIndex((s) => !nextPassed.has(s.id));
+      toast({
+        variant: "destructive",
+        title: "পাঠ এখনও সম্পন্ন হয়নি",
+        description: "সব ধাপ সম্পন্ন করলেই পাঠটি সম্পূর্ণ হিসেবে গণ্য হবে।",
+      });
+      if (firstUnpassed >= 0) initSection(firstUnpassed);
+      return;
+    }
+
+    // Lesson completely finished!
+    setLessonFinished(true);
+    playSuccess();
+
+    // Record an aggregate across every passed typing section rather than the
+    // single most recent section's score.
+    const sectionResults = Array.from(sectionResultsRef.current.values());
+    const aggregateAccuracy = sectionResults.length
+      ? Math.round(sectionResults.reduce((sum, r) => sum + r.accuracy, 0) / sectionResults.length)
+      : displayAccuracy;
+    const aggregateGpm = sectionResults.length
+      ? Math.round(sectionResults.reduce((sum, r) => sum + r.gpm, 0) / sectionResults.length)
+      : displayGpm;
+    const aggregateWpm = deriveWpmFromGpm(aggregateGpm) || displayWpm;
+
+    const state = getStoredCurriculumState();
+    recordLessonCompletion(state, lesson.id, aggregateAccuracy, aggregateWpm, aggregateGpm);
+
+    // Save to Supabase if authenticated
+    if (user) {
+      try {
+        await apiFetch("/api/user-progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user.id,
+            lessonId: lesson.id,
+            wpm: aggregateWpm,
+            accuracy: aggregateAccuracy,
+            errors: errorsCount,
+            timeElapsed: timeElapsedSec,
+            erredCharacters: [],
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to sync progress:", err);
+      }
+    }
+
+    onComplete?.();
   }, [
     currentSectionIndex,
-    lesson.sections.length,
+    lesson.sections,
+    passedSectionIds,
     lesson.id,
     initSection,
     displayAccuracy,
@@ -352,6 +423,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     user,
     playSuccess,
     onComplete,
+    toast,
   ]);
 
   // Global Enter key handler when a section passes or fails
@@ -451,16 +523,16 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
             for (let i = 0; i < sectionItems.length; i++) {
               finalGraphemes += bengaliSegmenter.segmentString(sectionItems[i]).length;
             }
-            const finalGpm = Math.round(finalGraphemes / (totalDurationSec / 60));
-            const finalWpm = Math.max(1, Math.round(finalGpm / 4));
+            const finalGpm = computeGpm(finalGraphemes, totalDurationSec * 1000);
+            const finalWpm = deriveWpmFromGpm(finalGpm);
 
             const requiredAcc = currentSection?.requiredAccuracy || 90;
             const finalAttempts = totalAttempts + 1;
             const correctCount = Math.max(0, finalAttempts - errorsCount);
-            const currentAcc = Math.round((correctCount / finalAttempts) * 100);
+            const currentAcc = computeAccuracy(correctCount, finalAttempts);
 
             // SPM: correct strokes per minute (stroke meter methodology)
-            const finalSpm = Math.round(correctCount / (totalDurationSec / 60));
+            const finalSpm = computeSpm(correctCount, totalDurationSec * 1000);
 
             setSectionResultStats({
               gpm: finalGpm,
@@ -470,6 +542,11 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
             });
 
             if (currentAcc >= requiredAcc) {
+              sectionResultsRef.current.set(currentSection.id, {
+                accuracy: currentAcc,
+                gpm: finalGpm,
+                wpm: finalWpm,
+              });
               setSectionPassed(true);
               setSectionFailed(false);
               playSuccess();
@@ -652,9 +729,9 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     [handleCharInput]
   );
 
-  // Progress percentage across sections
+  // Progress percentage across sections (count only genuinely passed sections)
   const lessonProgressPercent = Math.round(
-    ((currentSectionIndex + (sectionPassed ? 1 : 0)) / lesson.sections.length) * 100
+    (passedSectionIds.size / lesson.sections.length) * 100
   );
 
   if (lessonFinished) {
@@ -665,7 +742,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
         </div>
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold font-headline">অভিনন্দন! পাঠ সম্পন্ন হয়েছে 🎉</h2>
-          <p className="text-muted-foreground text-sm mt-1">{lesson.title} সফলভাবে আয়ত্ত করেছেন।</p>
+          <p className="text-muted-foreground text-sm mt-1">{lesson.title} সফলভাবে সম্পন্ন হয়েছে। দক্ষতা (আয়ত্ত) নির্ধারণে ধারাবাহিক ফলাফল বিবেচিত হয়।</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 max-w-2xl mx-auto">
@@ -693,7 +770,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center items-center pt-2">
           <Button
-            onClick={() => initSection(0)}
+            onClick={() => restartLesson()}
             onMouseDown={(e) => e.preventDefault()}
             variant="outline"
             className="w-full sm:w-auto gap-2 text-xs"
@@ -781,19 +858,31 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-thin">
           {lesson.sections.map((sec, idx) => {
             const isActive = currentSectionIndex === idx;
-            const isPassed = idx < currentSectionIndex || (idx === currentSectionIndex && sectionPassed);
+            const isPassed = isSectionPassed(sec.id);
+            const isOpen = canOpenSection(idx);
 
             return (
               <button
                 key={sec.id}
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
+                aria-disabled={!isOpen}
+                title={isOpen ? undefined : "আগের ধাপগুলো সম্পন্ন করার পর খুলবে"}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (!isOpen) {
+                    toast({
+                      variant: "destructive",
+                      title: "ধাপটি এখনও লক করা",
+                      description: "এই ধাপে যাওয়ার আগে আগের ধাপগুলো সম্পন্ন করুন।",
+                    });
+                    return;
+                  }
                   initSection(idx);
                 }}
                 className={cn(
                   "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all border shrink-0",
+                  !isOpen && "opacity-50 cursor-not-allowed",
                   isActive
                     ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
                     : isPassed

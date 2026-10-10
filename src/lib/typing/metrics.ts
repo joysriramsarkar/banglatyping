@@ -23,6 +23,7 @@
 import type { TypingEvent, ExtendedTypingStats } from '../types';
 import { segmentGraphemes } from './comparator';
 import { aggregateErrorBreakdown } from './error-classifier';
+import { computeGpm, computeSpm, computeStandardWpm } from './metric-formulas';
 
 /** Pause threshold in ms — gaps longer than this are counted as pauses */
 const PAUSE_THRESHOLD_MS = 2000;
@@ -65,16 +66,16 @@ export function computeMetrics(
   const inputEvents = events.filter(e => e.actualInput !== ''); // exclude non-input events
   const totalKeystrokes = inputEvents.length;
 
-  // Gross WPM: standard formula (1 word = 5 keystrokes)
-  const grossWpm = minutes > 0 ? Math.round((totalKeystrokes / 5) / minutes) : 0;
+  // Gross WPM: standardized formula (1 word = 5 keystrokes). Shared contract.
+  const grossWpm = computeStandardWpm(totalKeystrokes, durationMs);
 
   // Net WPM: deduct uncorrected errors
   const netWpm = minutes > 0
     ? Math.max(0, Math.round(grossWpm - (uncorrectedErrors / minutes)))
     : 0;
 
-  // GPM: correct graphemes per minute (Bengali-primary metric)
-  const gpm = minutes > 0 ? Math.round(correctGraphemes / minutes) : 0;
+  // GPM: correct graphemes per minute (Bengali-primary metric). Shared contract.
+  const gpm = computeGpm(correctGraphemes, durationMs);
 
   // CPM: unicode characters per minute (from correct events)
   const correctUnicodeChars = correctEvents.reduce(
@@ -83,8 +84,8 @@ export function computeMetrics(
   );
   const cpm = minutes > 0 ? Math.round(correctUnicodeChars / minutes) : 0;
 
-  // SPM: strokes (keystrokes) per minute
-  const spm = minutes > 0 ? Math.round(totalKeystrokes / minutes) : 0;
+  // SPM: recorded input events (strokes) per minute. Shared contract.
+  const spm = computeSpm(totalKeystrokes, durationMs);
 
   // ── Accuracy ────────────────────────────────────────────────
   // Based on graphemes: correct / (correct + uncorrected)
@@ -221,22 +222,34 @@ function computeLongestStreak(events: TypingEvent[]): number {
 
 /**
  * Compute maximum GPM achieved in any BURST_WINDOW_MS window.
+ *
+ * Uses a two-pointer sliding window over the (chronologically ordered) event
+ * buffer: O(n) instead of the previous O(n²) rescan of every candidate window.
+ * For any burst of consecutive correct events within the window we keep the
+ * running count, so the best window ending at each event is evaluated in O(1).
  */
 function computeBurstGpm(events: TypingEvent[]): number {
   if (events.length === 0) return 0;
 
-  let maxGpm = 0;
   const windowMinutes = BURST_WINDOW_MS / 60000;
+  let maxGpm = 0;
+  let correctInWindow = 0;
+  let left = 0;
 
-  for (let i = 0; i < events.length; i++) {
-    const windowStart = events[i].timestamp;
-    const windowEnd = windowStart + BURST_WINDOW_MS;
+  for (let right = 0; right < events.length; right++) {
+    if (events[right].correct && !events[right].corrected) {
+      correctInWindow++;
+    }
 
-    let correctInWindow = 0;
-    for (let j = i; j < events.length && events[j].timestamp <= windowEnd; j++) {
-      if (events[j].correct && !events[j].corrected) {
-        correctInWindow++;
+    // Drop events that fell out of the trailing BURST_WINDOW_MS window.
+    while (
+      left <= right &&
+      events[right].timestamp - events[left].timestamp > BURST_WINDOW_MS
+    ) {
+      if (events[left].correct && !events[left].corrected) {
+        correctInWindow--;
       }
+      left++;
     }
 
     const windowGpm = correctInWindow / windowMinutes;

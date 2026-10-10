@@ -158,7 +158,12 @@ export default function LessonsPage() {
                             const isUnlocked = curriculumState ? isLessonUnlocked(lesson.id, curriculumState) : lesson.level === 0;
                             const progress = curriculumState?.completedLessons[lesson.id];
                             const isCompleted = progress?.completed;
-                            const isMastered = progress?.mastered;
+                            // All-time achievement badge vs current (regress-capable) mastery.
+                            const everMastered = progress?.everMastered ?? progress?.mastered;
+                            const hasRegressed =
+                              progress != null &&
+                              !progress.mastered &&
+                              progress.lastAccuracy < progress.bestAccuracy;
 
                             return (
                               <div
@@ -174,10 +179,10 @@ export default function LessonsPage() {
                                 <div className="space-y-1 pr-2">
                                   <div className="flex items-center gap-2">
                                     <h4 className="font-semibold text-sm line-clamp-1">{lesson.title}</h4>
-                                    {isMastered && (
+                                    {everMastered && (
                                       <Award className="h-4 w-4 text-amber-500 shrink-0" />
                                     )}
-                                    {isCompleted && !isMastered && (
+                                    {isCompleted && !everMastered && (
                                       <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
                                     )}
                                   </div>
@@ -195,6 +200,14 @@ export default function LessonsPage() {
                                         <span>•</span>
                                         <span className="font-medium text-foreground">
                                           সেরা: {toBengaliNumber(progress.bestWpm)} WPM ({toBengaliNumber(progress.bestAccuracy)}%)
+                                        </span>
+                                      </>
+                                    )}
+                                    {hasRegressed && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="text-amber-600 dark:text-amber-400">
+                                          সর্বশেষ: {toBengaliNumber(progress.lastAccuracy)}%
                                         </span>
                                       </>
                                     )}

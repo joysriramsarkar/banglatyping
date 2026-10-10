@@ -5,6 +5,7 @@ import {
   bengaliSegmenter,
   normalizeBengaliString,
 } from '@/lib/bengali-grapheme';
+import { computeGpm, computeAccuracy } from '@/lib/typing/metric-formulas';
 
 /**
  * Custom Hook: useTypingPractice - Optimized for Performance
@@ -184,8 +185,10 @@ function calculateStatsHelper(
 
   // Accuracy is over graphemes the learner actually produced. Spaces count as
   // produced and never as errors, which matches how a typing test is scored.
+  // Uses the shared contract (src/lib/typing/metric-formulas.ts) so this screen
+  // agrees with the lesson player and the session engine.
   const correctGraphemes = graphemesTyped - uncorrectedErrors;
-  const accuracy = graphemesTyped > 0 ? Math.round((correctGraphemes / graphemesTyped) * 100) : 100;
+  const accuracy = computeAccuracy(correctGraphemes, graphemesTyped);
 
   const timeInMinutes = time / 60;
   if (timeInMinutes <= 0) {
@@ -201,8 +204,12 @@ function calculateStatsHelper(
     };
   }
 
+  // WPM here is words-per-minute (whole finished words / minute). This is a
+  // deliberately different, clearly-labelled metric from the keystroke-based
+  // "standardized WPM" in the session engine.
   const wpm = Math.round(finishedWords / timeInMinutes);
-  const gpm = Math.round(graphemesTyped / timeInMinutes);
+  // GPM shares the exact formula used everywhere else.
+  const gpm = computeGpm(graphemesTyped, time * 1000);
 
   return {
     totalCharsTyped: graphemesTyped,

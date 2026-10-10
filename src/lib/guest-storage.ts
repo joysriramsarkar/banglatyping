@@ -107,12 +107,16 @@ export function getGuestStats(): GuestStats {
 
 /**
  * Sync guest sessions to Supabase after user logs in.
- * Clears guest local queue after successful upload.
+ *
+ * Only the sessions that upload successfully are removed from the local queue.
+ * A partial failure keeps the un-synced sessions so they can be retried on the
+ * next login instead of being silently discarded.
  */
 export async function syncGuestSessionsToUser(userId: string): Promise<number> {
   const sessions = getGuestSessions();
   if (sessions.length === 0) return 0;
 
+  const syncedIds = new Set<string>();
   let syncedCount = 0;
 
   for (const s of sessions) {
@@ -128,10 +132,13 @@ export async function syncGuestSessionsToUser(userId: string): Promise<number> {
           errors: s.errors,
           timeElapsed: s.timeElapsed,
           erredCharacters: s.erredCharacters,
+          // Stable idempotency key: a replayed session can be de-duplicated.
+          clientSessionId: s.id,
         }),
       });
 
       if (res.ok) {
+        syncedIds.add(s.id);
         syncedCount++;
       }
     } catch (e) {
@@ -139,10 +146,17 @@ export async function syncGuestSessionsToUser(userId: string): Promise<number> {
     }
   }
 
-  // Clear guest queue once synced
-  if (typeof window !== 'undefined' && syncedCount > 0) {
+  // Remove ONLY the successfully uploaded sessions.
+  if (typeof window !== 'undefined' && syncedIds.size > 0) {
     try {
-      localStorage.removeItem(GUEST_SESSIONS_KEY);
+      const remaining = sessions.filter((s) => !syncedIds.has(s.id));
+      if (remaining.length > 0) {
+        localStorage.setItem(GUEST_SESSIONS_KEY, JSON.stringify(remaining));
+        updateGuestStats(remaining);
+      } else {
+        localStorage.removeItem(GUEST_SESSIONS_KEY);
+        localStorage.removeItem(GUEST_STATS_KEY);
+      }
     } catch {
       // Ignore
     }

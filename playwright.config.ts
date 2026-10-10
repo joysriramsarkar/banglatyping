@@ -11,7 +11,9 @@ export default defineConfig({
   workers: 2,
   timeout: 45_000,
   expect: {
-    timeout: 5_000,
+    // Dev-server compiles routes on demand; 5s was tight enough to make the
+    // smoke spec flaky on a cold `/game` route. 10s still fails real breakage.
+    timeout: 10_000,
   },
   reporter: [
     ["list"],

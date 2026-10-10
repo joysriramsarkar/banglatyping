@@ -11,6 +11,8 @@ import {
   isLessonUnlocked,
   recordLessonCompletion,
   calculateCurriculumProgress,
+  sanitizeCurriculumState,
+  CURRICULUM_STATE_VERSION,
   INITIAL_CURRICULUM_STATE,
   calculateWordDifficulty,
   getWordDifficultyTier,
@@ -86,6 +88,58 @@ describe('Curriculum Engine & Data Tests', () => {
     expect(progress.completedCount).toBe(1);
     expect(progress.masteredCount).toBe(1);
     expect(progress.percentage).toBeGreaterThan(0);
+  });
+
+  test('current mastery can regress while completion and the all-time badge stay', () => {
+    let state = INITIAL_CURRICULUM_STATE;
+    state = recordLessonCompletion(state, 'lesson-0-1', 98, 30, 150);
+
+    const first = state.completedLessons['lesson-0-1'];
+    expect(first.mastered).toBe(true);
+    expect(first.everMastered).toBe(true);
+    expect(first.bestAccuracy).toBe(98);
+    expect(first.lastAccuracy).toBe(98);
+
+    // A later weaker attempt demotes *current* mastery but not the achievement.
+    state = recordLessonCompletion(state, 'lesson-0-1', 88, 20, 90);
+    const after = state.completedLessons['lesson-0-1'];
+    expect(after.mastered).toBe(false); // current mastery regressed
+    expect(after.everMastered).toBe(true); // all-time badge preserved
+    expect(after.completed).toBe(true); // completion is a sticky milestone
+    expect(after.bestAccuracy).toBe(98); // best score preserved
+    expect(after.lastAccuracy).toBe(88); // latest attempt recorded
+
+    // The headline count is all-time, so it must not drop.
+    expect(calculateCurriculumProgress(state).masteredCount).toBe(1);
+  });
+
+  test('sanitizer upgrades legacy records with the new fields', () => {
+    const legacy = {
+      completedLessons: {
+        'lesson-0-1': {
+          lessonId: 'lesson-0-1',
+          completed: true,
+          mastered: true,
+          bestAccuracy: 98,
+          bestWpm: 30,
+          bestGpm: 150,
+          timesCompleted: 1,
+          lastAttemptAt: new Date().toISOString(),
+        },
+      },
+      currentLessonId: 'lesson-0-1',
+      unlockedLevel: 0,
+    };
+
+    const state = sanitizeCurriculumState(legacy);
+    const p = state.completedLessons['lesson-0-1'];
+    expect(state.version).toBe(CURRICULUM_STATE_VERSION);
+    // Legacy records only stored `mastered`; treat it as current + all-time and
+    // seed lastAccuracy from the best we know.
+    expect(p.mastered).toBe(true);
+    expect(p.everMastered).toBe(true);
+    expect(p.lastAccuracy).toBe(98);
+    expect(p.bestAccuracy).toBe(98);
   });
 });
 

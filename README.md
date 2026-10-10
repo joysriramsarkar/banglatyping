@@ -3,14 +3,15 @@
 [![Live Website](https://img.shields.io/badge/Live%20Website-typing.onuron.org-2563eb?style=for-the-badge)](https://typing.onuron.org)
 [![Next.js](https://img.shields.io/badge/Next.js-15.5-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178c6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/Tests-299%20Passed-success?style=for-the-badge)](docs/TESTING.md)
+[![Tests](https://img.shields.io/badge/Tests-425%20Passed-success?style=for-the-badge)](docs/TESTING.md)
 [![Accessibility](https://img.shields.io/badge/WCAG%202.1-AA%20Compliant-059669?style=for-the-badge)](docs/ACCESSIBILITY.md)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 > **বাংলা টাইপিং শেখা, অনুশীলন ও স্পিড টেস্ট প্ল্যাটফর্ম**  
-> An open-source, full-stack Bengali touch-typing learning, practice, and speed test platform. Featuring 13 curriculum levels (61 structured lessons), real-time virtual keyboard finger guidance, Avro/Bijoy/BanglaWord layouts, adaptive mistake drilling, and government-standard typing exam simulations with downloadable verified certificates.
+> An open-source, full-stack Bengali touch-typing learning, practice, and speed test platform. Featuring 13 curriculum levels (61 structured lessons), real-time virtual keyboard finger guidance, six keyboard layouts (Avro, Bijoy, BanglaWord, Khipro, Probhat, Unijoy), adaptive mistake drilling, and government-standard typing exam simulations with downloadable verified certificates.
 
 🌐 **লাইভ ওয়েবসাইট:** [https://typing.onuron.org](https://typing.onuron.org)
+> **Canonical domain:** https://typing.onuron.org is the production domain (matches NEXT_PUBLIC_SITE_URL). The Vercel URL is a preview/fallback only.
 
 ---
 
@@ -21,6 +22,9 @@
   - **Avro Phonetic (অভ্র):** স্বজ্ঞাত ধ্বনিভিত্তিক টাইপিং (ami = আমি)।
   - **Bijoy Classic / Bayanno (বিজয়):** সরকারি দপ্তর ও মুদ্রণশিল্পের মানদণ্ড।
   - **BanglaWord (বাংলাওয়ার্ড):** পেশাদার নথি টাইপিং লেআউট।
+  - **Khipro:** জিরো-শিফট ধ্বনিভিত্তিক লেআউট (zero-shift phonetic)।
+  - **Probhat:** ঐতিহ্যবাহী প্রভাত লেআউট।
+  - **Unijoy:** অভ্র-সমর্থিত ইউনিজয় লেআউট।
 - **১০০% নির্ভুল বাংলা গ্রাফিম ইঞ্জিন (Grapheme Engine):** যুক্তাক্ষর ও কার-চিহ্নের সঠিক বিভাজন এবং GPM (Graphemes Per Minute) ও WPM নির্ভুল গণনা।
 - **সম্পূর্ণ অ্যাক্সেসিবল ও ইনক্লুসিভ (WCAG 2.1 AA Compliant):** স্ক্রিন রিডার লাইভ প্রগ্রেস ঘোষণা, স্কিপ নেভিগেশন লিংক (`#main-content`), কীবোর্ড ফোকাস ট্র্যাপ প্রতিরোধ ও হাই কনট্রাস্ট।
 - **সরকারি চাকরির নিয়োগ পরীক্ষা সিমুলেটর (Govt Exam Simulation):** ৫ মিনিটের কঠোর পরীক্ষা মোড (সাঁটমুদ্রাক্ষরিক, ডাটা এন্ট্রি ও অফিস সহকারী পদের জন্য ২৫-৩০ WPM ও ৯৫% নির্ভুলতা মানদণ্ড)।
@@ -39,6 +43,7 @@
 | [🧪 টেস্টিং নির্দেশিকা (docs/TESTING.md)](docs/TESTING.md) | টেস্ট সুইট আর্কিটেকচার, গ্রাফিম টেস্টিং, কভারেজ রুলস ও সিআই পলিসি |
 | [♿ অ্যাক্সেসিবিলিটি গাইড (docs/ACCESSIBILITY.md)](docs/ACCESSIBILITY.md) | WCAG 2.1 AA স্ট্যান্ডার্ড, কীবোর্ড নেভিগেশন ও স্ক্রিন রিডার নির্দেশিকা |
 | [🏛️ সিস্টেম আর্কিটেকচার (docs/ARCHITECTURE.md)](docs/ARCHITECTURE.md) | হাই-লেভেল আর্কিটেকচার ডায়াগ্রাম, টাইপিং ইঞ্জিন ও ডাটা ফ্লো |
+| [📊 Metrics contract (docs/METRICS.md)](docs/METRICS.md) | GPM/WPM/accuracy formulas: the single source of truth used by every screen |
 | [🗄️ ডাটাবেস সেটআপ গাইড (docs/DATABASE_SETUP.md)](docs/DATABASE_SETUP.md) | Supabase স্কিমা, RLS পলিসি ও মাইগ্রেশন নির্দেশিকা |
 | [📘 ইমপ্লিমেন্টেশন গাইড (docs/IMPLEMENTATION_GUIDE.md)](docs/IMPLEMENTATION_GUIDE.md) | কম্পোনেন্ট ডাটা ফেচিং, হুক্স ও প্রগ্রেস সেভিং উদাহরণ |
 

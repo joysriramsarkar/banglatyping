@@ -97,4 +97,36 @@ describe('Guest Storage Engine', () => {
     const synced = await syncGuestSessionsToUser('user-123');
     expect(synced).toBe(0);
   });
+
+  test('keeps only the failed sessions when upload partially fails', async () => {
+    const apiFetchMock = apiFetch as jest.MockedFunction<typeof apiFetch>;
+
+    saveGuestSession({ lessonId: 'ok-2', wpm: 40, accuracy: 98, errors: 0, timeElapsed: 25, erredCharacters: [] });
+    saveGuestSession({ lessonId: 'fail', wpm: 30, accuracy: 90, errors: 2, timeElapsed: 20, erredCharacters: [] });
+    saveGuestSession({ lessonId: 'ok-1', wpm: 25, accuracy: 95, errors: 1, timeElapsed: 15, erredCharacters: [] });
+
+    // Iteration order is newest-first: ok-2 (ok), fail (rejected), ok-1 (ok).
+    apiFetchMock
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) } as never)
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ success: false }) } as never)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) } as never);
+
+    const synced = await syncGuestSessionsToUser('user-1');
+    expect(synced).toBe(2);
+
+    const remaining = getGuestSessions();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].lessonId).toBe('fail');
+  });
+
+  test('sends a stable client session id for idempotent retries', async () => {
+    const apiFetchMock = apiFetch as jest.MockedFunction<typeof apiFetch>;
+    saveGuestSession({ lessonId: 'l1', wpm: 25, accuracy: 95, errors: 1, timeElapsed: 15, erredCharacters: [] });
+
+    await syncGuestSessionsToUser('user-1');
+
+    const call = apiFetchMock.mock.calls[0];
+    const body = JSON.parse((call[1] as RequestInit).body as string);
+    expect(body.clientSessionId).toBeDefined();
+  });
 });

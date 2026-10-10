@@ -4,6 +4,12 @@
 **তারিখ:** অক্টোবর ২০২৬
 **মূল ভিত্তি:** এই রূপরেখা `docs/RESEARCH_AND_IMPROVEMENT_ANALYSIS.md`-এর সমস্যা-বিশ্লেষণ ও উন্নতি পরিকল্পনার ওপর গড়ে তোলা। গবেষণা-ডকুমেন্টটি বলে "কী সমস্যা আছে এবং কেন"; এই ডকুমেন্ট বলে **"কী করব, কত সময়ে করব, কীভাবে বুঝব কাজ হয়েছে"**।
 
+
+**Status update (October 2026):** Several items below are now implemented —
+getTypingHint() is no longer an empty placeholder (it resolves key sequences via
+getKeySequenceForGrapheme() in src/lib/typing/engine.ts + src/lib/keyboard-layouts.ts);
+speed/accuracy formulas are centralised in src/lib/typing/metric-formulas.ts (contract: docs/METRICS.md);
+lesson section bypass is closed and the curriculum E2E now runs in CI (.github/workflows/ci.yml).
 ---
 
 ## এক নজরে
