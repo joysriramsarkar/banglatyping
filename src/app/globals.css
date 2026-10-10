@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * Locked grapheme font (PixelPerfect spec §11). Prompt glyph cells render
+ * through THIS file everywhere, so mask geometry is identical on every
+ * device — no more per-machine system-font drift. UI typography is untouched.
+ */
+@font-face {
+  font-family: "BT Grapheme";
+  src: url("/fonts/hind-siliguri-bengali-400.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1, U+11DF0-11DF1;
+}
+
+@font-face {
+  font-family: "BT Grapheme";
+  src: url("/fonts/hind-siliguri-bengali-700.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1, U+11DF0-11DF1;
+}
+
 body {
   font-family: 'Noto Sans Bengali', 'Inter', sans-serif;
 }
@@ -107,6 +130,8 @@ body {
     grid-area: 1 / 1;
     white-space: pre;
     line-height: 1;
+    /* Locked shaper: every device draws these cells with the bundled font. */
+    font-family: "BT Grapheme", "Noto Sans Bengali", "Nirmala UI", Arial, sans-serif;
     /* The overlay must match the base shaping exactly. */
     font-kerning: normal;
     font-variant-ligatures: normal;

@@ -15,6 +15,11 @@ export default defineConfig({
     // smoke spec flaky on a cold `/game` route. 10s still fails real breakage.
     timeout: 10_000,
   },
+  // One baseline set for every runner: the locked webfont + same Chromium
+  // version keep OS raster drift inside the pixel tests' tolerance.
+  // If a backend upgrade shifts antialiasing, regenerate with --update-snapshots
+  // and review the diffs — never bless them blindly.
+  snapshotPathTemplate: "./e2e/__snapshots__/{arg}{ext}",
   reporter: [
     ["list"],
     ["html", { open: "never" }],

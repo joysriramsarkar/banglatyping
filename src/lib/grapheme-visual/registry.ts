@@ -119,9 +119,9 @@ export const GRAPHEME_VISUALS: Record<string, GraphemeVisualSpec> = {
     mask: {
       id: 'noto-stack-v1-ksa',
       version: 1,
-      fontProfile: 'noto-sans-bengali-stack-v1',
+      fontProfile: 'bt-grapheme-hind-siliguri-v14',
       viewBox: [0, 0, 1000, 1000],
-      maskUrl: '/grapheme-masks/noto-sans-bengali-stack-v1/ksa.svg',
+      maskUrl: '/grapheme-masks/bt-grapheme-hind-siliguri-v14/ksa.svg',
       stages: [
         { id: 'base', labelBn: 'মূল বর্ণ', completedThroughTypingStep: 1, regionIds: ['base'] },
         { id: 'full', labelBn: 'পূর্ণ যুক্তবর্ণ', completedThroughTypingStep: 3, regionIds: ['base', 'ssa'] },
@@ -142,9 +142,9 @@ export const GRAPHEME_VISUALS: Record<string, GraphemeVisualSpec> = {
     mask: {
       id: 'noto-stack-v1-jna',
       version: 1,
-      fontProfile: 'noto-sans-bengali-stack-v1',
+      fontProfile: 'bt-grapheme-hind-siliguri-v14',
       viewBox: [0, 0, 1000, 1000],
-      maskUrl: '/grapheme-masks/noto-sans-bengali-stack-v1/jna.svg',
+      maskUrl: '/grapheme-masks/bt-grapheme-hind-siliguri-v14/jna.svg',
       stages: [
         { id: 'base', labelBn: 'মূল বর্ণ', completedThroughTypingStep: 1, regionIds: ['base'] },
         { id: 'full', labelBn: 'পূর্ণ যুক্তবর্ণ', completedThroughTypingStep: 3, regionIds: ['base', 'nya'] },
@@ -165,9 +165,9 @@ export const GRAPHEME_VISUALS: Record<string, GraphemeVisualSpec> = {
     mask: {
       id: 'noto-stack-v1-kta',
       version: 1,
-      fontProfile: 'noto-sans-bengali-stack-v1',
+      fontProfile: 'bt-grapheme-hind-siliguri-v14',
       viewBox: [0, 0, 1000, 1000],
-      maskUrl: '/grapheme-masks/noto-sans-bengali-stack-v1/kta.svg',
+      maskUrl: '/grapheme-masks/bt-grapheme-hind-siliguri-v14/kta.svg',
       stages: [
         { id: 'base', labelBn: 'মূল বর্ণ', completedThroughTypingStep: 1, regionIds: ['base'] },
         { id: 'full', labelBn: 'পূর্ণ যুক্তবর্ণ', completedThroughTypingStep: 3, regionIds: ['base', 'ta'] },

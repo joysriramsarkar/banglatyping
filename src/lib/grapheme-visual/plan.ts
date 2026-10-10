@@ -18,14 +18,14 @@ import type {
 } from './types';
 
 /**
- * Locked font profile for mask QA. The app ships NO self-hosted Bengali font;
- * glyphs resolve through the CSS stack below, so no per-glyph Tier-3 mask can
- * be approved until a profile is bundled and locked (spec §11). The resolver
- * therefore downgrades every asset-backed strategy to simulation today.
+ * Locked font profile for mask QA. Grapheme cells render through the bundled
+ * Hind Siliguri v14 Bengali subsets (public/fonts, "BT Grapheme") on every
+ * device — UI typography is untouched. Tier-3 per-glyph assets still need
+ * individual screenshot review before `reviewed: true`.
  */
-export const ACTIVE_FONT_PROFILE: FontProfileId = 'noto-sans-bengali-stack-v1';
+export const ACTIVE_FONT_PROFILE: FontProfileId = 'bt-grapheme-hind-siliguri-v14';
 
-export const ACTIVE_FONT_STACK = "'Noto Sans Bengali', 'Nirmala UI', Arial, sans-serif";
+export const ACTIVE_FONT_STACK = "'BT Grapheme', 'Noto Sans Bengali', 'Nirmala UI', Arial, sans-serif";
 
 export function resolveRenderStrategy(
   spec: GraphemeVisualSpec,

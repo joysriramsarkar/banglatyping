@@ -30,10 +30,12 @@ setting it requires real screenshot QA against the locked font profile (§17).
 
 ## Font profile (spec §11)
 
-The app ships no self-hosted Bengali font; glyphs resolve through
-`'Noto Sans Bengali', 'Nirmala UI', Arial, sans-serif`. The locked profile id
-is `noto-sans-bengali-stack-v1` (`ACTIVE_FONT_PROFILE`). Until a font is
-bundled and locked, exact per-glyph masks stay unapproved by construction.
+Grapheme cells render through the **bundled Hind Siliguri v14 Bengali
+subsets** (`public/fonts`, family `"BT Grapheme"`) on every device — mask
+geometry is identical everywhere, which is what makes the pixel gates
+meaningful. UI typography is untouched. `ACTIVE_FONT_PROFILE =
+'bt-grapheme-hind-siliguri-v14'`. Tier-3 per-glyph assets still need
+individual screenshot review before `reviewed: true`.
 
 ## Review tooling
 
@@ -44,10 +46,12 @@ bundled and locked, exact per-glyph masks stay unapproved by construction.
   curriculum, drill data and game word banks; fails on any conjunct that
   would render on the safe-fallback path. Current baseline: **430 conjuncts,
   0 fallback** (206 heuristic-clip, 208 simulation, 16 whole-glyph).
-- **E2E contracts** (`e2e/50-grapheme-visual.spec.ts`): font engine ready,
+- **E2E contracts** (`e2e/50-grapheme-visual.spec.ts`): locked-webfont gate,
   intact text runs, base/overlay box alignment ≤ 1.5px, sim-box presence per
-  plan, dark mode. Screenshots attach as review artifacts; strict pixel
-  baselines are NOT committed (rasterization differs per OS/runner).
+  plan, dark mode. Pixel baselines ARE committed for the seven reviewed mask
+  geometries (`e2e/__snapshots__`, shared across runners): a wrong band moves
+  ~7% of cell pixels against a 2% tolerance, so mask regressions fail loudly.
+  Screenshots also attach as review artifacts.
 
 ## What changed vs the old engine
 

@@ -982,6 +982,20 @@ function getHornNotchSpan(baseChar: string): [number, number] {
   }
 }
 
+/**
+ * Shared horn-notch clip for ট/ঠ/ড/ঢ + ি, used by BOTH the plain ি branch
+ * and the chandrabindu branch so the two can never diverge again.
+ * ট gets a wider top tier (variant-verified): the horn tip sits left of
+ * the band while the umbrella stays below it.
+ */
+function hornNotchClip(start: number, topY: number, baseChar: string): string {
+  const [notchLeft, notchRight] = getHornNotchSpan(baseChar);
+  if (baseChar === 'ট') {
+    return `polygon(${start}% 100%, 100% 100%, 100% ${topY}%, ${notchRight}% ${topY}%, ${notchRight}% 0, 24% 0, 24% 4%, ${notchLeft}% 4%, ${notchLeft}% ${topY}%, ${start}% ${topY}%)`;
+  }
+  return `polygon(${start}% ${topY}%, ${notchLeft}% ${topY}%, ${notchLeft}% 0, ${notchRight}% 0, ${notchRight}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
+}
+
 function getConsonantDirghoIRatio(baseChar: string): number {
   switch (baseChar) {
     case 'চ': case 'দ':
@@ -1093,14 +1107,7 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
         if (currentStep === 1) {
           // Step 1: Consonant only -> exclude left mark and top chandrabindu
           if (hasHroshwoIKar && (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ')) {
-            const [notchLeft, notchRight] = getHornNotchSpan(baseChar);
-          // ট: the horn tip (y<4%) sits left of the 30% band while the ি
-          // umbrella stays below it — a wider top tier greens the whole horn
-          // without touching the umbrella (variant-verified, 2026-10-10).
-          if (baseChar === 'ট') {
-            return `polygon(${start}% 100%, 100% 100%, 100% ${topY}%, ${notchRight}% ${topY}%, ${notchRight}% 0, 24% 0, 24% 4%, ${notchLeft}% 4%, ${notchLeft}% ${topY}%, ${start}% ${topY}%)`;
-          }
-          return `polygon(${start}% ${topY}%, ${notchLeft}% ${topY}%, ${notchLeft}% 0, ${notchRight}% 0, ${notchRight}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
+            return hornNotchClip(start, topY, baseChar);
           }
           return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
         }
@@ -1176,14 +1183,7 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
       if (hasHroshwoIKar && !hasAaKar && !hasAnusvaraOrVisarga && !hasBothSides) {
         const start = getConsonantHroshwoIOffset(baseChar);
         if (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ') {
-          const [notchLeft, notchRight] = getHornNotchSpan(baseChar);
-          // ট: the horn tip (y<4%) sits left of the 30% band while the ি
-          // umbrella stays below it — a wider top tier greens the whole horn
-          // without touching the umbrella (variant-verified, 2026-10-10).
-          if (baseChar === 'ট') {
-            return `polygon(${start}% 100%, 100% 100%, 100% ${topY}%, ${notchRight}% ${topY}%, ${notchRight}% 0, 24% 0, 24% 4%, ${notchLeft}% 4%, ${notchLeft}% ${topY}%, ${start}% ${topY}%)`;
-          }
-          return `polygon(${start}% ${topY}%, ${notchLeft}% ${topY}%, ${notchLeft}% 0, ${notchRight}% 0, ${notchRight}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
+          return hornNotchClip(start, topY, baseChar);
         }
         return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
       }

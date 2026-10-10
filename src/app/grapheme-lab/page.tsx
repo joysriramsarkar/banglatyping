@@ -62,6 +62,21 @@ const FIXTURES: string[] = [
 const KEY_PLAN_TARGETS = ["ক্ষ", "ক্ল", "জ্ঞ", "ক্ক"];
 const KEY_PLAN_LAYOUTS = ["banglaword", "avro", "bijoy", "probhat", "unijoy"];
 
+/**
+ * Large mask-zoom strip for pixel gates: the same reviewed geometries at a
+ * size where a wrong band/notch moves thousands of pixels, so the screenshot
+ * assertions bite. Stages mirror real typing order.
+ */
+const SNAP_CASES: Array<[string, string]> = [
+  ["টি", "ট"],
+  ["ঠি", "ঠ"],
+  ["ডি", "ড"],
+  ["ঢি", "ঢ"],
+  ["প্র", "প"],
+  ["দ্ব", "দ"],
+  ["ক্ল", "ক"],
+];
+
 function stagesFor(target: string): string[] {
   const units = Array.from(normalizeBengaliString(target));
   const stages = ["", units[0] ?? "", units.slice(0, 2).join(""), target];
@@ -144,6 +159,30 @@ export default function GraphemeLabPage() {
             </div>
           );
         })}
+      </section>
+
+      <section className="max-w-6xl mx-auto rounded-2xl border bg-card p-4 space-y-3">
+        <h2 className="text-lg font-bold">Mask zoom (pixel-gate targets)</h2>
+        <div className="flex items-end justify-center gap-6 flex-wrap">
+          {SNAP_CASES.map(([target, typed]) => (
+            <div
+              key={target}
+              className="flex flex-col items-center gap-1"
+              data-testid="gv-snap"
+              data-grapheme={target}
+              data-stage={typed}
+            >
+              <div className="rounded-xl bg-secondary/60 border px-6 py-3">
+                <span className="font-black font-headline" style={{ fontSize: "7rem", lineHeight: 1.2 }}>
+                  <GraphemeDisplay model={buildGraphemeRenderModel(target, typed)} />
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {target}+{typed}
+              </span>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="max-w-5xl mx-auto rounded-2xl border bg-card p-4 space-y-3">

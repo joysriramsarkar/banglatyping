@@ -21,6 +21,13 @@ test.describe("grapheme visual contracts", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/grapheme-lab");
     await page.getByTestId("gv-fixture").first().waitFor();
+    // The locked webfont must shape every cell: without it the geometry
+    // assertions below are meaningless (spec §11).
+    await page.waitForFunction(
+      () => document.fonts.check('700 32px "BT Grapheme"'),
+      undefined,
+      { timeout: 15_000 },
+    );
     const fontsStatus = await page.evaluate(() =>
       document.fonts.ready.then(() => document.fonts.status),
     );
@@ -50,7 +57,8 @@ test.describe("grapheme visual contracts", () => {
   });
 
   test("overlay never drifts from its base (no double glyph)", async ({ page }) => {
-    const overlays = page.locator('[data-part="overlay"]');
+    // Scoped to matrix cells; the zoom strip (gv-snap) is covered by pixels.
+    const overlays = page.locator('[data-testid="gv-cell"] [data-part="overlay"]');
     const count = await overlays.count();
     expect(count).toBeGreaterThan(5);
 
@@ -122,6 +130,32 @@ test.describe("grapheme visual contracts", () => {
       expect(overlayBox).not.toBeNull();
       expect(Math.abs(baseBox!.x - overlayBox!.x)).toBeLessThanOrEqual(1.5);
       expect(Math.abs(baseBox!.width - overlayBox!.width)).toBeLessThanOrEqual(1.5);
+    }
+  });
+
+  test("mask boundaries hold at the pixel level (reviewed geometries)", async ({
+    page,
+  }) => {
+    // Large locked-font cells: a wrong band/notch moves thousands of pixels,
+    // antialiasing noise stays in the hundreds. Shared baselines across
+    // runners (see snapshotPathTemplate): same woff2 + same Chromium keeps
+    // OS raster drift inside tolerance; a failure message shows the ratio.
+    const cases: Array<[string, string]> = [
+      ["টি", "ট"],
+      ["ঠি", "ঠ"],
+      ["ডি", "ড"],
+      ["ঢি", "ঢ"],
+      ["প্র", "প"],
+      ["দ্ব", "দ"],
+      ["ক্ল", "ক"],
+    ];
+    for (const [grapheme, stage] of cases) {
+      const cell = page.locator(
+        `[data-testid="gv-snap"][data-grapheme="${grapheme}"][data-stage="${stage}"]`,
+      );
+      await expect(cell).toHaveScreenshot(`mask-${grapheme}-${stage}.png`, {
+        maxDiffPixelRatio: 0.02,
+      });
     }
   });
 
