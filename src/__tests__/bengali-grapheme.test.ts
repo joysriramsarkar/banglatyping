@@ -696,28 +696,28 @@ describe('buildGraphemeRenderModel', () => {
     expect(modelKsa.specialHint).toContain("বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক + ্ + ষ");
   });
 
-  it('keeps below-base legible conjuncts (ক্ল, ট্ট) on the clip path, not the simulation path', () => {
+  it('builds typing steps for every conjunct; the render plan decides visibility', () => {
+    // Steps exist even for clip-rendered conjuncts — pages only SHOW the box
+    // when the visual plan says simulation.
+    expect(buildGraphemeRenderModel('ক্ল', 'ক').conjunctSteps).toBeDefined();
+    expect(buildGraphemeRenderModel('ট্ট', 'ট').conjunctSteps).toBeDefined();
+    expect(buildGraphemeRenderModel('প্ত', 'প').conjunctSteps).toBeDefined();
+    expect(buildGraphemeRenderModel('ক্য', 'ক').conjunctSteps).toBeDefined();
+
     // 'ক্ল' renders through the layered clip highlight: upper ক first.
     const modelKlo = buildGraphemeRenderModel('ক্ল', 'ক');
     expect(modelKlo.isComplex).toBe(false);
-    expect(modelKlo.conjunctSteps).toBeUndefined();
     expect(modelKlo.hasPendingHalant).toBe(false);
 
     // Pending hasanta still shows the dot, as before.
     expect(buildGraphemeRenderModel('ক্ল', 'ক্').hasPendingHalant).toBe(true);
 
-    // 'ট্ট' stays classified complex but renders via clip + dot, not steps.
+    // 'ট্ট' stays classified complex and keeps the hasanta dot on the clip path.
     const modelTto = buildGraphemeRenderModel('ট্ট', 'ট্');
-    expect(modelTto.conjunctSteps).toBeUndefined();
     expect(modelTto.hasPendingHalant).toBe(true);
 
     // Fused illegible conjuncts keep simulation steps.
     expect(buildGraphemeRenderModel('ক্ত', 'ক').conjunctSteps).toBeDefined();
-
-    // Vertically stacked conjuncts keep the clip highlight: no steps needed.
-    expect(buildGraphemeRenderModel('প্ত', 'প').conjunctSteps).toBeUndefined();
-    expect(buildGraphemeRenderModel('প্র', 'প').conjunctSteps).toBeUndefined();
-    expect(buildGraphemeRenderModel('স্বা', 'স').conjunctSteps).toBeUndefined();
   });
 });
 

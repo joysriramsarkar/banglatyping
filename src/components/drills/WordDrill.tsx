@@ -10,7 +10,8 @@ import { SimplifiedKeyboard } from "@/components/common/VirtualKeyboard";
 import { DrillProgress } from "./DrillProgress";
 import { useWordDrill } from "./use-word-drill";
 
-import { normalizeBengaliString, bengaliSegmenter, buildGraphemeRenderModel, needsConjunctSimulation } from "@/lib/bengali-grapheme";
+import { normalizeBengaliString, bengaliSegmenter, buildGraphemeRenderModel } from "@/lib/bengali-grapheme";
+import { getRenderPlan } from "@/lib/grapheme-visual/plan";
 import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +84,7 @@ const WordDisplay = ({ word, isCurrent, userInput, isError }: { word: string; is
                     }
 
                     const isNextActive = cIdx === inputClusters.length;
-                    if (isNextActive && needsConjunctSimulation(normCluster)) {
+                    if (isNextActive && getRenderPlan(normCluster).showSimBox) {
                         const renderModel = buildGraphemeRenderModel(normCluster, "");
                         return (
                             <GraphemeDisplay
@@ -195,12 +196,13 @@ export const WordDrill = ({ drills: initialDrills, lessonId, accuracyGoal = 95 }
                            const activeCluster = targetClusters[activeIdx];
                            if (!activeCluster) return null;
                            const normCluster = normalizeBengaliString(activeCluster);
-                           if (needsConjunctSimulation(normCluster)) {
+                           const clusterPlan = getRenderPlan(normCluster);
+                           if (clusterPlan.showSimBox) {
                                const typedInCluster = activeIdx < inputClusters.length ? normalizeBengaliString(inputClusters[activeIdx]) : "";
                                const simModel = buildGraphemeRenderModel(normCluster, typedInCluster);
                                return (
                                    <div className="flex justify-center pt-1">
-                                       <ConjunctSimulationBox model={simModel} />
+                                       <ConjunctSimulationBox model={simModel} unreviewed={clusterPlan.strategy === 'safe-fallback'} />
                                    </div>
                                );
                            }

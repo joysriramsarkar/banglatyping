@@ -46,6 +46,9 @@ jobs:
       - name: Unit & Integration tests
         run: npm run test:ci
 
+      - name: Grapheme registry coverage
+        run: npm run grapheme:coverage
+
       - name: Build
         run: npm run build
 

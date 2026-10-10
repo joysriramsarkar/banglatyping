@@ -38,10 +38,10 @@ import {
   getNextExpectedKeyChar,
   bengaliSegmenter,
   buildGraphemeRenderModel,
-  needsConjunctSimulation,
   getUpcomingIndependentVowel,
   ensureSpacedDrillItems,
 } from "@/lib/bengali-grapheme";
+import { getRenderPlan, getTypingPlan, deriveVisualProgress } from "@/lib/grapheme-visual/plan";
 import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
 import {
   computeGpm,
@@ -156,6 +156,11 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
   const sectionResultsRef = useRef<Map<string, { accuracy: number; gpm: number; wpm: number }>>(
     new Map()
   );
+  // Accepted physical keystrokes for the CURRENT drill item. Feeds the
+  // layout-aware typing plan (spec §12): text alone cannot tell one shortcut
+  // key from several composition keys, so the count is tracked, not inferred.
+  const itemKeysRef = useRef<number>(0);
+  const [itemKeys, setItemKeys] = useState<number>(0);
 
   // Live timer ticker to update speed continuously during active typing
   useEffect(() => {
@@ -215,6 +220,32 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     return findKeyInfoForChar(nextCharToType, undefined, upcomingVowel?.processLabel);
   }, [nextCharToType, upcomingVowel]);
 
+  // Layout-aware typing plan + visual progress (PixelPerfect spec §12/§19).
+  // The lesson listens on the BanglaWord physical mapping, so the plan is
+  // resolved for that layout; the glyph itself never depends on it.
+  const typingPlan = useMemo(() => {
+    return getTypingPlan(currentTarget, "banglaword");
+  }, [currentTarget]);
+
+  const visualProgress = useMemo(() => {
+    return deriveVisualProgress({
+      target: currentTarget,
+      typedInput: currentInput,
+      typingPlan,
+      keysPressed: itemKeys,
+    });
+  }, [currentTarget, currentInput, typingPlan, itemKeys]);
+
+  // Item-level progress is only meaningful per-grapheme when the target item
+  // itself is a single cluster (the usual অক্ষর drill); multi-cluster items
+  // keep per-cluster stage labels from their own render models.
+  const singleClusterProgress = useMemo(() => {
+    if (bengaliSegmenter.segmentString(normalizeBengaliString(currentTarget)).length <= 1) {
+      return visualProgress;
+    }
+    return null;
+  }, [currentTarget, visualProgress]);
+
   // Focus input helper
   const focusHiddenInput = useCallback(() => {
     if (hiddenInputRef.current) {
@@ -238,6 +269,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
     isPausedRef.current = false;
     setActiveElapsedMs(0);
     setIsTypingPaused(false);
+    itemKeysRef.current = 0;
+    setItemKeys(0);
     if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
     setSectionResultStats(null);
     setSectionPassed(false);
@@ -497,6 +530,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
         playClick();
         setLastWrongChar(null);
         setCurrentInput(newInput);
+        itemKeysRef.current += 1;
+        setItemKeys(itemKeysRef.current);
 
         const normNewInput = normalizeBengaliString(newInput);
         const normTarget = normalizeBengaliString(target);
@@ -506,6 +541,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
           if (drillIndex < sectionItems.length - 1) {
             setDrillIndex((prev) => prev + 1);
             setCurrentInput("");
+            itemKeysRef.current = 0;
+            setItemKeys(0);
           } else {
             // Finished all items in current section
             if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
@@ -625,6 +662,8 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
           // Step-by-step character / modifier deletion (e.g. বাংলা -> বাংল -> বাং -> বা -> ব)
           return Array.from(prev).slice(0, -1).join('');
         });
+        itemKeysRef.current = Math.max(0, itemKeysRef.current - 1);
+        setItemKeys(itemKeysRef.current);
         return;
       }
 
@@ -1163,14 +1202,15 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                                   <GraphemeDisplay
                                     key={`cluster-${cIdx}`}
                                     model={renderModel}
+                                    progress={singleClusterProgress}
                                   />
                                 );
                               }
                             }
 
-                            // 3. Untyped cluster -> show breakdown simulation screen if active cluster is a complex conjunct
+                            // 3. Untyped cluster -> full-glyph simulation display when the plan says so
                             const isNextActive = cIdx === inputClusters.length;
-                            if (isNextActive && needsConjunctSimulation(normCluster)) {
+                            if (isNextActive && getRenderPlan(normCluster).showSimBox) {
                               const renderModel = buildGraphemeRenderModel(normCluster, "");
                               return (
                                 <GraphemeDisplay
@@ -1254,12 +1294,16 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                   const activeCluster = targetClusters[activeIdx];
                   if (!activeCluster) return null;
                   const normCluster = normalizeBengaliString(activeCluster);
-                  if (needsConjunctSimulation(normCluster)) {
+                  const clusterPlan = getRenderPlan(normCluster);
+                  if (clusterPlan.showSimBox) {
                     const typedInCluster = activeIdx < inputClusters.length ? normalizeBengaliString(inputClusters[activeIdx]) : "";
                     const simModel = buildGraphemeRenderModel(normCluster, typedInCluster);
                     return (
                       <div className="flex justify-center mt-3 mb-1">
-                        <ConjunctSimulationBox model={simModel} />
+                        <ConjunctSimulationBox
+                          model={simModel}
+                          unreviewed={clusterPlan.strategy === 'safe-fallback'}
+                        />
                       </div>
                     );
                   }

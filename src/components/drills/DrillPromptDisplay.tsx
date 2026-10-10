@@ -3,7 +3,8 @@ import { CheckCircle } from "lucide-react";
 import { cn, toBengaliNumber } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import type { Drill } from "@/lib/types";
-import { buildGraphemeRenderModel, bengaliSegmenter, normalizeBengaliString, needsConjunctSimulation } from "@/lib/bengali-grapheme";
+import { buildGraphemeRenderModel, bengaliSegmenter, normalizeBengaliString } from "@/lib/bengali-grapheme";
+import { getRenderPlan } from "@/lib/grapheme-visual/plan";
 import { GraphemeDisplay, ConjunctSimulationBox } from "@/components/lessons/GraphemeDisplay";
 import { getStepsForWord } from "@/lib/lessons";
 
@@ -192,7 +193,7 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
             const clusterEnd = stepOffset + clusterStepCount;
 
             if (currentStepIndex >= stepOffset && currentStepIndex < clusterEnd) {
-                if (needsConjunctSimulation(normCluster)) {
+                if (getRenderPlan(normCluster).showSimBox) {
                     const stepsTypedInCluster = currentStepIndex - stepOffset;
                     const typedInCluster = clusterSteps.slice(0, stepsTypedInCluster).map(s => s.display).join('');
                     return buildGraphemeRenderModel(normCluster, normalizeBengaliString(typedInCluster));
@@ -243,7 +244,10 @@ export const DrillPromptDisplay: React.FC<DrillPromptDisplayProps> = ({ drills, 
             {/* Standalone Conjunct Simulation Box (docked below prompt cards) */}
             {activeComplexModel && (
                 <div className="flex justify-center pt-2">
-                    <ConjunctSimulationBox model={activeComplexModel} />
+                    <ConjunctSimulationBox
+                      model={activeComplexModel}
+                      unreviewed={getRenderPlan(activeComplexModel.full).strategy === 'safe-fallback'}
+                    />
                 </div>
             )}
         </div>

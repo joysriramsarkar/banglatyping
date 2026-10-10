@@ -19,6 +19,7 @@
     "test:e2e:report": "playwright show-report",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --runInBand --coverage",
+    "grapheme:coverage": "npx tsx scripts/check-grapheme-coverage.ts",
     "db:check": "node scripts/check-db.mjs",
     "db:check-rls": "node scripts/check-rls.mjs",
     "db:seed": "npx tsx db/seeds/seed-lessons.ts",

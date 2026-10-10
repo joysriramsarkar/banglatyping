@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { GraphemeRenderModel } from "@/lib/bengali-grapheme";
+import { buildConjunctStructureFormula } from "@/lib/grapheme-visual/plan";
 
 function SparklesIcon({ className }: { className?: string }) {
   return (
@@ -29,21 +30,25 @@ function SparklesIcon({ className }: { className?: string }) {
 interface ConjunctSimulationBoxProps {
   model: GraphemeRenderModel;
   className?: string;
+  /**
+   * The cluster has no reviewed spatial strategy: show an honest
+   * "not yet verified" badge instead of implying precision.
+   */
+  unreviewed?: boolean;
 }
 
 /**
- * Modern, beautifully styled standalone Conjunct Simulation HUD Card.
- * Renders the component decomposition formula:
- *   [ক] + [ক্] + [র] = [ক্র]
- *   [ক] + [ক্] + [ত] = [ক্ত]
- *   [ষ] + [্] + [ঠ] + [া] = [ষ্ঠা]
- *
+ * Conjunct step HUD: HOW to type (incremental steps) is kept visually apart
+ * from WHAT the conjunct is made of (orthographic structure, spec §13).
+ * Steps use list semantics + aria-current so progress is never color-only.
  * Docked cleanly underneath prompt cards without breaking word baselines.
  */
-export function ConjunctSimulationBox({ model, className }: ConjunctSimulationBoxProps) {
-  if (!model.conjunctSteps || model.conjunctSteps.length === 0) {
+export function ConjunctSimulationBox({ model, className, unreviewed = false }: ConjunctSimulationBoxProps) {
+  const hasSteps = !!model.conjunctSteps && model.conjunctSteps.length > 0;
+  if (!model.full) {
     return null;
   }
+  const structure = buildConjunctStructureFormula(model.full);
 
   return (
     <div
@@ -59,11 +64,21 @@ export function ConjunctSimulationBox({ model, className }: ConjunctSimulationBo
       <div className="flex items-center gap-1.5 text-xs font-bold text-primary tracking-wide">
         <SparklesIcon className="w-3.5 h-3.5 text-primary animate-pulse" />
         <span>যুক্তাক্ষর সিমুলেশন</span>
+        {unreviewed && (
+          <span className="text-[10px] font-medium text-muted-foreground border border-border/60 rounded-full px-2 py-px">
+            যাচাই হয়নি
+          </span>
+        )}
       </div>
 
-      {/* Formula Decomposition Steps */}
-      <div className="flex items-center flex-wrap justify-center gap-1 sm:gap-1.5">
-        {model.conjunctSteps.map((step, idx) => (
+      {/* A. How to type: incremental typing steps */}
+      {hasSteps && (
+      <div
+        className="flex items-center flex-wrap justify-center gap-1 sm:gap-1.5"
+        role="list"
+        aria-label="টাইপের ধাপ"
+      >
+        {model.conjunctSteps!.map((step, idx) => (
           <React.Fragment key={idx}>
             {idx > 0 && (
               <span className="text-primary/70 dark:text-primary/60 font-bold text-sm sm:text-base select-none px-0.5">
@@ -71,6 +86,8 @@ export function ConjunctSimulationBox({ model, className }: ConjunctSimulationBo
               </span>
             )}
             <span
+              role="listitem"
+              aria-current={step.active ? "step" : undefined}
               className={cn(
                 "text-sm sm:text-base font-hind font-bold leading-none px-2.5 py-1 sm:py-1.5 rounded-lg border transition-all duration-150 flex items-center gap-1.5 shadow-xs",
                 step.completed
@@ -81,7 +98,7 @@ export function ConjunctSimulationBox({ model, className }: ConjunctSimulationBo
               )}
             >
               <span>{step.label}</span>
-              <span className="text-[10px] font-mono leading-none">
+              <span className="text-[10px] font-mono leading-none" aria-hidden="true">
                 {step.completed ? "✓" : step.active ? "●" : "○"}
               </span>
             </span>
@@ -89,10 +106,16 @@ export function ConjunctSimulationBox({ model, className }: ConjunctSimulationBo
         ))}
 
         {/* Equals Sign & Target Ligature */}
-        <span className="text-muted-foreground/50 font-bold text-sm select-none px-1">=</span>
+        <span className="text-muted-foreground/50 font-bold text-sm select-none px-1" aria-hidden="true">=</span>
         <span className="text-base sm:text-lg font-hind font-black px-3 py-1 rounded-lg bg-primary/10 border border-primary/30 text-primary">
           {model.full}
         </span>
+      </div>
+      )}
+
+      {/* B. What it is made of: orthographic structure, not typing order */}
+      <div className="text-[11px] sm:text-xs text-muted-foreground font-medium" aria-label="যুক্তবর্ণের গঠন">
+        গঠন: {structure.parts.join(' + ')} → {structure.result}
       </div>
 
       {/* Special Shortcut Hint Badge */}

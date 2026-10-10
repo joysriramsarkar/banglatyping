@@ -391,6 +391,32 @@ export function normalizeBengaliString(text: string): string {
 }
 
 /**
+ * Purpose-split normalization (PixelPerfect spec 5R). The legacy
+ * normalizeBengaliString() stays as the comparison default; the three
+ * functions below make each use-site declare its intent.
+ */
+
+/** Typing comparison: is the buffer equivalent to the target? (legacy behavior) */
+export function normalizeForComparison(text: string): string {
+  return normalizeBengaliString(text);
+}
+
+/** Cursor/grapheme boundaries: keep shaping controls, canonicalize order. */
+export function normalizeForSegmentation(text: string): string {
+  if (!text) return '';
+  return text.normalize('NFC');
+}
+
+/**
+ * Glyph shaping input: preserve ZWJ/ZWNJ (they can change Indic joining) and
+ * never rewrite decomposed nukta forms - the shaper handles both spellings.
+ */
+export function normalizeForRendering(text: string): string {
+  if (!text) return '';
+  return text.normalize('NFC');
+}
+
+/**
  * Check if a string is a Bengali conjunct (has halants)
  */
 export function isConjunct(text: string): boolean {
@@ -1238,7 +1264,7 @@ export interface GraphemeRenderModel {
   full: string;
   kind: GraphemeKind;
   parts: GraphemePart[];
-  conjunctSteps?: ConjunctStep[]; // যুক্তাক্ষর সিমুলেশনের জন্য (complex + non-stacked transparent)
+  conjunctSteps?: ConjunctStep[]; // সব conjunct-এর টাইপিং ধাপ; দেখানো হবে কি না plan ঠিক করে
   currentStep?: number;
   totalSteps?: number;
   hasPendingHalant?: boolean;
@@ -1367,7 +1393,9 @@ export function buildGraphemeRenderModel(
   let conjunctSteps: ConjunctStep[] | undefined = undefined;
   let specialHint: string | undefined = undefined;
 
-  if (needsConjunctSimulation(normCluster)) {
+  if (isConj) {
+    // Steps for every conjunct: the RENDER PLAN (not this model) decides
+    // whether they are shown (simulation box) or the clip path is used.
     conjunctSteps = buildConjunctSimulationSteps(normCluster, normTyped);
     if (normCluster.includes('ক্ষ')) {
       specialHint = "বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক + ্ + ষ";

@@ -86,3 +86,44 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /**
+   * PixelPerfect grapheme cell (spec §11): ONE intact text run per grapheme.
+   * Base and overlay paint the identical string stacked in a single grid
+   * cell, so the two layers can never misalign into a double glyph —
+   * regardless of font, size or letter-spacing around them.
+   */
+  .bt-grapheme {
+    display: inline-grid;
+    position: relative;
+    line-height: 1;
+    white-space: pre;
+    vertical-align: baseline;
+  }
+
+  .bt-grapheme__base,
+  .bt-grapheme__overlay {
+    grid-area: 1 / 1;
+    white-space: pre;
+    line-height: 1;
+    /* The overlay must match the base shaping exactly. */
+    font-kerning: normal;
+    font-variant-ligatures: normal;
+    font-feature-settings: normal;
+    letter-spacing: normal;
+    font-synthesis: none;
+  }
+
+  .bt-grapheme__overlay {
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bt-grapheme *,
+    .bt-grapheme {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
