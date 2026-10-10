@@ -31,17 +31,19 @@ interface GraphemeDisplayProps {
 /**
  * Renders a single Bengali grapheme cluster without breaking font shaping:
  *
- * 1. Kar clusters ('কা', 'টি', 'কু') & vertically-stacked transparent conjuncts
- *    ('প্ত', 'চ্ছ', 'জ্ব', 'প্র', 'দ্র', 'স্বা'):
+ * 1. Kar clusters ('কা', 'টি', 'কু'), vertically-stacked transparent conjuncts
+ *    ('প্ত', 'চ্ছ', 'জ্ব', 'প্র', 'দ্র', 'স্বা') and below-base legible conjuncts
+ *    ('ক্ল', 'গ্ল', 'প্ল', 'ট্ট'):
  *    - Unbroken glyph rendering via layered underlay (gray) and overlay with getBengaliGraphemeClip.
- *    - Halant indicator dot ('.') displayed below when halant ('্') is typed for transparent conjuncts.
+ *    - Stacked/below-base conjuncts use an upper/lower split: the upper part
+ *      turns green first, the lower part when its consonant is typed.
+ *    - Halant indicator dot ('.') displayed below when halant ('্') is typed.
  *
- * 2. Complex conjuncts ('ক্ত', 'ত্র', 'ট্ট', 'ক্র', 'ক্ষ', 'জ্ঞ') and side-by-side
- *    fused ligatures ('ক্ল', 'গ্ল'):
- *    - Full target glyph displayed cleanly without breaking text baselines (no
- *      mid-stroke clip that would render as a broken, overlapping glyph).
- *    - Step-by-step progress is shown by the ConjunctSimulationBox
- *      (e.g. ক ✓ + ক্ ● + ল ○ = ক্ল) instead of a partial green cut.
+ * 2. Fused complex conjuncts whose components are not recognizable
+ *    ('ক্ত', 'ত্র', 'ক্ষ', 'জ্ঞ'):
+ *    - Full target glyph displayed cleanly without breaking text baselines.
+ *    - Step-by-step progress is shown by the ConjunctSimulationBox instead of
+ *      a partial cut that would slice the ligature mid-stroke.
  */
 export function GraphemeDisplay({ model, className, isError, showSimulationBox = false }: GraphemeDisplayProps) {
   const typedColor = isError

@@ -496,16 +496,37 @@ export function isTransparentConjunct(cluster: string): boolean {
 }
 
 /**
- * Checks if a conjunct stacks its components vertically (one below the other),
- * e.g. 'প্ত', 'স্ব', 'প্র' (contains ্ব/্র, or the base consonant belongs to the
- * vertically-stacking family). For these, a horizontal split highlight follows
- * the natural glyph geometry.
+ * Below-base conjuncts whose second component attaches underneath the first AND
+ * stays legible there (ল-ফলা family: 'ক্ল', 'গ্ল', 'প্ল', 'স্ল', … plus the
+ * explicitly listed stacked doubles such as 'ট্ট'). These get an upper/lower
+ * split highlight: the upper consonant turns green first, the pending hasanta
+ * shows the usual dot, and the lower component turns green when typed.
  *
- * Side-by-side fused ligatures such as 'ক্ল' / 'গ্ল' (ল-ফলা) are NOT stacked:
- * a vertical cut through them slices the ligature mid-stroke and renders as a
- * broken, overlapping glyph. Those must use the simulation-steps path instead.
+ * Fused conjuncts where the lower component is NOT recognizable (e.g. 'ক্ত')
+ * are intentionally excluded — those keep the simulation-steps display.
+ */
+const BELOW_BASE_EXPLICIT = new Set<string>([
+  'ট্ট',
+]);
+
+export function isBelowBaseLegible(cluster: string): boolean {
+  const core = getConjunctCore(normalizeBengaliString(cluster));
+  if (BELOW_BASE_EXPLICIT.has(core)) return true;
+  // ল-ফলা: exactly C + hasanta + ল (কার stripped by getConjunctCore, so this
+  // also covers 'ক্লা', 'ক্লি', … via their core).
+  const units = Array.from(core);
+  return units.length === 3 && units[1] === '্' && units[2] === 'ল';
+}
+
+/**
+ * Checks if a conjunct stacks its components vertically (one below the other),
+ * e.g. 'প্ত', 'স্ব', 'প্র', 'ক্ল', 'ট্ট' (contains ্ব/্র, has a legible
+ * below-base component, or the base consonant belongs to the
+ * vertically-stacking family). For these, a horizontal split highlight follows
+ * the natural glyph geometry: upper part first, lower part when typed.
  */
 export function isVerticallyStackedConjunct(text: string): boolean {
+  if (isBelowBaseLegible(text)) return true;
   const baseChar = text[0] || '';
   return text.includes('্ব') ||
     text.includes('্র') ||
@@ -513,16 +534,22 @@ export function isVerticallyStackedConjunct(text: string): boolean {
 }
 
 /**
+ * Split height (%) for the below-base family ('ক্ল', 'ট্ট', …): everything
+ * above this line turns green once the upper consonant is typed.
+ * Tuned visually against Hind Siliguri / Noto Sans Bengali.
+ */
+export const BELOW_BASE_SPLIT_HEIGHT = 62;
+
+/**
  * Checks if a cluster needs the conjunct simulation (step-by-step decomposition)
- * display instead of a partial clip highlight. True for complex conjuncts and
- * for non-vertically-stacked transparent conjuncts (e.g. 'ক্ল', 'গ্ল'), where a
- * clip-path would cut a fused side-by-side ligature mid-stroke.
+ * display instead of a partial clip highlight. True for complex conjuncts whose
+ * components fuse beyond recognition (e.g. 'ক্ত', 'ক্র', 'ক্ষ'), where any
+ * clip-path would cut the ligature mid-stroke.
  */
 export function needsConjunctSimulation(cluster: string): boolean {
   const normCluster = normalizeBengaliString(cluster);
-  if (isComplexConjunct(normCluster)) return true;
-  const core = getConjunctCore(normCluster);
-  return isConjunct(core) && !isVerticallyStackedConjunct(core);
+  if (isBelowBaseLegible(normCluster)) return false;
+  return isComplexConjunct(normCluster);
 }
 
 /**
@@ -1164,10 +1191,13 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
         return `polygon(0 0, 100% 0, 100% 100%, 0 100%)`;
       }
 
-      // Bare conjuncts without trailing kar (e.g. 'স্ব', 'প্র', 'প্ত', 'চ্ছ', 'জ্ব', 'স্প', 'স্থ'):
+      // Bare conjuncts without trailing kar (e.g. 'স্ব', 'প্র', 'প্ত', 'চ্ছ', 'জ্ব', 'স্প', 'স্থ',
+      // and the below-base family 'ক্ল', 'গ্ল', 'ট্ট'):
       if (currentStep <= 2) {
         if (isVerticalStacked) {
-          const splitHeight = (baseChar === 'স' && text.includes('্ব'))
+          const splitHeight = isBelowBaseLegible(text)
+            ? BELOW_BASE_SPLIT_HEIGHT
+            : (baseChar === 'স' && text.includes('্ব'))
             ? 54
             : (text.includes('্র') || text.includes('্ব')) ? 72 : 58;
           return `polygon(0 0, 100% 0, 100% ${splitHeight}%, 0 ${splitHeight}%)`;
@@ -1326,12 +1356,18 @@ export function buildGraphemeRenderModel(
   const fullyTyped = normTyped === normCluster;
   const currentStep = typedUnits.length;
   const totalSteps = units.length;
-  const hasPendingHalant = !isComplex && isConj && normTyped.endsWith('্') && !fullyTyped;
+  // Pending-hasanta dot: shown for transparent conjuncts and for below-base
+  // legible ones (e.g. 'ট্ট') that render through the clip path.
+  const hasPendingHalant =
+    (!isComplex || isBelowBaseLegible(normCluster)) &&
+    isConj &&
+    normTyped.endsWith('্') &&
+    !fullyTyped;
 
   let conjunctSteps: ConjunctStep[] | undefined = undefined;
   let specialHint: string | undefined = undefined;
 
-  if (isComplex || needsConjunctSimulation(normCluster)) {
+  if (needsConjunctSimulation(normCluster)) {
     conjunctSteps = buildConjunctSimulationSteps(normCluster, normTyped);
     if (normCluster.includes('ক্ষ')) {
       specialHint = "বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক + ্ + ষ";

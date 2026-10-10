@@ -55,25 +55,25 @@ describe('GraphemeDisplay', () => {
     expect(simScreen.textContent).toContain('ক্র');
   });
 
-  it('renders side-by-side ligature (ক্ল) as one unbroken glyph with simulation steps, no clip overlay', () => {
-    // Regression: ক্ল typed ক used to render a mid-stroke clip cut that looked
-    // like two overlapping glyphs. It must render one clean glyph + steps.
+  it('renders below-base ligature (ক্ল) with upper/lower split clip, hasanta dot, no simulation box', () => {
+    // 'ক' typed -> only the upper ক part is green (horizontal split).
     const model = buildGraphemeRenderModel('ক্ল', 'ক');
-    const { container } = render(<GraphemeDisplay model={model} />);
+    const { container, rerender } = render(<GraphemeDisplay model={model} />);
 
-    // Exactly one visible instance of the full glyph (no underlay+overlay double).
+    // Unbroken glyph text, single layered clip overlay (no double glyph).
     expect(container.textContent).toContain('ক্ল');
     const clipped = Array.from(container.querySelectorAll('span')).filter(
       (s) => (s as HTMLElement).style.clipPath
     );
-    expect(clipped.length).toBe(0);
+    expect(clipped.length).toBe(1);
+    expect((clipped[0] as HTMLElement).style.clipPath).toContain('100% 62%');
 
-    // With the simulation box, the learner sees ক ✓ + ক্ ● + ল ○ = ক্ল.
-    const { getByLabelText, getByText } = render(
-      <GraphemeDisplay model={model} showSimulationBox />
-    );
-    expect(getByLabelText('যুক্তাক্ষর সিমুলেশন স্ক্রিন')).toBeInTheDocument();
-    expect(getByText('ক্')).toBeInTheDocument();
+    // 'ক্' typed -> same upper split + pending-hasanta dot, as before.
+    rerender(<GraphemeDisplay model={buildGraphemeRenderModel('ক্ল', 'ক্')} />);
+    expect(screen.getByTitle('হসন্ত (্) সক্রিয়')).toBeInTheDocument();
+
+    // No simulation box for legible below-base conjuncts.
+    expect(screen.queryByLabelText('যুক্তাক্ষর সিমুলেশন স্ক্রিন')).toBeNull();
   });
 
   it('renders complex conjunct (ক্ষ) with BanglaWord hint badge for "q" or "ক+্+ষ"', () => {
