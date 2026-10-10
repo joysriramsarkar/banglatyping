@@ -374,12 +374,12 @@ describe('getBengaliGraphemeClip', () => {
     expect(getBengaliGraphemeClip('ডা', 3, 2)).toBe('inset(0)');
   });
 
-  it('notches polygon for টি, ঠি to preserve top horn (টিঁকি) without coloring i-kar umbrella', () => {
+  it('notches polygon for টি, ঠি to preserve top horn (টিকি) without coloring i-kar umbrella', () => {
     expect(getBengaliGraphemeClip('টি', 1, 2)).toBe(
-      'polygon(31% 10%, 46% 10%, 46% 0, 78% 0, 78% 10%, 100% 10%, 100% 100%, 31% 100%)'
+      'polygon(31% 10%, 30% 10%, 30% 0, 62% 0, 62% 10%, 100% 10%, 100% 100%, 31% 100%)'
     );
     expect(getBengaliGraphemeClip('ঠি', 1, 2)).toBe(
-      'polygon(32% 10%, 46% 10%, 46% 0, 78% 0, 78% 10%, 100% 10%, 100% 100%, 32% 100%)'
+      'polygon(32% 10%, 30% 10%, 30% 0, 62% 0, 62% 10%, 100% 10%, 100% 100%, 32% 100%)'
     );
   });
 
@@ -418,8 +418,8 @@ describe('getBengaliGraphemeClip', () => {
   });
 
   it('correctly clips pre-base marks preserving uncolored e-kar, oi-kar, and hroshwo-i kar without slicing matra', () => {
-    // 'টি' uses 10% top margin for 'ট' with notched horn
-    expect(getBengaliGraphemeClip('টি', 1, 2)).toBe('polygon(31% 10%, 46% 10%, 46% 0, 78% 0, 78% 10%, 100% 10%, 100% 100%, 31% 100%)');
+    // 'টি' uses 10% top margin for 'ট' with notched horn (30-62 band)
+    expect(getBengaliGraphemeClip('টি', 1, 2)).toBe('polygon(31% 10%, 30% 10%, 30% 0, 62% 0, 62% 10%, 100% 10%, 100% 100%, 31% 100%)');
     // 'রি' uses 12% top margin for 'র', keeping full matra while keeping hroshwo-i umbrella uncolored
     expect(getBengaliGraphemeClip('রি', 1, 2)).toBe('polygon(31% 12%, 100% 12%, 100% 100%, 31% 100%)');
     // 'তৈ' keeps upper plume uncolored and matra full
@@ -482,16 +482,16 @@ describe('getBengaliGraphemeClip', () => {
     expect(getBengaliGraphemeClip('প্ত', 2, 3)).toBe('polygon(0 0, 100% 0, 100% 58%, 0 58%)');
     expect(getBengaliGraphemeClip('প্ত', 3, 3)).toBe('inset(0)');
 
-    // প্র: step 1 and 2 clip top 72%
-    expect(getBengaliGraphemeClip('প্র', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 72%, 0 72%)');
+    // প্র: step 1 and 2 clip top 58% (র-ফলা top verified below the line)
+    expect(getBengaliGraphemeClip('প্র', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 58%, 0 58%)');
     expect(getBengaliGraphemeClip('প্র', 3, 3)).toBe('inset(0)');
 
     // চ্ছ: step 1 clips top 58%
     expect(getBengaliGraphemeClip('চ্ছ', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 58%, 0 58%)');
     expect(getBengaliGraphemeClip('চ্ছ', 3, 3)).toBe('inset(0)');
 
-    // জ্ব: step 1 clips top 72%
-    expect(getBengaliGraphemeClip('জ্ব', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 72%, 0 72%)');
+    // জ্ব: step 1 clips top 58% (ব-subscript verified below the line)
+    expect(getBengaliGraphemeClip('জ্ব', 1, 3)).toBe('polygon(0 0, 100% 0, 100% 58%, 0 58%)');
     expect(getBengaliGraphemeClip('জ্ব', 3, 3)).toBe('inset(0)');
 
     // স্বা: 4-step progressive stages (স -> স্ -> স্ব -> স্বা)

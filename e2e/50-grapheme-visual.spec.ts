@@ -106,9 +106,9 @@ test.describe("grapheme visual contracts", () => {
   });
 
   test("dark mode keeps the contracts", async ({ page }) => {
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.reload();
-    await page.getByTestId("gv-fixture").first().waitFor();
+    // Tailwind darkMode:'class' — emulateMedia alone does nothing.
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await expect(page.locator("html.dark")).toHaveCount(1);
     const overlays = page.locator('[data-part="overlay"]');
     const count = await overlays.count();
     expect(count).toBeGreaterThan(5);
@@ -130,9 +130,8 @@ test.describe("grapheme visual contracts", () => {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     });
-    await page.emulateMedia({ colorScheme: "dark" });
-    await page.reload();
-    await page.getByTestId("gv-fixture").first().waitFor();
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await page.waitForTimeout(300);
     await testInfo.attach("grapheme-lab-dark", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",

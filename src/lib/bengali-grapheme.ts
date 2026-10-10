@@ -1079,7 +1079,7 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
         if (currentStep === 1) {
           // Step 1: Consonant only -> exclude left mark and top chandrabindu
           if (hasHroshwoIKar && (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ')) {
-            return `polygon(${start}% ${topY}%, 46% ${topY}%, 46% 0, 78% 0, 78% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
+            return `polygon(${start}% ${topY}%, 30% ${topY}%, 30% 0, 62% 0, 62% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
           }
           return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
         }
@@ -1149,13 +1149,13 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
       // 11. Pre-base Hroshwo-I kar 'ি' (e.g. 'টি', 'কি', 'চি', 'দি', 'সি', 'বি', 'রি', 'ড়ি', 'পি'):
       // Clips below topY so the top umbrella arch of 'ি' remains cleanly uncolored until 'ি' is typed!
       // For 'ট', 'ঠ', 'ড', 'ঢ', their distinctive upper horn/টিঁকি extends above the matra to 0%
-      // between 46% and 78% width, while the umbrella curve of 'ি' stays on the left (0 to 46%).
+      // around 30% and 62% width (screenshot-verified), while the umbrella curve of 'ি' stays on the left (0 to 46%).
       // We use a notched polygon that covers 100% of the consonant (including its top horn)
       // without ever touching the umbrella or left stem of 'ি'!
       if (hasHroshwoIKar && !hasAaKar && !hasAnusvaraOrVisarga && !hasBothSides) {
         const start = getConsonantHroshwoIOffset(baseChar);
         if (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ') {
-          return `polygon(${start}% ${topY}%, 46% ${topY}%, 46% 0, 78% 0, 78% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
+          return `polygon(${start}% ${topY}%, 30% ${topY}%, 30% 0, 62% 0, 62% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
         }
         return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
       }
@@ -1221,11 +1221,15 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
       // and the below-base family 'ক্ল', 'গ্ল', 'ট্ট'):
       if (currentStep <= 2) {
         if (isVerticalStacked) {
+          // Screenshot-verified (lab matrix): ্র- and ্ব-subscripts both
+          // start below ~58% while their bases end above it. স+্ব keeps
+          // its tighter 54 (স sits higher). Legacy 72 painted র/ব tops
+          // green from the first keystroke, so it is gone.
           const splitHeight = isBelowBaseLegible(text)
             ? BELOW_BASE_SPLIT_HEIGHT
-            : (baseChar === 'স' && text.includes('্ব'))
+            : baseChar === 'স' && text.includes('্ব')
             ? 54
-            : (text.includes('্র') || text.includes('্ব')) ? 72 : 58;
+            : 58;
           return `polygon(0 0, 100% 0, 100% ${splitHeight}%, 0 ${splitHeight}%)`;
         }
         return `polygon(0 0, 52% 0, 52% 100%, 0 100%)`;
