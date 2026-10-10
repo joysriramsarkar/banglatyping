@@ -375,9 +375,10 @@ describe('getBengaliGraphemeClip', () => {
   });
 
   it('notches polygon per base to preserve the horn (ট/ঠ/ড/ঢ + ি)', () => {
-    // ট/ড: horn span 30-62; ঠ: 26-62; ঢ reaches furthest left: 20-62.
+    // ট/ড: horn span 30-62, with ট getting a wider top tier (24%) for its tip;
+    // ঠ: 26-62; ঢ reaches furthest left: 20-62.
     expect(getBengaliGraphemeClip('টি', 1, 2)).toBe(
-      'polygon(31% 10%, 30% 10%, 30% 0, 62% 0, 62% 10%, 100% 10%, 100% 100%, 31% 100%)'
+      'polygon(31% 100%, 100% 100%, 100% 10%, 62% 10%, 62% 0, 24% 0, 24% 4%, 30% 4%, 30% 10%, 31% 10%)'
     );
     expect(getBengaliGraphemeClip('ঠি', 1, 2)).toBe(
       'polygon(32% 10%, 26% 10%, 26% 0, 62% 0, 62% 10%, 100% 10%, 100% 100%, 32% 100%)'
@@ -425,8 +426,8 @@ describe('getBengaliGraphemeClip', () => {
   });
 
   it('correctly clips pre-base marks preserving uncolored e-kar, oi-kar, and hroshwo-i kar without slicing matra', () => {
-    // 'টি' uses 10% top margin for 'ট' with notched horn (30-62 band; ঠ 26-62, ঢ 20-62)
-    expect(getBengaliGraphemeClip('টি', 1, 2)).toBe('polygon(31% 10%, 30% 10%, 30% 0, 62% 0, 62% 10%, 100% 10%, 100% 100%, 31% 100%)');
+    // 'টি' uses 10% top margin for 'ট' with tiered horn notch (top tier 24%, band 30-62; ঠ 26-62, ঢ 20-62)
+    expect(getBengaliGraphemeClip('টি', 1, 2)).toBe('polygon(31% 100%, 100% 100%, 100% 10%, 62% 10%, 62% 0, 24% 0, 24% 4%, 30% 4%, 30% 10%, 31% 10%)');
     // 'রি' uses 12% top margin for 'র', keeping full matra while keeping hroshwo-i umbrella uncolored
     expect(getBengaliGraphemeClip('রি', 1, 2)).toBe('polygon(31% 12%, 100% 12%, 100% 100%, 31% 100%)');
     // 'তৈ' keeps upper plume uncolored and matra full

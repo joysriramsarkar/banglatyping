@@ -1094,6 +1094,12 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
           // Step 1: Consonant only -> exclude left mark and top chandrabindu
           if (hasHroshwoIKar && (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ')) {
             const [notchLeft, notchRight] = getHornNotchSpan(baseChar);
+          // ট: the horn tip (y<4%) sits left of the 30% band while the ি
+          // umbrella stays below it — a wider top tier greens the whole horn
+          // without touching the umbrella (variant-verified, 2026-10-10).
+          if (baseChar === 'ট') {
+            return `polygon(${start}% 100%, 100% 100%, 100% ${topY}%, ${notchRight}% ${topY}%, ${notchRight}% 0, 24% 0, 24% 4%, ${notchLeft}% 4%, ${notchLeft}% ${topY}%, ${start}% ${topY}%)`;
+          }
           return `polygon(${start}% ${topY}%, ${notchLeft}% ${topY}%, ${notchLeft}% 0, ${notchRight}% 0, ${notchRight}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
           }
           return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
@@ -1171,6 +1177,12 @@ export function getBengaliGraphemeClip(text: string, currentStep: number, totalS
         const start = getConsonantHroshwoIOffset(baseChar);
         if (baseChar === 'ট' || baseChar === 'ঠ' || baseChar === 'ড' || baseChar === 'ঢ') {
           const [notchLeft, notchRight] = getHornNotchSpan(baseChar);
+          // ট: the horn tip (y<4%) sits left of the 30% band while the ি
+          // umbrella stays below it — a wider top tier greens the whole horn
+          // without touching the umbrella (variant-verified, 2026-10-10).
+          if (baseChar === 'ট') {
+            return `polygon(${start}% 100%, 100% 100%, 100% ${topY}%, ${notchRight}% ${topY}%, ${notchRight}% 0, 24% 0, 24% 4%, ${notchLeft}% 4%, ${notchLeft}% ${topY}%, ${start}% ${topY}%)`;
+          }
           return `polygon(${start}% ${topY}%, ${notchLeft}% ${topY}%, ${notchLeft}% 0, ${notchRight}% 0, ${notchRight}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
         }
         return `polygon(${start}% ${topY}%, 100% ${topY}%, 100% 100%, ${start}% 100%)`;
