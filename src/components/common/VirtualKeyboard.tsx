@@ -37,7 +37,30 @@ const FINGER_COLORS: Record<number, string> = {
   10: "bg-red-100 dark:bg-red-950/40 border-red-200 dark:border-red-900/50", // Right Pinky
 };
 
-const Key = ({
+const KeyCapPropsAreEqual = (
+  prev: {
+    data: KeyLayoutData;
+    isHighlighted: boolean;
+    needsShift: boolean;
+    isShiftHighlighted: boolean;
+  },
+  next: {
+    data: KeyLayoutData;
+    isHighlighted: boolean;
+    needsShift: boolean;
+    isShiftHighlighted: boolean;
+  }
+): boolean => {
+  return (
+    prev.data.key === next.data.key &&
+    prev.data.keyCode === next.data.keyCode &&
+    prev.isHighlighted === next.isHighlighted &&
+    prev.needsShift === next.needsShift &&
+    prev.isShiftHighlighted === next.isShiftHighlighted
+  );
+};
+
+const Key = React.memo(({
   data,
   isHighlighted,
   needsShift,
@@ -141,7 +164,9 @@ const Key = ({
       </span>
     </div>
   );
-};
+}, KeyCapPropsAreEqual);
+
+Key.displayName = "KeyCap";
 
 interface SimplifiedKeyboardProps {
   highlightKeyCode?: string;
@@ -152,14 +177,14 @@ interface SimplifiedKeyboardProps {
   className?: string;
 }
 
-export const SimplifiedKeyboard = ({
+export const SimplifiedKeyboard = React.memo(function SimplifiedKeyboard({
   highlightKeyCode,
   needsShift = false,
   resolvedKeyInfo,
   showFingerGuide = true,
   layout,
   className,
-}: SimplifiedKeyboardProps) => {
+}: SimplifiedKeyboardProps) {
   const layoutConfig = getKeyboardLayoutConfig(layout);
   const rows = {
     top: layoutConfig.top as KeyLayoutData[],
@@ -290,4 +315,6 @@ export const SimplifiedKeyboard = ({
       </div>
     </div>
   );
-};
+});
+
+SimplifiedKeyboard.displayName = "SimplifiedKeyboard";

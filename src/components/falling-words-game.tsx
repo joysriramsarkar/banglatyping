@@ -23,7 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getRandomGameWord, GameDifficulty } from '@/lib/game/game-words';
 import { gameAudio } from '@/lib/game/game-audio';
-import { recordFallingGameResult, getArcadeStats } from '@/lib/game/game-storage';
+import { recordFallingGameResult, getArcadeStats } from '@/lib/game/score-store';
 import { toBengaliNumber } from '@/lib/utils';
 
 interface ActiveWord {

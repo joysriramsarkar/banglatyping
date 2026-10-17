@@ -784,7 +784,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
           <p className="text-muted-foreground text-sm mt-1">{lesson.title} সফলভাবে সম্পন্ন হয়েছে। দক্ষতা (আয়ত্ত) নির্ধারণে ধারাবাহিক ফলাফল বিবেচিত হয়।</p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 max-w-2xl mx-auto">
+        <div role="status" aria-label="পাঠের চূড়ান্ত ফলাফল" className="grid grid-cols-2 sm:grid-cols-5 gap-3 max-w-2xl mx-auto">
           <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
             <p className="text-[11px] text-muted-foreground font-semibold">গতি (GPM)</p>
             <p className="text-xl font-bold text-primary">{toBengaliNumber(displayGpm)}</p>
@@ -1117,6 +1117,10 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
                       আঙুল: {resolvedKeyInfo.bengaliFingerLabel}
                     </Badge>
                   )}
+                  {/* Screen-reader progress announcement (visual badge is aria-hidden noise-free). */}
+                  <span className="sr-only" role="status">
+                    {isSentenceDrill ? "বাক্য" : "অক্ষর"} {drillIndex + 1} / {sectionItems.length}
+                  </span>
                 </div>
 
                 {/* Target String Stream Display: Active Set + Upcoming Sets (Upcoming hidden for sentences) */}
@@ -1329,7 +1333,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
               {/* FAILED BANNER WITH RETRY ACTION */}
               {sectionFailed && (
-                <div className="p-3.5 sm:p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-red-900 dark:text-red-200 animate-in fade-in">
+                <div role="alert" className="p-3.5 sm:p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-red-900 dark:text-red-200 animate-in fade-in">
                   <div className="flex items-center gap-2.5">
                     <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
                     <div>
@@ -1356,7 +1360,7 @@ export default function LessonPlayer({ lesson, onComplete }: LessonPlayerProps) 
 
               {/* PASSED BANNER WITH NEXT ACTION */}
               {sectionPassed && (
-                <div className="p-3.5 sm:p-4 rounded-xl bg-green-500/10 border border-green-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-green-900 dark:text-green-200 animate-in fade-in">
+                <div role="status" className="p-3.5 sm:p-4 rounded-xl bg-green-500/10 border border-green-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-green-900 dark:text-green-200 animate-in fade-in">
                   <div className="flex items-center gap-2.5">
                     <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                     <div>

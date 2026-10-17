@@ -35,7 +35,9 @@ class TypingSoundEngine {
 
   private initContext() {
     if (!this.ctx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
@@ -166,3 +168,143 @@ class TypingSoundEngine {
 }
 
 export const typingAudio = new TypingSoundEngine();
+
+/**
+ * OptimizedTypingSoundEngine — pooled Web Audio engine.
+ *
+ * Pre-creates a pool of 8 oscillator+gain pairs and reuses them
+ * round-robin, avoiding per-keystroke node allocation/GC churn.
+ * Kept alongside the legacy `TypingSoundEngine` for compatibility.
+ */
+const POOL_SIZE = 8;
+
+interface PooledVoice {
+  osc: OscillatorNode | null;
+  gain: GainNode | null;
+}
+
+export class OptimizedTypingSoundEngine {
+  private ctx: AudioContext | null = null;
+  private pool: PooledVoice[] = [];
+  private cursor = 0;
+  private settings: AudioSettings = DEFAULT_AUDIO_SETTINGS;
+
+  constructor() {
+    if (typeof window !== "undefined") {
+      this.loadSettings();
+    }
+  }
+
+  private ensureContext(): AudioContext | null {
+    if (typeof window === "undefined") return null;
+    if (!this.ctx) {
+      const AudioCtx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return null;
+      this.ctx = new AudioCtx();
+      this.pool = Array.from({ length: POOL_SIZE }, () => {
+        if (!this.ctx) return { osc: null, gain: null };
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        return { osc, gain };
+      });
+    }
+    if (this.ctx.state === "suspended") {
+      void this.ctx.resume();
+    }
+    return this.ctx;
+  }
+
+  private loadSettings(): void {
+    try {
+      const raw = localStorage.getItem(AUDIO_SETTINGS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<AudioSettings>;
+        this.settings = { ...DEFAULT_AUDIO_SETTINGS, ...parsed };
+      }
+    } catch {
+      this.settings = DEFAULT_AUDIO_SETTINGS;
+    }
+  }
+
+  public getSettings(): AudioSettings {
+    return { ...this.settings };
+  }
+
+  public updateSettings(next: Partial<AudioSettings>): void {
+    this.settings = { ...this.settings, ...next };
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(AUDIO_SETTINGS_KEY, JSON.stringify(this.settings));
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private nextVoice(): PooledVoice | null {
+    const voice = this.pool[this.cursor];
+    this.cursor = (this.cursor + 1) % POOL_SIZE;
+    return voice ?? null;
+  }
+
+  private blip(freqFrom: number, freqTo: number, duration: number, peak: number, type: OscillatorType): void {
+    if (!this.settings.soundEnabled) return;
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    try {
+      const voice = this.nextVoice();
+      if (!voice?.osc || !voice?.gain) return;
+      const now = ctx.currentTime;
+      voice.osc.type = type;
+      voice.osc.frequency.cancelScheduledValues(now);
+      voice.osc.frequency.setValueAtTime(freqFrom, now);
+      voice.osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqTo), now + duration);
+      voice.gain.gain.cancelScheduledValues(now);
+      voice.gain.gain.setValueAtTime(peak, now);
+      voice.gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    } catch {
+      // ignore synthesis errors
+    }
+  }
+
+  public playKeyClick(): void {
+    const freq = this.settings.soundType === "soft" ? 400 : 700 + Math.random() * 80;
+    this.blip(freq, 100, 0.04, this.settings.volume * 0.4, "sine");
+  }
+
+  public playErrorSound(): void {
+    this.blip(180, 110, 0.08, this.settings.volume * 0.5, "sawtooth");
+  }
+
+  public playCompletionChime(): void {
+    if (!this.settings.soundEnabled) return;
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    try {
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      const now = ctx.currentTime;
+      notes.forEach((freq, idx) => {
+        const voice = this.pool[(this.cursor + idx) % POOL_SIZE];
+        if (!voice?.osc || !voice?.gain) return;
+        const start = now + idx * 0.08;
+        voice.osc.type = "triangle";
+        voice.osc.frequency.setValueAtTime(freq, start);
+        voice.gain.gain.cancelScheduledValues(start);
+        voice.gain.gain.setValueAtTime(0.0001, start);
+        voice.gain.gain.linearRampToValueAtTime(this.settings.volume * 0.4, start + 0.02);
+        voice.gain.gain.exponentialRampToValueAtTime(0.001, start + 0.3);
+      });
+      this.cursor = (this.cursor + notes.length) % POOL_SIZE;
+    } catch {
+      // ignore
+    }
+  }
+}
+
+export const optimizedTypingAudio = new OptimizedTypingSoundEngine();

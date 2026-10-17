@@ -15,9 +15,14 @@ const eslintConfig = [
   },
   {
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/triple-slash-reference': 'off',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      // eslint-plugin-react ships with next/core-web-vitals (verified in
+      // node_modules), so this resolves without an extra dependency.
+      'react/jsx-no-leaked-render': 'warn',
+      '@typescript-eslint/explicit-function-return-type': 'warn',
       // Warnings rather than off: they surface real problems without
       // failing the build over the existing backlog.
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],

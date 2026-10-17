@@ -2,6 +2,11 @@
  * Bengali Grapheme Cluster Utilities
  * Handles proper segmentation of Bengali text at the grapheme level,
  * including complex conjuncts (যুক্তাক্ষর) with multiple halants and ZWJ
+ *
+ * UNICODE 16 NOTE: the Bengali block ranges below (U+0980–U+09FF) and the
+ * ZWJ/ZWNJ code points were verified against Unicode 16.0 — the Bengali
+ * block gained no new characters in 16.0, so no range change is needed.
+ * Re-verify against future Unicode versions before widening any range.
  */
 
 // Bengali script Unicode ranges and important characters
@@ -209,6 +214,72 @@ export function segmentBengaliGraphemesFallback(text: string): string[] {
   return out;
 }
 
+/**
+ * Deterministic fallback-first segmentation (default path).
+ *
+ * `fallbackSegment` is the hand-rolled GB9/GB9c walker above, aliased for a
+ * stable public name. `segmentGraphemes` is the app-wide default and is
+ * intentionally fallback-first so every browser (including ones without
+ * Intl.Segmenter) produces identical clusters. `nativeSegment` exposes the
+ * Intl.Segmenter path ONLY for the parity test — never for scoring, cursors,
+ * or hints.
+ */
+export const fallbackSegment: (text: string) => string[] =
+  segmentBengaliGraphemesFallback;
+
+let _nativeSegmenter: Intl.Segmenter | null | undefined;
+export function nativeSegment(text: string): string[] {
+  if (!text) return [];
+  if (!hasNativeSegmenter) return fallbackSegment(text);
+  try {
+    if (_nativeSegmenter === undefined) {
+      _nativeSegmenter = new Intl.Segmenter('bn-IN', {
+        granularity: 'grapheme',
+      });
+    }
+  } catch {
+    _nativeSegmenter = null;
+  }
+  if (!_nativeSegmenter) return fallbackSegment(text);
+  return Array.from(_nativeSegmenter.segment(text), (s) => s.segment);
+}
+
+/** App-wide default: deterministic fallback segmentation. */
+export function segmentGraphemes(text: string): string[] {
+  return fallbackSegment(text);
+}
+
+/**
+ * Shared memoised segmentation path. All BengaliSegmenter methods go through
+ * here so one target string is segmented once per session, not per keystroke.
+ * Module-level Map, FIFO eviction at 200 entries (oldest key deleted first).
+ * Returns the cached array by reference — callers must not mutate it.
+ */
+const SEGMENT_CACHE_MAX = 200;
+const _segmentCache = new Map<string, string[]>();
+
+export function segmentCached(text: string): string[] {
+  const hit = _segmentCache.get(text);
+  if (hit) return hit;
+  const segs = fallbackSegment(text);
+  _segmentCache.set(text, segs);
+  if (_segmentCache.size > SEGMENT_CACHE_MAX) {
+    const oldest = _segmentCache.keys().next();
+    if (!oldest.done) _segmentCache.delete(oldest.value);
+  }
+  return segs;
+}
+
+/** Test hook: reset the segmentation cache between specs. */
+export function clearSegmentCache(): void {
+  _segmentCache.clear();
+}
+
+/** Test hook: observe cache size without exposing the map. */
+export function segmentCacheSize(): number {
+  return _segmentCache.size;
+}
+
 export class BengaliSegmenter {
   private segmenter: Intl.Segmenter | null;
 
@@ -223,10 +294,15 @@ export class BengaliSegmenter {
     return this.segmenter !== null;
   }
 
+  /**
+   * Deterministic segmentation: always the cached fallback walker, even when
+   * a native Intl.Segmenter exists. Cross-browser identical clusters matter
+   * more than platform shaping here; the native path lives in nativeSegment()
+   * for parity testing only.
+   */
   segmentString(text: string): string[] {
     if (!text) return [];
-    if (!this.segmenter) return segmentBengaliGraphemesFallback(text);
-    return Array.from(this.segmenter.segment(text), (s: Intl.SegmentData) => s.segment);
+    return segmentCached(text);
   }
 
   /**
@@ -310,28 +386,57 @@ export function isNukta(char: string): boolean {
 
 /**
  * Parse a Bengali conjunct (যুক্তাক্ষর) into its constituent parts
- * Returns { consonants: [array], halants: [count], trailingKar: string | null }
- * 
- * Example: 'ক্ষ্ম' → { 
- *   consonants: ['ক', 'ষ', 'ম'], 
+ * Returns { consonants: [array], halants: [count], trailingKar: string | null,
+ *           hasZWJ: boolean, hasZWNJ: boolean }
+ *
+ * ZWJ/ZWNJ are shaping-significant joiners, NOT noise: র‍্য (র + ্ + ZWJ + য)
+ * renders as an explicit ya-phala only because the ZWJ sits between hasanta
+ * and য, and ZWNJ explicitly breaks a conjunct (ক্‌ষ ≠ ক্ষ). They are
+ * therefore reported (hasZWJ/hasZWNJ) and NEVER stripped here — stripping
+ * belongs to normalizeBengaliString (comparison only), never to parsing or
+ * segmentation (normalizeForSegmentation/normalizeForRendering keep them).
+ *
+ * Lesson note (Bijoy/Avro য়): Bijoy types য় as য + ় (nukta sequence) while
+ * Avro/Probhat offer the atomic য় (U+09DF) directly; both spellings segment
+ * as one cluster and compare equal via the nukta fold in
+ * normalizeBengaliString, but the raw teaching steps must show the layout's
+ * actual key order, not the folded form.
+ *
+ * Example: 'ক্ষ্ম' → {
+ *   consonants: ['ক', 'ষ', 'ম'],
  *   halants: [1, 1],  // halants between consonants
- *   trailingKar: null 
+ *   trailingKar: null
  * }
  */
 export function parseConjunct(conjunct: string): {
   consonants: string[];
   halants: number[];
   trailingKar: string | null;
+  hasZWJ: boolean;
+  hasZWNJ: boolean;
 } {
   const consonants: string[] = [];
   const halants: number[] = [];
   let trailingKar: string | null = null;
+  let hasZWJ = false;
+  let hasZWNJ = false;
 
   const segments = Array.from(conjunct);
-  
+
   let i = 0;
   while (i < segments.length) {
     const segment = segments[i];
+
+    if (segment === '\u200D') {
+      hasZWJ = true;
+      i++;
+      continue;
+    }
+    if (segment === '\u200C') {
+      hasZWNJ = true;
+      i++;
+      continue;
+    }
 
     if (isNukta(segment) || segment === '') {
       i++;
@@ -356,8 +461,11 @@ export function parseConjunct(conjunct: string): {
         i++;
       }
 
-      // Skip ZWJ/ZWNJ after halant
+      // Record (do NOT strip) ZWJ/ZWNJ after halant — they decide whether
+      // the link below forms (ZWJ: explicit join, e.g. র‍্য) or breaks (ZWNJ).
       while (i < segments.length && (segments[i] === '\u200D' || segments[i] === '\u200C')) {
+        if (segments[i] === '\u200D') hasZWJ = true;
+        else hasZWNJ = true;
         i++;
       }
 
@@ -372,7 +480,7 @@ export function parseConjunct(conjunct: string): {
     }
   }
 
-  return { consonants, halants, trailingKar };
+  return { consonants, halants, trailingKar, hasZWJ, hasZWNJ };
 }
 
 /**
@@ -1431,6 +1539,20 @@ export function buildGraphemeRenderModel(
     conjunctSteps = buildConjunctSimulationSteps(normCluster, normTyped);
     if (normCluster.includes('ক্ষ')) {
       specialHint = "বাংলাওয়ার্ড: সরাসরি 'q' অথবা ক + ্ + ষ";
+    }
+    // Explicit-joiner typing order (checked on the RAW cluster — the
+    // normalizer above strips joiners). র‍্য is র + ্ + ZWJ + য IN THAT
+    // ORDER: the ZWJ sits between hasanta and the following consonant,
+    // never before the hasanta. That position is what forces the explicit
+    // ya-phala instead of the default ligature; ZWNJ in the same slot
+    // breaks the conjunct instead (ক্‌ষ ≠ ক্ষ).
+    if (cluster.includes('\u200D') || cluster.includes('\u200C')) {
+      const joiner = cluster.includes('\u200D') ? 'ZWJ' : 'ZWNJ';
+      const orderHint =
+        joiner === 'ZWJ'
+          ? 'ZWJ ক্রম: র + ্ + ZWJ + য — ZWJ সবসময় হসন্তের পরে, পরের ব্যঞ্জনের আগে বসে'
+          : 'ZWNJ যুক্তাক্ষর ভাঙে: হসন্তের পরে বসে পাশাপাশি রূপ রাখে (ক্‌ষ ≠ ক্ষ)';
+      specialHint = specialHint ? `${specialHint}। ${orderHint}` : orderHint;
     }
   }
 

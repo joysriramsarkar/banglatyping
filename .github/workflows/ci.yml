@@ -26,16 +26,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Node 22 is required for this repo (Next.js 15 + native SQLite tooling).
-      # Keep this in sync with "engines" in package.json.
+      # Node version tracks "engines" in package.json.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: package.json
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
 
       - name: Typecheck
         run: npm run typecheck
@@ -51,6 +58,18 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Bundle analysis (informational)
+        # next/bundle-analyzer is not wired into next.config yet; until it is,
+        # report the production output size. Informational only — never red.
+        run: |
+          echo "## .next size report" >> "$GITHUB_STEP_SUMMARY"
+          du -sh .next 2>/dev/null | tee -a "$GITHUB_STEP_SUMMARY" || true
+          du -sh .next/static 2>/dev/null || true
+        continue-on-error: true
+
+      - name: Build worker (Cloudflare)
+        run: npm run build:worker
 
   e2e-smoke:
     name: E2E Smoke Tests
@@ -69,17 +88,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: package.json
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Run E2E tests (full suite)
         # Serialize: the specs fight over the on-demand dev-server compile,
         # which otherwise trips the expect timeout when run in parallel.
         run: npx playwright test --workers=1
-

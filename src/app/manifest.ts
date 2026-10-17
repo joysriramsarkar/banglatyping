@@ -6,9 +6,14 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'বাংলা টাইপিং',
     description: 'অনলাইনে সেরা বাংলা টাইপিং টেস্ট ও প্র্যাকটিস প্ল্যাটফর্ম। Avro, Bijoy ও BanglaWord লেআউট সাপোর্ট।',
     start_url: '/',
+    scope: '/',
     display: 'standalone',
+    orientation: 'portrait',
     background_color: '#ffffff',
     theme_color: '#059669',
+    lang: 'bn',
+    dir: 'ltr',
+    categories: ['education', 'productivity'],
     icons: [
       {
         src: '/favicon.ico',
@@ -19,6 +24,34 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/logo.svg',
         sizes: 'any',
         type: 'image/svg+xml',
+      },
+      {
+        src: '/icons/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        src: '/icons/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+      {
+        src: '/icons/maskable-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+    ],
+    screenshots: [
+      {
+        src: '/screenshots/typing-test.png',
+        sizes: '1280x720',
+        type: 'image/png',
+      },
+      {
+        src: '/screenshots/lessons-mobile.png',
+        sizes: '390x844',
+        type: 'image/png',
       },
     ],
   };

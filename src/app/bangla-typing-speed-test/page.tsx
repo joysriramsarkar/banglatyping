@@ -40,7 +40,7 @@ export default function BanglaTypingSpeedTestPage() {
         <h2 className="text-2xl font-bold mb-6">WPM বনাম GPM — পার্থক্য কী?</h2>
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
-            <h3 className="text-xl font-semibold text-blue-300 mb-3">WPM (Words Per Minute)</h3>
+            <h3 lang="en" className="text-xl font-semibold text-blue-300 mb-3">WPM (Words Per Minute)</h3>
             <p className="text-slate-300 text-sm leading-relaxed mb-3">
               প্রতি মিনিটে কতটি শব্দ টাইপ করলেন তার পরিমাপ। সাধারণত ৫টি character = ১টি শব্দ।
             </p>
@@ -49,7 +49,7 @@ export default function BanglaTypingSpeedTestPage() {
             </p>
           </div>
           <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-6">
-            <h3 className="text-xl font-semibold text-cyan-300 mb-3">GPM (Graphemes Per Minute)</h3>
+            <h3 lang="en" className="text-xl font-semibold text-cyan-300 mb-3">GPM (Graphemes Per Minute)</h3>
             <p className="text-slate-300 text-sm leading-relaxed mb-3">
               বাংলার জন্য বিশেষভাবে তৈরি। প্রতি মিনিটে সঠিক বাংলা grapheme (অক্ষর-একক) সংখ্যা।
               যুক্তাক্ষর ও কার-কে সঠিকভাবে গণনা করে।

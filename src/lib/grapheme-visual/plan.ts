@@ -91,20 +91,51 @@ export interface VisualProgressInput {
  * Derive what the EYES should show from what the HANDS did (spec §12/§19).
  * Key steps (layout plan) and visual stages (grapheme units) are separate:
  * one BanglaWord shortcut key can complete several code points at once.
+ *
+ * Progress uses the LONGEST COMMON PREFIX between typed and target, so a
+ * wrong keystroke preserves everything correct up to the divergence instead
+ * of resetting the stage to 0. `errorAt` is the code-point index (Array.from
+ * units, NOT grapheme clusters) where typed first diverges from target, or
+ * null when there is no error — typing proceeds code-point by code-point
+ * inside a cluster (ক, then ্, then ল), while a grapheme cluster is the whole
+ * visible unit (ক্ল). The renderer maps errorAt to the error glyph for the
+ * red underline; stage math keeps counting in code points for continuity
+ * with the existing totalVisualStages.
  */
 export function deriveVisualProgress(input: VisualProgressInput): TypingVisualProgress {
   const normTarget = normalizeBengaliString(input.target);
   const normTyped = normalizeBengaliString(input.typedInput);
-  const totalUnits = Math.max(1, Array.from(normTarget).length);
+  const targetUnits = Array.from(normTarget);
+  const typedUnits = Array.from(normTyped);
+  const totalUnits = Math.max(1, targetUnits.length);
+
+  // Longest common prefix in code points.
+  let lcp = 0;
+  while (
+    lcp < targetUnits.length &&
+    lcp < typedUnits.length &&
+    targetUnits[lcp] === typedUnits[lcp]
+  ) {
+    lcp++;
+  }
+
   let stage: number;
+  let errorAt: number | null;
   if (!normTyped) {
     stage = 0;
-  } else if (normTyped === normTarget || normTyped.startsWith(normTarget)) {
+    errorAt = null;
+  } else if (lcp >= targetUnits.length) {
+    // Typed covers the whole target (exact or with trailing extra input).
     stage = totalUnits;
-  } else if (normTarget.startsWith(normTyped)) {
-    stage = Array.from(normTyped).length;
+    errorAt = null;
+  } else if (lcp >= typedUnits.length) {
+    // Proper prefix: still composing, nothing wrong yet.
+    stage = lcp;
+    errorAt = null;
   } else {
-    stage = 0;
+    // Divergence: keep progress up to the LCP, flag the error position.
+    stage = lcp;
+    errorAt = lcp;
   }
   return {
     typedKeySteps: input.keysPressed ?? null,
@@ -112,6 +143,7 @@ export function deriveVisualProgress(input: VisualProgressInput): TypingVisualPr
     visualStageIndex: stage,
     totalVisualStages: totalUnits,
     targetGrapheme: normTarget,
+    errorAt,
   };
 }
 

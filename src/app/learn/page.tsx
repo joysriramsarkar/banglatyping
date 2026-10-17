@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import LayoutPicker from '@/components/onboarding/LayoutPicker';
+import TodaysReview from '@/components/learning/TodaysReview';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://typing.onuron.org';
 
@@ -90,6 +92,13 @@ export default function LearnPage() {
         >
           পূর্ণাঙ্গ কোর্স দেখুন →
         </Link>
+      </section>
+
+      <section className="max-w-5xl mx-auto px-4 pt-10 space-y-6">
+        <LayoutPicker />
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 text-white [&_h2]:text-white [&_p]:text-slate-300">
+          <TodaysReview />
+        </div>
       </section>
 
       <section className="max-w-5xl mx-auto px-4 py-10">

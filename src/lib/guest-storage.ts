@@ -121,6 +121,14 @@ export async function syncGuestSessionsToUser(userId: string): Promise<number> {
 
   for (const s of sessions) {
     try {
+      // Guest sessions carry no server-verified event log: guests type
+      // without an authenticated TypingEvent buffer, so even a complete
+      // payload cannot prove each keystroke happened. Flag them unverified.
+      // Event-log presence check: a session with neither erred nor attempted
+      // detail has no per-character evidence at all — it MUST stay
+      // unverified and the badge in TestResults reflects that.
+      const hasEventLog =
+        (s.erredCharacters?.length ?? 0) > 0;
       const res = await apiFetch('/api/user-progress', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,8 +140,11 @@ export async function syncGuestSessionsToUser(userId: string): Promise<number> {
           errors: s.errors,
           timeElapsed: s.timeElapsed,
           erredCharacters: s.erredCharacters,
+          unverified: true,
           // Stable idempotency key: a replayed session can be de-duplicated.
           clientSessionId: s.id,
+          // Diagnostic only (stripped server-side): did any event log exist?
+          hadEventLog: hasEventLog,
         }),
       });
 

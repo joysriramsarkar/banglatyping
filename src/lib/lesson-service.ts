@@ -178,14 +178,33 @@ export async function getLessonsByRow(row: 'home-row' | 'top-row' | 'bottom-row'
 }
 
 /**
+ * Sanitize a free-text lesson search query before embedding it in a
+ * PostgREST `.or()` filter.
+ *
+ * PostgREST splits `.or()` on top-level commas and treats `(`, `)`, `"` and
+ * `'` as filter syntax, so unsanitized input can break out of the intended
+ * `title.ilike.%…%,description.ilike.%…%` shape (filter injection). Stripping
+ * those characters keeps the query a plain literal, and the 100-char cap
+ * bounds filter length.
+ */
+export function sanitizeLessonSearchQuery(query: string): string {
+  return query
+    .replace(/[,()"'%_\\]/g, '')
+    .trim()
+    .slice(0, 100);
+}
+
+/**
  * Search lessons by title
  */
 export async function searchLessons(query: string): Promise<Lesson[]> {
   try {
+    const q = sanitizeLessonSearchQuery(query);
+    if (!q) return [];
     const { data, error } = await supabase
       .from('lessons')
       .select('*')
-      .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+      .or(`title.ilike.%${q}%,description.ilike.%${q}%`)
       .order('sort_order', { ascending: true });
 
     if (error) {

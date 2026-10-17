@@ -1,5 +1,6 @@
 // Database client configuration for Supabase
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 export function getSupabaseUrl(): string {
   return process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -13,8 +14,8 @@ export function getSupabaseServiceKey(): string | undefined {
   return process.env.SUPABASE_SERVICE_KEY;
 }
 
-let _client: ReturnType<typeof createClient> | null = null;
-let _adminClient: ReturnType<typeof createClient> | null = null;
+let _client: SupabaseClient<Database> | null = null;
+let _adminClient: SupabaseClient<Database> | null = null;
 
 /**
  * Resets cached Supabase singletons (used in testing environments).
@@ -24,15 +25,29 @@ export function resetSupabaseClientsForTesting() {
   _adminClient = null;
 }
 
-// Client for authentication and basic public queries
-export function getSupabase() {
+// Client for authentication and basic public queries.
+// NOTE: The Supabase client disables session persistence (persistSession:
+// false) because auth state is managed explicitly by the app; enabling the
+// default localStorage persistence would duplicate session storage.
+export function getSupabase(): SupabaseClient<Database> {
   const url = getSupabaseUrl();
   const key = getSupabaseAnonKey();
   if (!_client) {
     if (!url || !key) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'Supabase credentials are not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).',
+        );
+      }
       console.warn('⚠️ Supabase credentials not fully configured');
     }
-    _client = createClient(url, key);
+    _client = createClient<Database>(url, key, {
+      auth: {
+        // Managed explicitly by the app; do not persist to localStorage.
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
   return _client;
 }
@@ -41,11 +56,11 @@ export function getSupabase() {
  * Privileged admin client for server-side maintenance, migrations, and seeds only.
  * NEVER use in user route handlers or user request context.
  */
-export function getSupabaseAdmin() {
+export function getSupabaseAdmin(): SupabaseClient<Database> | null {
   const serviceKey = getSupabaseServiceKey();
   const url = getSupabaseUrl();
   if (!_adminClient && serviceKey && url) {
-    _adminClient = createClient(url, serviceKey, {
+    _adminClient = createClient<Database>(url, serviceKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -55,8 +70,12 @@ export function getSupabaseAdmin() {
   return _adminClient;
 }
 
-export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
-  get: (_, prop) => getSupabase()[prop as keyof ReturnType<typeof createClient>],
+export const supabase = new Proxy({} as SupabaseClient<Database>, {
+  // Browser-only singleton: every property access lazily resolves the
+  // client-side anon client via getSupabase(). Never access this proxy from
+  // server code paths that need the service-role key — use
+  // getSupabaseAdmin() in server-only maintenance scripts instead.
+  get: (_, prop) => getSupabase()[prop as keyof SupabaseClient<Database>],
 });
 
 /**
@@ -68,7 +87,7 @@ export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
  * - When no token is provided, returns the public anonymous client.
  * - NEVER falls back to service role admin client during normal user requests.
  */
-export function createRequestClient(accessToken?: string | null): ReturnType<typeof createClient> {
+export function createRequestClient(accessToken?: string | null): SupabaseClient<Database> {
   if (!accessToken) {
     return getSupabase();
   }
@@ -76,7 +95,7 @@ export function createRequestClient(accessToken?: string | null): ReturnType<typ
   const url = getSupabaseUrl();
   const key = getSupabaseAnonKey();
 
-  return createClient(url, key, {
+  return createClient<Database>(url, key, {
     global: {
       headers: { Authorization: `Bearer ${accessToken}` },
     },

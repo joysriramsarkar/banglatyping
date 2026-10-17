@@ -152,3 +152,82 @@ body {
     }
   }
 }
+
+/**
+ * WCAG 2.2 keyboard accessibility baseline (appended by QUALITY pass).
+ *
+ * Component-level Tailwind `focus-visible:` rings cover individual controls;
+ * this is the global floor so every natively focusable element (links,
+ * headings with tabindex, lesson inputs) shows a visible indicator even
+ * where no utility class was added.
+ */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (prefers-contrast: more) {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline-width: 4px;
+  }
+}
+
+/* Sticky app header must paint above lesson content and keyboards. */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* Anchor jumps (#main-content) must not hide under the sticky header. */
+html {
+  scroll-padding-top: 4.5rem;
+}
+
+main {
+  scroll-padding-top: 4.5rem;
+}
+
+/* Typing feedback micro-animations (UX pass). */
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+@keyframes correct-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.error-shake {
+  animation: error-shake 0.3s ease-in-out;
+}
+
+.correct-pop {
+  animation: correct-pop 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error-shake,
+  .correct-pop {
+    animation: none !important;
+  }
+}
+
+/**
+ * WCAG 1.4.1 (Use of Color): error state must not rely on color alone.
+ * Applied alongside the red error color (see GraphemeDisplay isError) so a
+ * wrong grapheme also carries an icon-independent text cue: a wavy
+ * underline. Decorative only — screen readers get the sr-only label.
+ */
+.error-underline {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}

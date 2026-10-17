@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { RACING_SENTENCES } from '@/lib/game/game-words';
 import { gameAudio } from '@/lib/game/game-audio';
-import { recordRacerGameResult, getArcadeStats } from '@/lib/game/game-storage';
+import { recordRacerGameResult, getArcadeStats } from '@/lib/game/score-store';
 import { toBengaliNumber } from '@/lib/utils';
 import { normalizeBengaliString } from '@/lib/bengali-grapheme';
 

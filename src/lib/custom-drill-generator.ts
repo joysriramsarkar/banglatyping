@@ -1,7 +1,13 @@
 // Dynamic custom drill generator based on weak characters
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createRequestClient } from './db';
+import type { Database } from '@/types/supabase';
 import { generateDrills } from './lessons';
 import type { CustomDrill, WeakCharacterView } from './types';
+
+type Db = SupabaseClient<Database>;
+type CustomDrillInsert = Database['public']['Tables']['custom_drills']['Insert'];
+type CustomDrillUpdate = Database['public']['Tables']['custom_drills']['Update'];
 
 /**
  * Generate a custom drill focused on user's weak characters
@@ -18,7 +24,7 @@ export async function generateCustomDrill(
       return null;
     }
 
-    const db = createRequestClient(accessToken);
+    const db: Db = createRequestClient(accessToken);
 
     // Extract characters and focus on the weakest characters in a single pass
     const { characterList, focusCharacters } = weakCharacters.reduce(
@@ -35,7 +41,7 @@ export async function generateCustomDrill(
     const drills = generateDrills(characterList, drillCount);
 
     // Store the custom drill in database
-    const customDrill = {
+    const customDrill: CustomDrillInsert = {
       user_id: userId,
       name: `Custom Drill - Weak Characters (${new Date().toLocaleDateString()})`,
       characters: characterList.join(','),
@@ -44,7 +50,7 @@ export async function generateCustomDrill(
       generated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await (db as any)
+    const { data, error } = await db
       .from('custom_drills')
       .insert(customDrill)
       .select()
@@ -133,7 +139,7 @@ export async function updateCustomDrillUsage(
   accessToken?: string | null
 ): Promise<boolean> {
   try {
-    const db = createRequestClient(accessToken);
+    const db: Db = createRequestClient(accessToken);
     if (!userId) {
       return false;
     }
@@ -150,13 +156,14 @@ export async function updateCustomDrillUsage(
       return false;
     }
 
-    const { error } = await (db as any)
+    const usageUpdate: CustomDrillUpdate = {
+      usage_count: (current?.usage_count || 0) + 1,
+      last_used_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await db
       .from('custom_drills')
-      .update({
-        usage_count: (current?.usage_count || 0) + 1,
-        last_used_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .update(usageUpdate)
       .eq('id', drillId)
       .eq('user_id', userId);
 

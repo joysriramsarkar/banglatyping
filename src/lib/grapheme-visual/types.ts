@@ -105,6 +105,13 @@ export interface TypingVisualProgress {
   totalVisualStages: number;
   /** The final expected grapheme remains unchanged. */
   targetGrapheme: string;
+  /**
+   * Code-point index (Array.from units, NOT grapheme-cluster index) where the
+   * typed input first diverges from the target, or null when there is no
+   * error. The renderer underlines the error glyph in red while keeping the
+   * green progress up to the longest common prefix.
+   */
+  errorAt?: number | null;
 }
 
 export interface TypingPlan {

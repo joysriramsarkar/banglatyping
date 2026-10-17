@@ -28,6 +28,11 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.production
+
+# secret / backup artifacts
+*.dump
+backups/
 
 # typescript
 *.tsbuildinfo
@@ -37,6 +42,9 @@ yarn-error.log*
 .idea/
 *.swp
 *.swo
+
+# Project-local tool state (Firebase Studio / IDX)
+.idx/
 
 # Temporary files
 *.tmp
@@ -51,3 +59,5 @@ Thumbs.db
 
 #পরিকল্পনা
 .পরিকল্পনা
+পরিকল্পনা.txt
+BanglaTyping_PixelPerfect_যুক্তবর্ণ_রূপরেখা.md

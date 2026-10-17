@@ -3,8 +3,8 @@
 [![Live Website](https://img.shields.io/badge/Live%20Website-typing.onuron.org-2563eb?style=for-the-badge)](https://typing.onuron.org)
 [![Next.js](https://img.shields.io/badge/Next.js-15.5-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178c6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/Tests-425%20Passed-success?style=for-the-badge)](docs/TESTING.md)
-[![Accessibility](https://img.shields.io/badge/WCAG%202.1-AA%20Compliant-059669?style=for-the-badge)](docs/ACCESSIBILITY.md)
+[![CI](https://github.com/joysriramsarkar/banglatyping/actions/workflows/ci.yml/badge.svg)](https://github.com/joysriramsarkar/banglatyping/actions/workflows/ci.yml)
+[![Accessibility](https://img.shields.io/badge/WCAG_2.1_AA-target:_automated_checks_in_CI-059669?style=for-the-badge)](docs/ACCESSIBILITY.md)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 > **বাংলা টাইপিং শেখা, অনুশীলন ও স্পিড টেস্ট প্ল্যাটফর্ম**  
@@ -26,7 +26,7 @@
   - **Probhat:** ঐতিহ্যবাহী প্রভাত লেআউট।
   - **Unijoy:** অভ্র-সমর্থিত ইউনিজয় লেআউট।
 - **১০০% নির্ভুল বাংলা গ্রাফিম ইঞ্জিন (Grapheme Engine):** যুক্তাক্ষর ও কার-চিহ্নের সঠিক বিভাজন এবং GPM (Graphemes Per Minute) ও WPM নির্ভুল গণনা।
-- **সম্পূর্ণ অ্যাক্সেসিবল ও ইনক্লুসিভ (WCAG 2.1 AA Compliant):** স্ক্রিন রিডার লাইভ প্রগ্রেস ঘোষণা, স্কিপ নেভিগেশন লিংক (`#main-content`), কীবোর্ড ফোকাস ট্র্যাপ প্রতিরোধ ও হাই কনট্রাস্ট।
+- **সম্পূর্ণ অ্যাক্সেসিবল ও ইনক্লুসিভ (WCAG 2.1 AA target — automated checks in CI):** স্ক্রিন রিডার লাইভ প্রগ্রেস ঘোষণা, স্কিপ নেভিগেশন লিংক (`#main-content`), কীবোর্ড ফোকাস ট্র্যাপ প্রতিরোধ ও হাই কনট্রাস্ট।
 - **সরকারি চাকরির নিয়োগ পরীক্ষা সিমুলেটর (Govt Exam Simulation):** ৫ মিনিটের কঠোর পরীক্ষা মোড (সাঁটমুদ্রাক্ষরিক, ডাটা এন্ট্রি ও অফিস সহকারী পদের জন্য ২৫-৩০ WPM ও ৯৫% নির্ভুলতা মানদণ্ড)।
 - **ভেরিফায়েড ডিজিটাল সার্টিফিকেট (Verified Certificates):** প্রতিটি টেস্টের জন্য অনন্য ভেরিফিকেশন আইডি (যেমন `BTP-2026-XXXXXX`) সম্বলিত ডাউনলোডযোগ্য ও শেয়ারযোগ্য অফিসিয়াল PDF সনদ।
 - **অ্যাডাপ্টিভ ভুল সংশোধন হাব (Mistake Hub):** ব্যবহারকারীর দুর্বল অক্ষর ও ভুল যুক্তবর্ণ স্বয়ংক্রিয়ভাবে শনাক্ত করে কাস্টম ড্রিল তৈরি।

@@ -93,17 +93,17 @@ export default function BanglaTypingTestPage() {
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6 text-center">
               <div className="text-4xl font-bold text-blue-400 mb-2">WPM</div>
-              <h3 className="font-semibold mb-2">Words Per Minute</h3>
+              <h3 lang="en" className="font-semibold mb-2">Words Per Minute</h3>
               <p className="text-slate-400 text-sm">প্রতি মিনিটে কতটি শব্দ টাইপ করলেন তার পরিমাপ।</p>
             </div>
             <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 text-center">
               <div className="text-4xl font-bold text-purple-400 mb-2">GPM</div>
-              <h3 className="font-semibold mb-2">Graphemes Per Minute</h3>
+              <h3 lang="en" className="font-semibold mb-2">Graphemes Per Minute</h3>
               <p className="text-slate-400 text-sm">বাংলার জন্য বিশেষভাবে তৈরি — প্রতি মিনিটে সঠিক বাংলা অক্ষরের সংখ্যা।</p>
             </div>
             <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6 text-center">
               <div className="text-4xl font-bold text-green-400 mb-2">%</div>
-              <h3 className="font-semibold mb-2">Accuracy</h3>
+              <h3 lang="en" className="font-semibold mb-2">Accuracy</h3>
               <p className="text-slate-400 text-sm">মোট টাইপের মধ্যে কতটি সঠিক ছিল তার শতকরা হার।</p>
             </div>
           </div>

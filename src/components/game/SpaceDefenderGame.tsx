@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { getRandomGameWord, GAME_WORDS_CONJUNCTS, GameDifficulty } from '@/lib/game/game-words';
 import { gameAudio } from '@/lib/game/game-audio';
-import { recordSpaceGameResult, getArcadeStats } from '@/lib/game/game-storage';
+import { recordSpaceGameResult, getArcadeStats } from '@/lib/game/score-store';
 import { toBengaliNumber } from '@/lib/utils';
 
 interface EnemyShip {

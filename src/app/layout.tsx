@@ -1,9 +1,34 @@
 
 import type { Metadata } from 'next';
+import localFont from 'next/font/local';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/hooks/use-auth";
+
+// Subset Bengali UI font (Hind Siliguri woff2 in public/fonts).
+// next/font emits preload <link>s + font-display:swap automatically; the
+// fallback stack keeps layout stable while the subset downloads. This face
+// serves UI text — the locked "BT Grapheme" @font-face in globals.css
+// (same files, Bengali-only unicode-range) keeps serving grapheme cells.
+const bengaliSubset = localFont({
+  src: [
+    {
+      path: '../../public/fonts/hind-siliguri-bengali-400.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/hind-siliguri-bengali-700.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
+  display: 'swap',
+  preload: true,
+  fallback: ['"Noto Sans Bengali"', '"Nirmala UI"', 'Arial', 'sans-serif'],
+  variable: '--font-bengali-subset',
+});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://typing.onuron.org';
 
@@ -99,17 +124,14 @@ const jsonLdSchemas = [
       priceCurrency: 'BDT',
     },
   },
-  // WebSite
+  // WebSite (name only — no SearchAction: /learn is a static topic hub
+  // with no ?q search handling, so advertising a SearchAction target
+  // would be a misleading schema claim).
   {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'বাংলা টাইপিং মাস্টার - Bangla Typing Test and Practice',
     url: siteUrl,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: `${siteUrl}/learn?q={search_term_string}`,
-      'query-input': 'required name=search_term_string',
-    },
   },
   // Organization
   {
@@ -144,19 +166,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="bn" suppressHydrationWarning>
+      {/* i18n lang policy: root stays lang="bn". Inline English fragments
+          (layout names, metric names, code samples) are wrapped with
+          lang="en" at their element — see skip link below and the SEO
+          landing pages (avro/bijoy/test/speed-test). */}
       <head>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchemas) }}
         />
       </head>
-      <body className={cn("font-body antialiased")}>
+      <body className={cn("font-body antialiased", bengaliSubset.variable)}>
         {/* Skip to main content — keyboard accessibility */}
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-lg focus:font-bold focus:shadow-lg"
         >
-          মূল বিষয়বস্তুতে যান (Skip to main content)
+          মূল বিষয়বস্তুতে যান <span lang="en">(Skip to main content)</span>
         </a>
         <AuthProvider>
           {children}

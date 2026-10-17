@@ -9,7 +9,10 @@ export async function GET(
 ) {
   try {
     const { userId } = await params;
-    const threshold = parseInt(request.nextUrl.searchParams.get('threshold') || '95');
+    const rawThreshold = parseInt(request.nextUrl.searchParams.get('threshold') || '95');
+    const threshold = Number.isNaN(rawThreshold)
+      ? 95
+      : Math.min(100, Math.max(0, rawThreshold));
 
     if (!userId) {
       return NextResponse.json(

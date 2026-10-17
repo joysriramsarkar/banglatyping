@@ -70,17 +70,36 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { threshold = 85, minCharacters = 5, maxCharacters = 20, drillCount = 100 } = body;
+    const { threshold = 85, minCharacters = 5, maxCharacters = 20, drillCount = 100 } = body ?? {};
+
+    // Clamp caller-controlled numbers: drillCount is capped at 50 rows per
+    // request, and non-numeric input (NaN) falls back to safe defaults.
+    const parsedThreshold = Number(threshold);
+    const parsedMin = Number(minCharacters);
+    const parsedMax = Number(maxCharacters);
+    const parsedCount = Number(drillCount);
+    const safeThreshold = Number.isFinite(parsedThreshold)
+      ? Math.min(100, Math.max(0, Math.floor(parsedThreshold)))
+      : 85;
+    const safeMaxCharacters = Number.isFinite(parsedMax)
+      ? Math.min(50, Math.max(1, Math.floor(parsedMax)))
+      : 20;
+    const safeMinCharacters = Number.isFinite(parsedMin)
+      ? Math.min(safeMaxCharacters, Math.max(1, Math.floor(parsedMin)))
+      : Math.min(5, safeMaxCharacters);
+    const safeDrillCount = Number.isFinite(parsedCount)
+      ? Math.max(1, Math.min(50, Math.floor(parsedCount)))
+      : 50;
 
     // Drills are always created for the verified caller.
     const resolvedUserId = auth.user.id;
 
     const customDrill = await createWeakCharacterDrill(
       resolvedUserId,
-      threshold,
-      minCharacters,
-      maxCharacters,
-      drillCount,
+      safeThreshold,
+      safeMinCharacters,
+      safeMaxCharacters,
+      safeDrillCount,
       auth.accessToken
     );
 

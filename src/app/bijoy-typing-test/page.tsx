@@ -68,7 +68,7 @@ export default function BijoyTypingTestPage() {
         <div className="flex gap-3 flex-wrap">
           {bijoyHomeRow.map((k) => (
             <div key={k.key} className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4 text-center min-w-[72px]">
-              <div className="font-mono text-orange-300 text-lg font-bold mb-1 uppercase">{k.key}</div>
+              <div lang="en" className="font-mono text-orange-300 text-lg font-bold mb-1 uppercase">{k.key}</div>
               <div className="text-2xl">{k.bangla}</div>
             </div>
           ))}

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "lessons": [
+    {
+      "id": "home-row-chars",
+      "title": "HR-01: প্রথম হাতের অক্ষর (া স ড ফ)",
+      "level": "Beginner",
+      "row": "home-row",
+      "drills": [
+        { "prompt": "া", "steps": [] },
+        { "prompt": "স", "steps": [] },
+        { "prompt": "ড", "steps": [] },
+        { "prompt": "ফ", "steps": [] },
+        { "prompt": "ফা", "steps": [] },
+        { "prompt": "সা", "steps": [] }
+      ]
+    },
+    {
+      "id": "home-row-right",
+      "title": "HR-02: ডান পাশের হোম কী (গ ্ জ ক ল)",
+      "level": "Beginner",
+      "row": "home-row",
+      "drills": [
+        { "prompt": "গ", "steps": [] },
+        { "prompt": "্", "steps": [] },
+        { "prompt": "জ", "steps": [] },
+        { "prompt": "ক", "steps": [] },
+        { "prompt": "ল", "steps": [] }
+      ]
+    }
+  ]
+}

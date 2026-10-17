@@ -15,6 +15,7 @@ const config = {
     'src/lib/**/*.ts',
     'src/hooks/**/*.ts',
     'src/hooks/**/*.tsx',
+    'src/app/api/**/route.ts',
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
@@ -27,10 +28,28 @@ const config = {
   // across lines, branches, functions, and statements (পরিকল্পনা.md #19.2).
   coverageThreshold: {
     global: {
-      lines: 85,
-      statements: 85,
-      functions: 80,
-      branches: 65,
+      lines: 90,
+      statements: 90,
+      functions: 85,
+      branches: 75,
+    },
+    './src/lib/bengali-grapheme.ts': {
+      lines: 95,
+      statements: 95,
+      functions: 95,
+      branches: 90,
+    },
+    './src/lib/typing/metric-formulas.ts': {
+      lines: 100,
+      statements: 100,
+      functions: 100,
+      branches: 95,
+    },
+    './src/lib/typing/session.ts': {
+      lines: 90,
+      statements: 90,
+      functions: 90,
+      branches: 80,
     },
   },
 };

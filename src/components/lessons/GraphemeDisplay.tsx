@@ -41,15 +41,29 @@ interface GraphemeDisplayProps {
  * cannot break. Base and overlay paint the identical string stacked in one
  * grid cell, so they can never misalign into a double glyph.
  *
+ * Font-readiness note: glyph cells rely on the preloaded "BT Grapheme"
+ * subset (@font-face display:swap in globals.css + next/font/local preload
+ * in layout.tsx). There is deliberately NO `document.fonts.ready` render
+ * gate here — gating would blank the prompt on slow networks, while swap +
+ * an identical unicode-range keeps shaping stable once the face arrives.
+ *
  * Routing comes from the visual registry's fail-closed plan:
  * - heuristic-clip (Tier-2 kar + approved stacked/below-base splits): gray
  *   underlay + green overlay through the tested clip helper.
  * - simulation / safe-fallback: full glyph intact, progress in the step card.
  * - whole-glyph: single span, green only when fully typed.
  */
-export function GraphemeDisplay({ model, className, isError, showSimulationBox = false, plan, progress }: GraphemeDisplayProps) {
-  const typedColor = isError
-    ? "text-red-500 font-black"
+export const GraphemeDisplay = React.memo(function GraphemeDisplay({ model, className, isError, showSimulationBox = false, plan, progress }: GraphemeDisplayProps) {
+  // errorAt (code-point index of first divergence) comes from
+  // deriveVisualProgress; isError is the legacy boolean path (WordDrill).
+  // Either way the red state is an UNDERLINE on the glyph — green clip
+  // progress up to the longest common prefix is preserved, never reset.
+  const errorAt = progress?.errorAt ?? null;
+  const hasError = isError || errorAt !== null;
+  // Error state pairs color with a wavy underline (.error-underline in
+  // globals.css) so mistakes are never conveyed by color alone (WCAG 1.4.1).
+  const typedColor = hasError
+    ? "text-red-500 font-black error-underline"
     : "text-green-600 dark:text-green-400 font-black";
 
   const renderPlan = plan ?? getRenderPlan(model.full);
@@ -60,7 +74,7 @@ export function GraphemeDisplay({ model, className, isError, showSimulationBox =
   const stageTotal = progress?.totalVisualStages ?? model.totalSteps ?? model.full.length;
   const accessibleLabel =
     stageTotal > 1
-      ? `${model.full}, ধাপ ${stageIndex}/${stageTotal}`
+      ? `${model.full}, ধাপ ${stageIndex}/${stageTotal}${errorAt !== null ? `, ভুল ${errorAt}` : ""}`
       : model.full;
 
   // ── Simulation / safe-fallback: full glyph intact, no overlay ─────────────
@@ -153,4 +167,6 @@ export function GraphemeDisplay({ model, className, isError, showSimulationBox =
       <span className="sr-only">{accessibleLabel}</span>
     </span>
   );
-}
+});
+
+GraphemeDisplay.displayName = "GraphemeDisplay";

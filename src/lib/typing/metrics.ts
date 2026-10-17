@@ -28,6 +28,25 @@ import { computeGpm, computeSpm, computeStandardWpm } from './metric-formulas';
 /** Pause threshold in ms — gaps longer than this are counted as pauses */
 const PAUSE_THRESHOLD_MS = 2000;
 
+/** Canonical duration unit for all metric inputs. Durations are milliseconds. */
+export const DURATION_UNIT = 'ms' as const;
+
+/** Display label for the Bengali-estimate WPM (an approximation, not standard WPM). */
+export const BENGALI_WPM_LABEL = 'WPM (আনুমানিক)';
+
+/** Minimum effective session duration worth persisting (ms). */
+export const MIN_SAVEABLE_DURATION_MS = 3000;
+
+/** Convert milliseconds → whole seconds (rounded), the unit of `timeElapsed`. */
+export function msToSec(durationMs: number): number {
+  return Math.round(durationMs / 1000);
+}
+
+/** Convert whole seconds → milliseconds. */
+export function secToMs(durationSec: number): number {
+  return durationSec * 1000;
+}
+
 /** Window size in ms for burst speed calculation */
 const BURST_WINDOW_MS = 5000;
 
@@ -69,7 +88,12 @@ export function computeMetrics(
   // Gross WPM: standardized formula (1 word = 5 keystrokes). Shared contract.
   const grossWpm = computeStandardWpm(totalKeystrokes, durationMs);
 
-  // Net WPM: deduct uncorrected errors
+  // Net WPM: deduct uncorrected errors.
+  // Unit-mismatch fix: grossWpm is keystrokes/5/min while the penalty is
+  // errors/min (per-error, not per-5-keystrokes). This intentionally mixes
+  // units — one uncorrected error costs one full "word" per minute — which is
+  // the harsh traditional net-WPM penalty, not a dimensionally clean rate.
+  // Keep as-is for leaderboard continuity; use GPM for Bengali comparisons.
   const netWpm = minutes > 0
     ? Math.max(0, Math.round(grossWpm - (uncorrectedErrors / minutes)))
     : 0;
@@ -125,7 +149,7 @@ export function computeMetrics(
     errors: uncorrectedErrors,
     correctedErrors,
     uncorrectedErrors,
-    timeElapsed: Math.round(seconds),
+    timeElapsed: msToSec(durationMs),
     consistency,
     pauseCount,
     longestStreak,
@@ -294,7 +318,7 @@ function buildEmptyStats(durationMs: number): ExtendedTypingStats {
     errors: 0,
     correctedErrors: 0,
     uncorrectedErrors: 0,
-    timeElapsed: Math.round(durationMs / 1000),
+    timeElapsed: msToSec(durationMs),
     consistency: 100,
     pauseCount: 0,
     longestStreak: 0,

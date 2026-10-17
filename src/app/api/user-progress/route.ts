@@ -1,18 +1,13 @@
 // API endpoint to save user typing session progress
 import { NextRequest, NextResponse } from 'next/server';
-import { saveTypingSession, updateLessonCompletion, DEFAULT_PRACTICE_LESSON_ID } from '@/lib/user-progress';
+import { saveTypingSession, updateLessonCompletion } from '@/lib/user-progress';
 import type { ErredCharacter } from '@/lib/types';
 import { authenticate, isOwnResource } from '@/lib/api-auth';
-
-interface SaveProgressRequest {
-  userId: string;
-  lessonId: string;
-  wpm: number;
-  accuracy: number;
-  errors: number;
-  timeElapsed: number;
-  erredCharacters: ErredCharacter[];
-}
+import {
+  saveProgressSchema,
+  normalizeLessonId,
+  consumeIdempotencyKey,
+} from '@/lib/progress-validation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,9 +22,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body: SaveProgressRequest = await request.json();
+    const idempotencyKey = request.headers.get('x-idempotency-key');
+    if (idempotencyKey && consumeIdempotencyKey(idempotencyKey)) {
+      return NextResponse.json(
+        { success: true, duplicate: true, message: 'Duplicate request ignored' },
+        { status: 200 }
+      );
+    }
 
-    const { userId, lessonId, wpm, accuracy, errors, timeElapsed, erredCharacters } = body;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'অকার্যকর অনুরোধ: JSON পড়া যায়নি' },
+        { status: 422 }
+      );
+    }
+
+    const parsed = saveProgressSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      const message = firstIssue?.message ?? 'অকার্যকর অনুরোধ: তথ্য যাচাই ব্যর্থ হয়েছে';
+      return NextResponse.json(
+        { success: false, error: message, details: parsed.error.issues },
+        { status: 422 }
+      );
+    }
+
+    const { userId, wpm, accuracy, errors, timeElapsed, erredCharacters, attemptedCharacters } =
+      parsed.data;
 
     if (userId && userId !== auth.user.id) {
       return NextResponse.json(
@@ -38,22 +60,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate lessonId is a valid UUID, otherwise use default practice lesson UUID
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const validLessonId = lessonId && uuidRegex.test(lessonId) ? lessonId : null;
-    const sessionLessonId = validLessonId || DEFAULT_PRACTICE_LESSON_ID;
+    // Reject physically implausible sessions: a sub-2s burst claiming 200+ WPM
+    // is a scripted payload, not a typing session.
+    if (timeElapsed < 2000 && wpm >= 200) {
+      return NextResponse.json(
+        { success: false, error: 'অকার্যকর সেশন: এত কম সময়ে এত গতি সম্ভব নয়' },
+        { status: 422 }
+      );
+    }
 
-    // Save the typing session
-    const progress = await saveTypingSession(
-      auth.user.id,
-      sessionLessonId,
-      wpm,
-      accuracy,
-      errors,
-      timeElapsed,
-      erredCharacters || [],
-      auth.accessToken
-    );
+    // Invalid UUID -> null (general practice session). Never the nil UUID.
+    const rawLessonId = (body as { lessonId?: unknown }).lessonId;
+    const validLessonId: string | null = normalizeLessonId(rawLessonId);
+
+    // Save the typing session. The attemptedCharacters argument is only
+    // passed when the client sent it, keeping the 8-arg call shape for
+    // older callers.
+    const erred = (erredCharacters ?? []) as ErredCharacter[];
+    const progress =
+      attemptedCharacters !== undefined
+        ? await saveTypingSession(
+            auth.user.id,
+            validLessonId,
+            wpm,
+            accuracy,
+            errors,
+            timeElapsed,
+            erred,
+            auth.accessToken,
+            attemptedCharacters as ErredCharacter[]
+          )
+        : await saveTypingSession(
+            auth.user.id,
+            validLessonId,
+            wpm,
+            accuracy,
+            errors,
+            timeElapsed,
+            erred,
+            auth.accessToken
+          );
 
     if (!progress) {
       return NextResponse.json(
@@ -87,8 +133,15 @@ export async function GET(request: NextRequest) {
   try {
     const userId = request.nextUrl.searchParams.get('userId');
     const _lessonId = request.nextUrl.searchParams.get('lessonId');
-    const _limit = parseInt(request.nextUrl.searchParams.get('limit') || '50');
-    const _offset = parseInt(request.nextUrl.searchParams.get('offset') || '0');
+    // Cap pagination params so a crafted query cannot request an unbounded scan.
+    const _limit = Math.min(
+      Math.max(parseInt(request.nextUrl.searchParams.get('limit') || '50', 10) || 50, 1),
+      100
+    );
+    const _offset = Math.max(parseInt(request.nextUrl.searchParams.get('offset') || '0', 10) || 0, 0);
+    const rawThreshold = request.nextUrl.searchParams.get('threshold');
+    const _threshold =
+      rawThreshold === null ? undefined : Math.min(Math.max(Number(rawThreshold) || 0, 0), 100);
 
     if (!userId) {
       return NextResponse.json(
@@ -115,7 +168,7 @@ export async function GET(request: NextRequest) {
 
     // Note: For GET, implement query logic based on filters
     // This would typically fetch from database with pagination
-    
+
     return NextResponse.json({
       success: true,
       message: 'Use GET /api/user-progress/[userId] for detailed progress',

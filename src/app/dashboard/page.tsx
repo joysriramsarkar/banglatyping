@@ -17,6 +17,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/db";
@@ -27,6 +28,15 @@ import { toBengaliNumber } from "@/lib/utils";
 import KeyboardHeatmap from "@/components/analytics/KeyboardHeatmap";
 import GraphemeMasteryGrid from "@/components/analytics/GraphemeMasteryGrid";
 import TypingRhythmChart from "@/components/analytics/TypingRhythmChart";
+import { FeatureGate } from "@/components/billing/FeatureGate";
+import { AiFeedbackCard } from "@/components/coach/AiFeedbackCard";
+import type { PlanTier } from "@/lib/billing/feature-gate";
+
+// Lazy-safe: TodaysReview reads localStorage on mount, so it never SSRs.
+const TodaysReview = dynamic(() => import("@/components/learning/TodaysReview"), {
+  ssr: false,
+  loading: () => null,
+});
 
 const StatCard = ({
   icon: Icon,
@@ -80,6 +90,16 @@ export default function DashboardPage() {
   const [loadingStats, setLoadingStats] = useState(true);
   const [weakChars, setWeakChars] = useState<WeakCharacterView[]>([]);
   const [dailyPlan, setDailyPlan] = useState<DailyTrainingPlan | null>(null);
+  const [tier, setTier] = useState<PlanTier>("free");
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("bt-tier");
+      if (stored === "pro" || stored === "institution") setTier(stored);
+    } catch {
+      // localStorage unavailable — stay on free tier.
+    }
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -178,6 +198,9 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Today's 8-minute review (logged-in SRS + weak-char plan) */}
+      {user ? <TodaysReview weakChars={weakChars} /> : null}
 
       {/* Primary Metrics Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -300,14 +323,36 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Rhythm Velocity Chart */}
-      <TypingRhythmChart />
+      {/* AI coach (pro-gated) */}
+      <FeatureGate
+        feature="ai-feedback"
+        tier={tier}
+        fallbackMessage="ব্যক্তিগত এআই পরামর্শ পেতে প্রো প্ল্যানে আপগ্রেড করুন।"
+      >
+        <AiFeedbackCard
+          wpm={stats?.averageWpm ?? 0}
+          accuracy={stats?.averageAccuracy ?? 0}
+        />
+      </FeatureGate>
 
-      {/* Keyboard Heatmap Analyzer */}
-      <KeyboardHeatmap weakChars={weakChars} />
+      {/* Rhythm Velocity Chart (pro-gated advanced analytics) */}
+      <FeatureGate
+        feature="advanced-analytics"
+        tier={tier}
+        fallbackMessage="বিস্তারিত চার্ট ও বিশ্লেষণ দেখতে প্রো প্ল্যানে আপগ্রেড করুন।"
+      >
+        <TypingRhythmChart />
 
-      {/* Grapheme Mastery Grid */}
-      <GraphemeMasteryGrid weakChars={weakChars} />
+        {/* Keyboard Heatmap Analyzer */}
+        <div className="mt-6">
+          <KeyboardHeatmap weakChars={weakChars} />
+        </div>
+
+        {/* Grapheme Mastery Grid */}
+        <div className="mt-6">
+          <GraphemeMasteryGrid weakChars={weakChars} />
+        </div>
+      </FeatureGate>
     </div>
   );
 }

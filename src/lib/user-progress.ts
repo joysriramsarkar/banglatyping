@@ -1,11 +1,22 @@
 // User progress tracking service
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createRequestClient } from './db';
+import type { Database } from '@/types/supabase';
 import type { UserProgress, CharacterError, WeakCharacterView, UserStatistics, ErredCharacter } from './types';
 
-export const DEFAULT_PRACTICE_LESSON_ID = '00000000-0000-0000-0000-000000000000';
+type Db = SupabaseClient<Database>;
+type UserProgressInsert = Database['public']['Tables']['user_progress']['Insert'];
+
+/**
+ * @deprecated Magic fallback lesson ids are no longer used. Pass `null`
+ * lessonId for general practice sessions instead. Kept only so existing
+ * imports do not break.
+ */
+export const DEFAULT_PRACTICE_LESSON_ID: string | null = null;
 
 /**
  * Save a typing session to the database
+ * @param lessonId Lesson UUID, or null for general practice sessions
  * @param accessToken The caller's Supabase access token, so RLS applies
  */
 export async function saveTypingSession(
@@ -16,48 +27,50 @@ export async function saveTypingSession(
   errors: number,
   timeElapsed: number,
   erredCharacters: ErredCharacter[],
-  accessToken?: string | null
+  accessToken?: string | null,
+  attemptedCharacters?: ErredCharacter[]
 ): Promise<UserProgress | null> {
   try {
-    const db = createRequestClient(accessToken);
+    const db: SupabaseClient<Database> = createRequestClient(accessToken);
     // Format erred characters for storage
     const formattedErrors = (erredCharacters || []).map(item => ({
       char: item.char,
       count: item.count
     }));
+    const formattedAttempts = (attemptedCharacters || []).map(item => ({
+      char: item.char,
+      count: item.count
+    }));
 
-    // Target lesson ID: if none provided, use the universal practice lesson UUID
-    const targetLessonId = lessonId || DEFAULT_PRACTICE_LESSON_ID;
+    const row: UserProgressInsert = {
+      user_id: userId,
+      lesson_id: lessonId,
+      wpm,
+      accuracy,
+      errors,
+      time_elapsed: timeElapsed,
+      erred_characters: formattedErrors,
+    };
+    if (attemptedCharacters !== undefined) {
+      row.attempted_characters = formattedAttempts;
+    }
 
-    const { data, error } = await (db as any)
+    const { data, error } = await db
       .from('user_progress')
-      .insert({
-        user_id: userId,
-        lesson_id: targetLessonId,
-        wpm,
-        accuracy,
-        errors,
-        time_elapsed: timeElapsed,
-        erred_characters: formattedErrors,
-      })
+      .insert(row)
       .select()
       .single();
 
     if (error) {
-      // If error was a foreign key or null constraint on lesson_id, retry with DEFAULT_PRACTICE_LESSON_ID
-      if ((error.code === '23502' || error.code === '23503') && targetLessonId !== DEFAULT_PRACTICE_LESSON_ID) {
-        console.warn(`Foreign key/not-null error with lesson_id (${targetLessonId}). Retrying with default practice lesson...`);
-        const { data: retryData, error: retryError } = await (db as any)
+      // Genuine dangling-lesson reference: the client sent a UUID that has
+      // no row in lessons. Retry once as a general (null-lesson) session
+      // instead of failing the write or inventing a magic UUID.
+      if (error.code === '23503' && lessonId !== null) {
+        console.warn(`Foreign key error with lesson_id (${lessonId}). Retrying with null lesson...`);
+        const retryRow: UserProgressInsert = { ...row, lesson_id: null };
+        const { data: retryData, error: retryError } = await db
           .from('user_progress')
-          .insert({
-            user_id: userId,
-            lesson_id: DEFAULT_PRACTICE_LESSON_ID,
-            wpm,
-            accuracy,
-            errors,
-            time_elapsed: timeElapsed,
-            erred_characters: formattedErrors,
-          })
+          .insert(retryRow)
           .select()
           .single();
 
@@ -92,12 +105,14 @@ export async function getUserWeakCharacters(
   accessToken?: string | null
 ): Promise<WeakCharacterView[]> {
   try {
-    const db = createRequestClient(accessToken);
+    // Cap caller-supplied threshold to a valid percentage.
+    const cappedThreshold = Math.min(Math.max(Number.isFinite(threshold) ? threshold : 95, 0), 100);
+    const db: SupabaseClient<Database> = createRequestClient(accessToken);
     const { data, error } = await db
       .from('user_weak_characters')
       .select('*')
       .eq('user_id', userId)
-      .lt('accuracy_rate', threshold)
+      .lt('accuracy_rate', cappedThreshold)
       .order('accuracy_rate', { ascending: true })
       .limit(30); // Return top 30 weakest characters
 
@@ -221,7 +236,10 @@ export async function getUserProgressHistory(
   accessToken?: string | null
 ): Promise<{ data: UserProgress[] | null; total: number }> {
   try {
-    const db = createRequestClient(accessToken);
+    // Cap pagination so callers cannot request unbounded scans.
+    const safeLimit = Math.min(Math.max(Math.floor(limit) || 50, 1), 100);
+    const safeOffset = Math.max(Math.floor(offset) || 0, 0);
+    const db: SupabaseClient<Database> = createRequestClient(accessToken);
     // Get total count
     const { count, error: countError } = await db
       .from('user_progress')
@@ -239,7 +257,7 @@ export async function getUserProgressHistory(
       .select('*')
       .eq('user_id', userId)
       .order('session_timestamp', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .range(safeOffset, safeOffset + safeLimit - 1);
 
     if (error) {
       console.error('Error fetching progress history:', error);
@@ -264,8 +282,8 @@ export async function updateLessonCompletion(
   accessToken?: string | null
 ): Promise<boolean> {
   try {
-    const db = createRequestClient(accessToken);
-    const { error } = await (db as any)
+    const db: SupabaseClient<Database> = createRequestClient(accessToken);
+    const { error } = await db
       .from('user_lesson_completion')
       .upsert(
         {

@@ -53,7 +53,7 @@ export default function AvroTypingTestPage() {
             Mehdi Hasan Khan তৈরি করেন। এটি Open Source এবং সম্পূর্ণ বিনামূল্যে ব্যবহার করা যায়।
           </p>
           <p className="text-slate-300 leading-relaxed">
-            অভ্র ফোনেটিক লেআউটে আপনি উচ্চারণ অনুযায়ী লেখেন। যেমন: <span className="text-emerald-300 font-mono">amar</span> লিখলে 
+            অভ্র ফোনেটিক লেআউটে আপনি উচ্চারণ অনুযায়ী লেখেন। যেমন: <span lang="en" className="text-emerald-300 font-mono">amar</span> লিখলে 
             <span className="text-emerald-300"> আমার</span> হয়। এই কারণে নতুনদের জন্য শেখা সহজ।
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function AvroTypingTestPage() {
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {avroKeys.map((k) => (
             <div key={k.key} className="bg-white/5 border border-white/10 rounded-lg p-3 text-center">
-              <div className="font-mono text-emerald-300 text-sm mb-1">{k.key}</div>
+              <div lang="en" className="font-mono text-emerald-300 text-sm mb-1">{k.key}</div>
               <div className="text-xl">{k.bangla}</div>
             </div>
           ))}

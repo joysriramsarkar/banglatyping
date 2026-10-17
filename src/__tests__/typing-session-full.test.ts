@@ -22,7 +22,7 @@ import {
 import type { WeakCharacterView } from '../lib/types';
 
 jest.mock('@supabase/supabase-js', () => {
-  const mockBuilder: any = {
+  const mockBuilder: { [key: string]: jest.Mock } = {
     from: jest.fn(() => mockBuilder),
     select: jest.fn(() => mockBuilder),
     insert: jest.fn(() => mockBuilder),
@@ -97,7 +97,8 @@ describe('Typing Session Reducer & Lifecycle', () => {
       payload: { timestamp: 1200 },
     });
     expect(state.currentGraphemeIndex).toBe(0);
-    expect(state.events[0].corrected).toBe(true);
+    // Pop contract: correct event removed; wrong-event pops increment correctedCount
+    expect(state.events).toHaveLength(0);
   });
 
   test('handles PAUSE, RESUME, FINISH, and RESET actions', () => {

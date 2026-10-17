@@ -18,7 +18,13 @@ import {
 } from "lucide-react";
 import { TypingStats, ExtendedTypingStats } from "@/lib/types";
 import { useEffect, useRef, useMemo } from "react";
-import Certificate from "./certificate";
+import dynamic from "next/dynamic";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const Certificate = dynamic(() => import("./certificate"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-64 w-full rounded-xl" />,
+});
 import WhyWasIWrong, { MistakeDetail } from "./typing/WhyWasIWrong";
 import DifficultyFeedback from "./typing/DifficultyFeedback";
 import {
@@ -84,6 +90,7 @@ export default function TestResults({
   isDrill = false,
   customDrill: _customDrill,
   accuracyGoal = 95,
+  verified = true,
 }: {
   stats: TypingStats | ExtendedTypingStats;
   onRestart: () => void;
@@ -91,6 +98,8 @@ export default function TestResults({
   isDrill?: boolean;
   customDrill?: () => void;
   accuracyGoal?: number;
+  /** False for guest-synced sessions without a server-verified event log. */
+  verified?: boolean;
 }) {
   const { wpm, accuracy, errors, timeElapsed, erredCharacters = [] } = stats;
 
@@ -191,6 +200,19 @@ export default function TestResults({
 
           if (!response.ok) throw new Error("Failed to save");
           toast({ title: "সাফল্য!", description: "আপনার ফলাফল সংরক্ষণ করা হয়েছে।" });
+          // SRS sync: advance per-character Leitner boxes in skill_mastery.
+          // Lazy import keeps the results bundle lean; failures must never
+          // break the save path, so warn-only.
+          try {
+            const { updateMasteryAfterSession } = await import("@/lib/learning/skill-sync");
+            const attempted = (stats as { attemptedCharacters?: Array<{ char: string; count: number }> }).attemptedCharacters;
+            await updateMasteryAfterSession(
+              user.id,
+              attempted ? { erred: erredCharacters, attempted } : erredCharacters
+            );
+          } catch (srsError) {
+            console.warn("SRS sync skipped:", srsError);
+          }
         } catch (error) {
           console.error("Error saving results: ", error);
           toast({ variant: "destructive", title: "ত্রুটি", description: "ফলাফল সংরক্ষণ করা যায়নি।" });
@@ -225,6 +247,13 @@ export default function TestResults({
           <CardTitle className="text-3xl font-bold font-headline">
             {isDrill ? (passedDrill ? "অনুশীলন সফল!" : "অনুশীলন ব্যর্থ") : "টেস্ট ফলাফল ও মূল্যায়ন"}
           </CardTitle>
+          {!verified && (
+            <p className="mt-2">
+              <span className="inline-block rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                অযাচাইকৃত — ইভেন্ট লগ ছাড়া সিঙ্ক করা সেশন
+              </span>
+            </p>
+          )}
           <CardDescription className="text-sm font-medium mt-1">
             {drillSummaryDescription}
           </CardDescription>

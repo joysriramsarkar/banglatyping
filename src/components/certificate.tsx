@@ -1,7 +1,5 @@
 "use client";
 
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import { useRef, useState, useMemo } from "react";
 import { Button } from "./ui/button";
 import { Logo } from "./logo";
@@ -27,11 +25,17 @@ export default function Certificate({
   const certificateRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Generate deterministic or random verification code if not provided
+  // Generate a secure verification code if not provided.
+  // 8 uppercase hex chars from a CSPRNG: 32 bits of entropy.
   const certId = useMemo(() => {
     if (verificationId) return verificationId;
-    const rand = Math.floor(100000 + Math.random() * 900000);
-    return `BTP-2026-${rand}`;
+    const bytes = new Uint8Array(4);
+    crypto.getRandomValues(bytes);
+    const hex = Array.from(bytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+      .toUpperCase();
+    return `BTP-${new Date().getFullYear()}-${hex}`;
   }, [verificationId]);
 
   const certDate = date || new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -41,6 +45,11 @@ export default function Certificate({
     
     try {
       setIsGenerating(true);
+      // Dynamic imports keep jspdf/html2canvas out of the initial bundle.
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
       const canvas = await html2canvas(certificateRef.current, {
         scale: 2, // Higher resolution for crisp print quality
         useCORS: true,
