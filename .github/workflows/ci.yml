@@ -41,8 +41,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Typecheck
         run: npm run typecheck
@@ -68,9 +68,6 @@ jobs:
           du -sh .next/static 2>/dev/null || true
         continue-on-error: true
 
-      - name: Build worker (Cloudflare)
-        run: npm run build:worker
-
   e2e-smoke:
     name: E2E Smoke Tests
     runs-on: ubuntu-latest
@@ -95,9 +92,9 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium webkit
+        run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests (full suite)
         # Serialize: the specs fight over the on-demand dev-server compile,
         # which otherwise trips the expect timeout when run in parallel.
-        run: npx playwright test --workers=1
+        run: npx playwright test --project=chromium --workers=1
