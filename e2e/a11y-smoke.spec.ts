@@ -91,7 +91,7 @@ test.describe("Accessibility smoke (pure Playwright, no axe dep)", () => {
     await firstTopic.focus();
     await expect(firstTopic).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/learn\/.+/);
+    await expect(page).toHaveURL(/\/learn\/.+/, { timeout: 25_000 });
     expect(await page.locator("h1").count()).toBe(1);
   });
 

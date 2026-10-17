@@ -451,7 +451,7 @@ export default function Home() {
           <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4 pb-8 border-b">
             {/* Column 1: Tests */}
             <nav aria-label="টাইপিং টেস্ট ও টুলস" className="space-y-3">
-              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">টাইপিং টেস্ট ও টুলস</h4>
+              <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">টাইপিং টেস্ট ও টুলস</h3>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li><Link href="/bangla-typing-test" className="hover:text-primary transition-colors">বাংলা টাইপিং টেস্ট</Link></li>
                 <li><Link href="/bangla-typing-speed-test" className="hover:text-primary transition-colors">টাইপিং স্পিড টেস্ট (WPM)</Link></li>
@@ -463,7 +463,7 @@ export default function Home() {
 
             {/* Column 2: Learn */}
             <nav aria-label="শেখার পাঠক্রম" className="space-y-3">
-              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">শেখার পাঠক্রম</h4>
+              <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">শেখার পাঠক্রম</h3>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li><Link href="/learn" className="hover:text-primary transition-colors">টাইপিং শেখার হাব</Link></li>
                 <li><Link href="/bangla-typing-course" className="hover:text-primary transition-colors">১৩ লেভেলের সম্পূর্ণ কোর্স</Link></li>
@@ -476,7 +476,7 @@ export default function Home() {
 
             {/* Column 3: Rules & Grammar */}
             <nav aria-label="যুক্তাক্ষর ও নিয়মাবলি" className="space-y-3">
-              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">যুক্তাক্ষর ও নিয়মাবলি</h4>
+              <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">যুক্তাক্ষর ও নিয়মাবলি</h3>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li><Link href="/learn/hasanta" className="hover:text-primary transition-colors">হসন্তের (্) নিয়ম</Link></li>
                 <li><Link href="/learn/phola" className="hover:text-primary transition-colors">বাংলা ফলা টাইপিং</Link></li>
@@ -490,7 +490,7 @@ export default function Home() {
 
             {/* Column 4: Keyboards & Jobs */}
             <nav aria-label="কীবোর্ড ও ক্যারিয়ার" className="space-y-3">
-              <h4 className="font-bold text-foreground text-sm uppercase tracking-wider">কীবোর্ড ও ক্যারিয়ার</h4>
+              <h3 className="font-bold text-foreground text-sm uppercase tracking-wider">কীবোর্ড ও ক্যারিয়ার</h3>
               <ul className="space-y-2 text-xs sm:text-sm">
                 <li><Link href="/bangla-keyboard" className="hover:text-primary transition-colors">বাংলা কীবোর্ড পরিচিতি</Link></li>
                 <li><Link href="/bangla-typing-for-jobs" className="hover:text-primary transition-colors">চাকরির পরীক্ষার প্রস্তুতি</Link></li>

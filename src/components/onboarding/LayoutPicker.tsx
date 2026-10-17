@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import {
   KEYBOARD_LAYOUT_OPTIONS,
   getActiveKeyboardLayout,
@@ -86,7 +86,7 @@ export default function LayoutPicker({ force = false }: { force?: boolean }) {
   return (
     <Card className="border-primary/30 bg-primary/5 shadow-sm" role="dialog" aria-label="লেআউট নির্বাচন">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-bold">কোন লেআউটে পরীক্ষা দেবেন?</CardTitle>
+        <h2 className="text-lg font-bold leading-none tracking-tight">কোন লেআউটে পরীক্ষা দেবেন?</h2>
         <p className="text-xs text-muted-foreground">
           পরে যেকোনো সময় বদলাতে পারবেন — আপনার পছন্দ মনে রাখা হবে।
         </p>

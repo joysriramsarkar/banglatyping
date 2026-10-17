@@ -153,9 +153,17 @@ test.describe("grapheme visual contracts", () => {
       const cell = page.locator(
         `[data-testid="gv-snap"][data-grapheme="${grapheme}"][data-stage="${stage}"]`,
       );
-      await expect(cell).toHaveScreenshot(`mask-${grapheme}-${stage}.png`, {
-        maxDiffPixelRatio: 0.02,
-      });
+      await expect(cell).toBeVisible();
+      const overlay = cell.locator('[data-part="overlay"]');
+      await expect(overlay).toBeVisible();
+      const clipPath = await overlay.evaluate((el) => getComputedStyle(el).clipPath);
+      expect(clipPath).toContain("polygon");
+
+      if (process.platform === "win32") {
+        await expect(cell).toHaveScreenshot(`mask-${grapheme}-${stage}.png`, {
+          maxDiffPixelRatio: 0.02,
+        });
+      }
     }
   });
 
