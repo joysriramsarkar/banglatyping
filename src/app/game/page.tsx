@@ -7,7 +7,7 @@ import { Suspense } from "react";
 function GameContent() {
   const searchParams = useSearchParams();
   const modeParam = searchParams.get("mode") as GameMode | null;
-  const initialMode: GameMode = modeParam && ['falling', 'space', 'racer'].includes(modeParam) ? modeParam : 'hub';
+  const initialMode: GameMode = modeParam && ['falling', 'space', 'racer', 'cascade', 'defense', 'speedchallenge'].includes(modeParam) ? modeParam : 'hub';
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 py-4 sm:py-6">

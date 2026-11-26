@@ -24,6 +24,27 @@ export interface ArcadeStats {
     firstPlaceWins: number;
     gamesPlayed: number;
   };
+  cascade: {
+    highScore: number;
+    bestLevel: number;
+    maxCombo: number;
+    totalLinesCleared: number;
+    gamesPlayed: number;
+  };
+  defense: {
+    highScore: number;
+    bestWave: number;
+    towersBuilt: number;
+    enemiesDefeated: number;
+    gamesPlayed: number;
+  };
+  speedChallenge: {
+    bestWpm: number;
+    bestAccuracy: number;
+    bestScore: number;
+    gamesPlayed: number;
+    personalBests: Record<string, { wpm: number; accuracy: number }>;
+  };
   totalPlayTimeMinutes: number;
 }
 
@@ -40,6 +61,9 @@ export function getDefaultStats(): ArcadeStats {
     falling: { highScore: 0, maxLevel: 1, maxCombo: 0, gamesPlayed: 0 },
     space: { highScore: 0, shipsDestroyed: 0, maxLevel: 1, gamesPlayed: 0 },
     racer: { bestWpm: 0, firstPlaceWins: 0, gamesPlayed: 0 },
+    cascade: { highScore: 0, bestLevel: 1, maxCombo: 0, totalLinesCleared: 0, gamesPlayed: 0 },
+    defense: { highScore: 0, bestWave: 1, towersBuilt: 0, enemiesDefeated: 0, gamesPlayed: 0 },
+    speedChallenge: { bestWpm: 0, bestAccuracy: 0, bestScore: 0, gamesPlayed: 0, personalBests: {} },
     totalPlayTimeMinutes: 0,
   };
 }
@@ -51,6 +75,9 @@ function mergeStats(defaults: ArcadeStats, parsed: Partial<ArcadeStats>): Arcade
     falling: { ...defaults.falling, ...(parsed.falling || {}) },
     space: { ...defaults.space, ...(parsed.space || {}) },
     racer: { ...defaults.racer, ...(parsed.racer || {}) },
+    cascade: { ...defaults.cascade, ...(parsed.cascade || {}) },
+    defense: { ...defaults.defense, ...(parsed.defense || {}) },
+    speedChallenge: { ...defaults.speedChallenge, ...(parsed.speedChallenge || {}) },
   };
 }
 
@@ -128,6 +155,64 @@ export function recordRacerGameResult(wpm: number, isFirstPlace: boolean): Arcad
   }
   if (isFirstPlace) {
     current.racer.firstPlaceWins += 1;
+  }
+  saveArcadeStats(current);
+  return current;
+}
+
+export function recordCascadeGameResult(score: number, level: number, linesCleared: number, combo: number): ArcadeStats {
+  const current = getArcadeStats();
+  current.cascade.gamesPlayed += 1;
+  if (score > current.cascade.highScore) {
+    current.cascade.highScore = score;
+  }
+  if (level > current.cascade.bestLevel) {
+    current.cascade.bestLevel = level;
+  }
+  if (combo > current.cascade.maxCombo) {
+    current.cascade.maxCombo = combo;
+  }
+  current.cascade.totalLinesCleared += linesCleared;
+  saveArcadeStats(current);
+  return current;
+}
+
+export function recordDefenseGameResult(score: number, wave: number, gold: number): ArcadeStats {
+  const current = getArcadeStats();
+  current.defense.gamesPlayed += 1;
+  if (score > current.defense.highScore) {
+    current.defense.highScore = score;
+  }
+  if (wave > current.defense.bestWave) {
+    current.defense.bestWave = wave;
+  }
+  current.defense.towersBuilt += Math.floor(gold / 100);
+  current.defense.enemiesDefeated += Math.floor(score / 50);
+  saveArcadeStats(current);
+  return current;
+}
+
+export function recordSpeedChallengeResult(wpm: number, accuracy: number, mode: string, duration: number): ArcadeStats {
+  const current = getArcadeStats();
+  current.speedChallenge.gamesPlayed += 1;
+  if (wpm > current.speedChallenge.bestWpm) {
+    current.speedChallenge.bestWpm = wpm;
+  }
+  if (accuracy > current.speedChallenge.bestAccuracy) {
+    current.speedChallenge.bestAccuracy = accuracy;
+  }
+  const score = Math.round(wpm * accuracy / 100);
+  if (score > current.speedChallenge.bestScore) {
+    current.speedChallenge.bestScore = score;
+  }
+  if (!current.speedChallenge.personalBests[mode]) {
+    current.speedChallenge.personalBests[mode] = { wpm, accuracy };
+  } else {
+    const pb = current.speedChallenge.personalBests[mode];
+    if (wpm > pb.wpm || (wpm === pb.wpm && accuracy > pb.accuracy)) {
+      pb.wpm = wpm;
+      pb.accuracy = accuracy;
+    }
   }
   saveArcadeStats(current);
   return current;

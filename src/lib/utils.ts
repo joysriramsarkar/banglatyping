@@ -10,3 +10,8 @@ export const toBengaliNumber = (num: number | string) => {
     const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
     return String(num).replace(/\d/g, (d) => bengaliDigits[parseInt(d)]);
 };
+
+export const formatDate = (date: Date | string) => {
+  const d = new Date(date);
+  return d.toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' });
+};

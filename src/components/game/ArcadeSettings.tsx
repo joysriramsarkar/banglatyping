@@ -17,7 +17,11 @@ import {
   Zap, 
   Trophy,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Castle,
+  Target,
+  Zap as ZapIcon,
+  Star
 } from 'lucide-react';
 import { cn, toBengaliNumber } from '@/lib/utils';
 import { 
@@ -29,7 +33,7 @@ import {
   KeyboardLayoutOption
 } from '@/lib/keyboard-layouts';
 import { gameAudio } from '@/lib/game/game-audio';
-import { getArcadeStats, resetArcadeStats, ArcadeStats } from '@/lib/game/game-storage';
+import { getArcadeStats, resetArcadeStats, ArcadeStats } from '@/lib/game/score-store';
 import { SimplifiedKeyboard } from '../common/VirtualKeyboard';
 
 interface ArcadeSettingsProps {
@@ -259,7 +263,7 @@ export default function ArcadeSettings({ onBackToHub }: ArcadeSettingsProps) {
               size="sm"
               className="gap-1.5 text-xs hover:bg-cyan-50 dark:hover:bg-cyan-950/40"
             >
-              <Zap className="h-3.5 w-3.5 text-cyan-500" /> নাইট্রো বুস্ট (Nitro)
+              <ZapIcon className="h-3.5 w-3.5 text-cyan-500" /> নাইট্রো বুস্ট (Nitro)
             </Button>
 
             <Button
@@ -271,6 +275,28 @@ export default function ArcadeSettings({ onBackToHub }: ArcadeSettingsProps) {
               className="gap-1.5 text-xs hover:bg-amber-50 dark:hover:bg-amber-950/40"
             >
               <Trophy className="h-3.5 w-3.5 text-amber-500" /> কম্বো কাইম (Chime)
+            </Button>
+
+            <Button
+              onClick={() => {
+                gameAudio.playFreeze();
+              }}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs hover:bg-blue-50 dark:hover:bg-blue-950/40"
+            >
+              <Star className="h-3.5 w-3.5 text-blue-500" /> ফ্রিজ সাউন্ড (Freeze)
+            </Button>
+
+            <Button
+              onClick={() => {
+                gameAudio.playBomb();
+              }}
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs hover:bg-orange-50 dark:hover:bg-orange-950/40"
+            >
+              <Castle className="h-3.5 w-3.5 text-orange-500" /> বোমা সাউন্ড (Bomb)
             </Button>
           </div>
         </CardContent>
@@ -323,35 +349,99 @@ export default function ArcadeSettings({ onBackToHub }: ArcadeSettingsProps) {
 
         <CardContent className="p-5">
           {stats && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
-                <p className="text-xs text-muted-foreground font-semibold">ঝরন্ত শব্দ (Falling Words)</p>
-                <p className="text-lg font-bold font-mono text-primary">
-                  স্কোর: {toBengaliNumber(stats.falling.highScore)}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  ম্যাক্স কম্বো: {toBengaliNumber(stats.falling.maxCombo)}× | ম্যাচ: {toBengaliNumber(stats.falling.gamesPlayed)}
-                </p>
+            <div className="space-y-4">
+              {/* Classic Games */}
+              <div>
+                <h4 className="text-sm font-semibold text-primary mb-3 flex items-center gap-1.5">
+                  <Gamepad2 className="h-4 w-4" /> ক্লাসিক গেমস
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
+                    <p className="text-xs text-muted-foreground font-semibold">ঝরন্ত শব্দ (Falling Words)</p>
+                    <p className="text-lg font-bold font-mono text-primary">
+                      স্কোর: {toBengaliNumber(stats.falling.highScore)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      ম্যাক্স কম্বো: {toBengaliNumber(stats.falling.maxCombo)}× | লেভেল: {toBengaliNumber(stats.falling.maxLevel)} | ম্যাচ: {toBengaliNumber(stats.falling.gamesPlayed)}
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
+                    <p className="text-xs text-muted-foreground font-semibold">শব্দ শিকারী (Space Defender)</p>
+                    <p className="text-lg font-bold font-mono text-indigo-500">
+                      স্কোর: {toBengaliNumber(stats.space.highScore)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      জাহাজ ধ্বংস: {toBengaliNumber(stats.space.shipsDestroyed)} | তরঙ্গ: {toBengaliNumber(stats.space.maxLevel)} | ম্যাচ: {toBengaliNumber(stats.space.gamesPlayed)}
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
+                    <p className="text-xs text-muted-foreground font-semibold">টাইপ দৌড় (Speed Racer)</p>
+                    <p className="text-lg font-bold font-mono text-amber-500">
+                      সেরা গতি: {toBengaliNumber(stats.racer.bestWpm)} WPM
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      ১ম স্থান জয়: {toBengaliNumber(stats.racer.firstPlaceWins)} | ম্যাচ: {toBengaliNumber(stats.racer.gamesPlayed)}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
-                <p className="text-xs text-muted-foreground font-semibold">শব্দ শিকারী (Space Defender)</p>
-                <p className="text-lg font-bold font-mono text-indigo-500">
-                  স্কোর: {toBengaliNumber(stats.space.highScore)}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  জাহাজ ধ্বংস: {toBengaliNumber(stats.space.shipsDestroyed)} | ম্যাচ: {toBengaliNumber(stats.space.gamesPlayed)}
-                </p>
+              {/* New Games */}
+              <div>
+                <h4 className="text-sm font-semibold text-purple-500 mb-3 flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4" /> নতুন গেমস
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
+                    <p className="text-xs text-muted-foreground font-semibold">শব্দ ক্যাসকেড (Word Cascade)</p>
+                    <p className="text-lg font-bold font-mono text-purple-500">
+                      স্কোর: {toBengaliNumber(stats.cascade.highScore)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      লেভেল: {toBengaliNumber(stats.cascade.bestLevel)} | কম্বো: {toBengaliNumber(stats.cascade.maxCombo)}× | লাইন: {toBengaliNumber(stats.cascade.totalLinesCleared)} | ম্যাচ: {toBengaliNumber(stats.cascade.gamesPlayed)}
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
+                    <p className="text-xs text-muted-foreground font-semibold">টাইপিং ডিফেন্স (Typing Defense)</p>
+                    <p className="text-lg font-bold font-mono text-orange-500">
+                      স্কোর: {toBengaliNumber(stats.defense.highScore)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      তরঙ্গ: {toBengaliNumber(stats.defense.bestWave)} | শত্রু: {toBengaliNumber(stats.defense.enemiesDefeated)} | টাওয়ার: {toBengaliNumber(stats.defense.towersBuilt)} | ম্যাচ: {toBengaliNumber(stats.defense.gamesPlayed)}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
-                <p className="text-xs text-muted-foreground font-semibold">টাইপ দৌড় (Speed Racer)</p>
-                <p className="text-lg font-bold font-mono text-amber-500">
-                  সেরা গতি: {toBengaliNumber(stats.racer.bestWpm)} WPM
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  ১ম স্থান জয়: {toBengaliNumber(stats.racer.firstPlaceWins)} | ম্যাচ: {toBengaliNumber(stats.racer.gamesPlayed)}
-                </p>
+              {/* Challenge Mode */}
+              <div>
+                <h4 className="text-sm font-semibold text-cyan-500 mb-3 flex items-center gap-1.5">
+                  <Target className="h-4 w-4" /> চ্যালেঞ্জ মোড
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
+                  <div className="p-3.5 rounded-xl bg-secondary/50 border space-y-1">
+                    <p className="text-xs text-muted-foreground font-semibold">স্পিড চ্যালেঞ্জ (Speed Challenge)</p>
+                    <p className="text-lg font-bold font-mono text-cyan-500">
+                      সেরা WPM: {toBengaliNumber(stats.speedChallenge.bestWpm)} | সেরা নির্ভুলতা: {toBengaliNumber(stats.speedChallenge.bestAccuracy)}%
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      স্কোর: {toBengaliNumber(stats.speedChallenge.bestScore)} | মোট টেস্ট: {toBengaliNumber(stats.speedChallenge.gamesPlayed)}
+                    </p>
+                    {Object.keys(stats.speedChallenge.personalBests).length > 0 && (
+                      <div className="mt-2 pt-2 border-t text-[10px] text-slate-400">
+                        পারসোনাল বেস্ট: {' '}
+                        {Object.entries(stats.speedChallenge.personalBests).map(([mode, pb]) => (
+                          <span key={mode} className="mx-1 font-mono">
+                            {mode}: {toBengaliNumber(pb.wpm)} WPM / {toBengaliNumber(pb.accuracy)}%
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -360,3 +450,5 @@ export default function ArcadeSettings({ onBackToHub }: ArcadeSettingsProps) {
     </div>
   );
 }
+
+import { Gamepad2 } from 'lucide-react';
