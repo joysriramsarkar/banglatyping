@@ -25,29 +25,58 @@ export function resetSupabaseClientsForTesting() {
   _adminClient = null;
 }
 
+/**
+ * Builds an anon-key Supabase client. When `accessToken` is provided, it is
+ * forwarded as `Authorization: Bearer <token>` so PostgREST derives
+ * `auth.uid()` and enforces Row Level Security for this caller only.
+ */
+function buildAnonClient(accessToken?: string | null): SupabaseClient<Database> {
+  const url = getSupabaseUrl();
+  const key = getSupabaseAnonKey();
+  if (!url || !key) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'Supabase credentials are not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).',
+      );
+    }
+    console.warn('⚠️ Supabase credentials not fully configured');
+  }
+  return createClient<Database>(url, key, {
+    ...(accessToken ? { global: { headers: { Authorization: `Bearer ${accessToken}` } } } : {}),
+    auth: {
+      // Managed explicitly by the app; do not persist to localStorage.
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
 // Client for authentication and basic public queries.
 // NOTE: The Supabase client disables session persistence (persistSession:
 // false) because auth state is managed explicitly by the app; enabling the
 // default localStorage persistence would duplicate session storage.
+//
+// SECURITY: the singleton is bound to whichever token first created it. It is
+// therefore only safe on the browser (where "the current token" is always the
+// local user's). On the server — where one runtime serves many users — code
+// MUST use createRequestClient(token) instead; that guard is enforced below.
+// `globalThis.__BTP_ALLOW_SERVER_ANON_CLIENT__` lets trusted server-side
+// jobs (e.g. scheduled cleanup) opt into an explicit anon-context client.
 export function getSupabase(): SupabaseClient<Database> {
-  const url = getSupabaseUrl();
-  const key = getSupabaseAnonKey();
+  const allowServerAnon = Boolean(
+    (globalThis as { __BTP_ALLOW_SERVER_ANON_CLIENT__?: boolean })
+      .__BTP_ALLOW_SERVER_ANON_CLIENT__
+  );
+  if (typeof window === 'undefined' && !allowServerAnon) {
+    throw new Error(
+      'getSupabase() must not be called during a server request: its cached ' +
+        'anon client carries no user token, so RLS cannot identify the caller. ' +
+        'Use createRequestClient(accessToken) with the verified caller token ' +
+        '(see lib/api-auth.ts) instead.',
+    );
+  }
   if (!_client) {
-    if (!url || !key) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'Supabase credentials are not configured (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).',
-        );
-      }
-      console.warn('⚠️ Supabase credentials not fully configured');
-    }
-    _client = createClient<Database>(url, key, {
-      auth: {
-        // Managed explicitly by the app; do not persist to localStorage.
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
+    _client = buildAnonClient();
   }
   return _client;
 }
@@ -84,26 +113,17 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
  * Always enforces the user's privilege boundary:
  * - When an accessToken is provided, forwards `Authorization: Bearer <token>`
  *   so PostgREST sets `auth.uid()` and enforces Row Level Security (RLS).
- * - When no token is provided, returns the public anonymous client.
- * - NEVER falls back to service role admin client during normal user requests.
+ *   A fresh, request-scoped client is returned — never a shared singleton —
+ *   so one caller's token can never leak into another caller's queries.
+ * - When no token is provided, returns the public anonymous client (anon key,
+ *   no Authorization header). RLS then applies with `auth.uid() IS NULL`.
+ * - NEVER falls back to the service-role admin client during user requests.
  */
 export function createRequestClient(accessToken?: string | null): SupabaseClient<Database> {
   if (!accessToken) {
     return getSupabase();
   }
-
-  const url = getSupabaseUrl();
-  const key = getSupabaseAnonKey();
-
-  return createClient<Database>(url, key, {
-    global: {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    },
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  return buildAnonClient(accessToken);
 }
 
 // Type definitions
