@@ -10,6 +10,7 @@
 
 import {
   createRequestClient,
+  getSupabase,
   getSupabaseAdmin,
   resetSupabaseClientsForTesting,
 } from '../lib/db';
@@ -110,6 +111,48 @@ describe('Database Client Security Boundaries', () => {
     const admin = getSupabaseAdmin() as any;
     expect(admin).toBeDefined();
     expect(admin._key).toBe('service-role-secret-key');
+  });
+
+  test('createRequestClient returns a fresh request-scoped client per token (no cross-user leak)', () => {
+    // Regression guard: two consecutive authenticated requests must never
+    // share a client instance, otherwise user A's Authorization header could
+    // be reused for user B's queries.
+    const clientA = createRequestClient('user-a-token') as any;
+    const clientB = createRequestClient('user-b-token') as any;
+
+    expect(clientA).not.toBe(clientB);
+    expect(clientA._options.global.headers.Authorization).toBe('Bearer user-a-token');
+    expect(clientB._options.global.headers.Authorization).toBe('Bearer user-b-token');
+    // Neither may carry the service-role secret.
+    expect(clientA._key).not.toBe('service-role-secret-key');
+    expect(clientB._key).not.toBe('service-role-secret-key');
+  });
+
+  test('getSupabase() refuses to serve a shared singleton during server requests', () => {
+    // Outside a browser (no window) and outside unit-test mode, the cached
+    // anon singleton cannot carry the caller's token, so RLS would silently
+    // run as `auth.uid() IS NULL`. The privilege boundary is enforced by
+    // throwing instead.
+    const originalWindow = global.window;
+    const originalNodeEnv = process.env.NODE_ENV;
+    // @ts-expect-error -- deliberately simulating a server runtime
+    delete global.window;
+    process.env.NODE_ENV = 'production';
+    try {
+      resetSupabaseClientsForTesting();
+      expect(() => getSupabase()).toThrow(/createRequestClient/);
+      // createRequestClient WITH a token remains safe on the server.
+      expect(() => createRequestClient('user-a-token')).not.toThrow();
+      // Trusted server jobs can opt into an explicit anon-context client.
+      (globalThis as Record<string, unknown>).__BTP_ALLOW_SERVER_ANON_CLIENT__ = true;
+      expect(() => getSupabase()).not.toThrow();
+    } finally {
+      delete (globalThis as Record<string, unknown>).__BTP_ALLOW_SERVER_ANON_CLIENT__;
+      // @ts-expect-error -- restoring jsdom window
+      global.window = originalWindow;
+      process.env.NODE_ENV = originalNodeEnv;
+      resetSupabaseClientsForTesting();
+    }
   });
 });
 
